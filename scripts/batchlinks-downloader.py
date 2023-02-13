@@ -101,22 +101,36 @@ def hfdown(todownload, folder, downloader):
     if downloader=='curl':
         os.system(f"curl -LJO {todownload} -o " + os.path.join(folder, filename))
 
-def run(command, choosedowner):
+def run(command, choosedowner, progress=gr.Progress()):
     #out = getoutput(f"{command}")
+    progress(0.0, desc="Extracting links...")
     currentfolder = '/content/stable-diffusion-webui/models/Stable-diffusion'
     links = extract_links(command)
+    steps = 0
+    totalsteps = 2
+    for listpart in links:
+        if listpart.startswith("https://mega.nz") or listpart.startswith("https://huggingface.co"):
+            totalsteps +=1
+    steps +=1
+    progress(round(steps/totalsteps, 1), desc="Installing Mega...")
+    #print(links)
     installmega()
+    steps +=1
     for listpart in links:
         if listpart.startswith("https://mega.nz"):
             currentlink = listpart
+            progress(round(steps/totalsteps, 1), desc="Downloading from " + currentlink)
             print()
             print(currentlink)
             transfare(currentlink, currentfolder)
+            steps +=1
         if listpart.startswith("https://huggingface.co"):
+            progress(round(steps/totalsteps, 1), desc="Downloading from " + currentlink)
             currentlink = listpart
             print()
             print(currentlink)
             hfdown(currentlink, currentfolder, choosedowner)
+            steps +=1
 
         else:
             for prefix in typechecker:
