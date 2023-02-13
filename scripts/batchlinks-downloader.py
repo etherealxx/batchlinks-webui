@@ -112,21 +112,23 @@ def hfdown(todownload, folder, downloader):
         os.rename(os.path.join(curdir, filename), os.path.join(folder, filename))
 
 def writeall(towritedict):
+    print(towritedict)
+    global finalwrite
     finalwrite = []
     modelbox, vaebox, lorabox, addnetlorabox, embedbox, hynetbox = [], [], [], [], [], []
-    for file, dir in towritedict.items():
-        if dir == modelpath:
-            modelbox.append(file)
-        elif dir == vaepath:
-            vaebox.append(file)
-        elif dir == lorapath:
-            lorabox.append(file)
-        elif dir == addnetlorapath:
-            addnetlorabox.append(file)
-        elif dir == embedpath:
-            embedbox.append(file)
-        elif dir == hynetbox:
-            hynetbox.append(file)
+    for namefile, namedir in towritedict.items():
+        if namedir == modelpath:
+            modelbox.append(namefile)
+        elif namedir == vaepath:
+            vaebox.append(namefile)
+        elif namedir == lorapath:
+            lorabox.append(namefile)
+        elif namedir == addnetlorapath:
+            addnetlorabox.append(namefile)
+        elif namedir == embedpath:
+            embedbox.append(namefile)
+        elif namedir == hynetbox:
+            hynetbox.append(namefile)
 
     finalwrite.append("All done!")
     finalwrite.append("Downloaded files: ")
@@ -143,6 +145,7 @@ def writeall(towritedict):
     return finaloutput
 
 def writepart(box, path):
+    global finalwrite
     if len(box) > 0:
         finalwrite.append("⬇️" + path + "⬇️")
         for item in box:
@@ -156,6 +159,7 @@ def run(command, choosedowner):
     totrack = os.listdir(currentfolder)
     links = extract_links(command)
     installmega()
+    tocompare, totrack = [], []
     for listpart in links:
         if listpart.startswith("https://mega.nz"):
             currentlink = listpart
@@ -173,10 +177,14 @@ def run(command, choosedowner):
             print()
             print(currentlink)
             hfdown(currentlink, currentfolder, choosedowner)
-            for filename in tocompare:
-                if filename not in totrack:
-                    #newfiles.append(filename)
-                    newfilesdict[filename] = currentfolder
+            tocompare = os.listdir(currentfolder)
+            s = set(totrack)
+            trackcompare = [x for x in tocompare if x not in s]
+            newfilesdict[trackcompare[0]] = currentfolder
+            # for filename in tocompare:
+            #     if filename not in totrack:
+            #         #newfiles.append(filename)
+            #         newfilesdict[filename] = currentfolder
 
         else:
             for prefix in typechecker:
@@ -196,7 +204,11 @@ def run(command, choosedowner):
                     os.makedirs(currentfolder, exist_ok=True)
                     print(currentfolder)
                     totrack = os.listdir(currentfolder)
-    
+                    #debug
+                    print("totrack")
+                    print(totrack)
+
+    print(newfilesdict)
     downloadedfiles = writeall(newfilesdict)
 
     return downloadedfiles
