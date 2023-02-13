@@ -3,7 +3,8 @@ import time
 import gradio as gr
 from modules import scripts, script_callbacks
 import urllib.request, subprocess, contextlib #these handle mega.nz
-from IPython.display import clear_output #this also handle mega.nz
+#from IPython.display import display, clear_output
+from pathlib import Path
 
 typechecker = [
     "embedding", "embeddings", "embed", "embeds",
@@ -55,26 +56,27 @@ def transfare(todownload, folder):
 
 
 def installmega():
-  HOME = os.path.expanduser("~")
-  if not os.path.exists(f"{HOME}/.ipython/ocr.py"):
-      hCode = "https://raw.githubusercontent.com/biplobsd/" \
-                  "OneClickRun/master/res/ocr.py"
-      urllib.request.urlretrieve(hCode, f"{HOME}/.ipython/ocr.py")
+    HOME = os.path.expanduser("~")
+    ocr_file = Path(f"{HOME}/.ipython/ocr.py")
+    if not ocr_file.exists():
+        hCode = "https://raw.githubusercontent.com/biplobsd/" \
+                    "OneClickRun/master/res/ocr.py"
+        urllib.request.urlretrieve(hCode, str(ocr_file))
 
-  from ocr import (
-      runSh,
-      loadingAn,
-  )
+    from importlib.util import module_from_spec, spec_from_file_location
+    ocr_spec = spec_from_file_location("ocr", str(ocr_file))
+    ocr = module_from_spec(ocr_spec)
+    ocr_spec.loader.exec_module(ocr)
 
-  if not os.path.exists("/usr/bin/mega-cmd"):
-      loadingAn()
-      print("Installing MEGA ...")
-      runSh('sudo apt-get -y update')
-      runSh('sudo apt-get -y install libmms0 libc-ares2 libc6 libcrypto++6 libgcc1 libmediainfo0v5 libpcre3 libpcrecpp0v5 libssl1.1 libstdc++6 libzen0v5 zlib1g apt-transport-https')
-      runSh('sudo curl -sL -o /var/cache/apt/archives/MEGAcmd.deb https://mega.nz/linux/MEGAsync/Debian_9.0/amd64/megacmd-Debian_9.0_amd64.deb', output=True)
-      runSh('sudo dpkg -i /var/cache/apt/archives/MEGAcmd.deb', output=True)
-      print("MEGA is installed.")
-      clear_output()
+    if not os.path.exists("/usr/bin/mega-cmd"):
+        #ocr.loadingAn()
+        print("Installing MEGA ...")
+        ocr.runSh('sudo apt-get -y update')
+        ocr.runSh('sudo apt-get -y install libmms0 libc-ares2 libc6 libcrypto++6 libgcc1 libmediainfo0v5 libpcre3 libpcrecpp0v5 libssl1.1 libstdc++6 libzen0v5 zlib1g apt-transport-https')
+        ocr.runSh('sudo curl -sL -o /var/cache/apt/archives/MEGAcmd.deb https://mega.nz/linux/MEGAsync/Debian_9.0/amd64/megacmd-Debian_9.0_amd64.deb', output=True)
+        ocr.runSh('sudo dpkg -i /var/cache/apt/archives/MEGAcmd.deb', output=True)
+        print("MEGA is installed.")
+        #clear_output()
 #these code above handle mega.nz
 
 # def updatetext(text):
@@ -90,17 +92,31 @@ def installmega():
 #     updatetext("four")
 #     time.sleep(3)
 #     return "done"
+def hfdown(todownload, folder, downloader):
+    filename = todownload.rsplit('/', 1)[-1]
+    if downloader=='gdown':
+        os.system(f"gdown {todownload} -O " + os.path.join(folder, filename))
+    if downloader=='wget':
+        os.system(f"wget {todownload} -P {folder}")
+    if downloader=='curl':
+        os.system(f"curl -LJO {todownload} -o " + os.path.join(folder, filename))
 
-def run(command):
+def run(command, choosedowner):
     #out = getoutput(f"{command}")
     currentfolder = '/content/stable-diffusion-webui/models/Stable-diffusion'
     links = extract_links(command)
-    print(links)
     installmega()
     for listpart in links:
-        if listpart.startswith("https://mega.nz") or listpart.startswith("mega.nz"):
+        if listpart.startswith("https://mega.nz"):
             currentlink = listpart
+            print()
+            print(currentlink)
             transfare(currentlink, currentfolder)
+        if listpart.startswith("https://huggingface.co"):
+            currentlink = listpart
+            print()
+            print(currentlink)
+            hfdown(currentlink, currentfolder, choosedowner)
 
         else:
             for prefix in typechecker:
@@ -117,15 +133,19 @@ def run(command):
                         currentfolder = '/content/stable-diffusion-webui/models/hypernetworks'
                     elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
                         currentfolder = '/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora'
+                    os.makedirs(currentfolder, exist_ok=True)
+                    print(currentfolder)
 
-    return links + "\nall done!"
+    return "all done!"
 
 def extract_links(string):
     links = []
-    lines = string.lower().split('\n')
+    lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz") or line.startswith("mega.nz"):
+        if line.startswith("https://mega.nz"):
+            links.append(line)
+        if line.startswith("https://huggingface.co"):
             links.append(line)
         else:
             for prefix in typechecker:
@@ -158,17 +178,16 @@ def uploaded(textpath):
         return text    
 
 def on_ui_tabs():     
-    with gr.Blocks() as megalinks:
+    with gr.Blocks() as batchlinks:
         gr.Markdown(
         """
-        ### 🦒 Colab Run Command
-        ```py
-        model: wget https://huggingface.co/ckpt/anything-v4.5-vae-swapped/resolve/main/anything-v4.5-vae-swapped.safetensors -O /content/stable-diffusion-webui/models/Stable-diffusion/anything-v4.5-vae-swapped.safetensors
-        lora:  wget https://huggingface.co/embed/Sakimi-Chan_LoRA/resolve/main/Sakimi-Chan_LoRA.safetensors -O /content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora/Sakimi-Chan_LoRA.safetensors
-        embed: wget https://huggingface.co/embed/EasyNegative/resolve/main/EasyNegative.safetensors -O /content/stable-diffusion-webui/embeddings/EasyNegative.safetensors
-        vae:   wget https://huggingface.co/ckpt/trinart_characters_19.2m_stable_diffusion_v1/resolve/main/autoencoder_fix_kl-f8-trinart_characters.ckpt -O /content/stable-diffusion-webui/models/VAE/autoencoder_fix_kl-f8-trinart_characters.vae.pt
-        zip outputs folder: zip -r /content/outputs.zip /content/stable-diffusion-webui/outputs
-        ```
+        ### ⬇️ Batchlinks Downloader
+        this tool will read the textbox and download every links from top to bottom one by one
+        put your links down below. Supported link: MEGA, Huggingface
+        use hashtag to separate downloaded items based on their download location
+        valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.
+        (For colab that uses sd-webui-additional-networks, use `#addnetlora`)
+        use double hashtag after links for comment
         """)
         with gr.Group():
             file_output = gr.File(file_types=['text'])
@@ -176,15 +195,16 @@ def on_ui_tabs():
             with gr.Box():
                 command = gr.Textbox(show_label=False, placeholder="command")
                 out_text = gr.Textbox(show_label=False)
+                choose_downloader = gr.Radio(["gdown", "wget", "curl"])
 
                 with gr.Row():
                     
-                    btn_run = gr.Button("run command")
+                    btn_run = gr.Button("Download All!")
                     # btn_test = gr.Button("test")
-                    btn_run.click(run, inputs=command, outputs=out_text)
+                    btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
                     # btn_test.click(test, outputs=out_text)
                     file_output.change(uploaded, file_output, command)
                     # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
                     # btn_upload.upload(uploaded, btn_upload, file_output)
-    return (megalinks, "Megalinks", "megalinks"),
+    return (batchlinks, "Batchlinks Downloader", "batchlinks"),
 script_callbacks.on_ui_tabs(on_ui_tabs)
