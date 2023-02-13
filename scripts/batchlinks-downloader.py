@@ -99,7 +99,9 @@ def hfdown(todownload, folder, downloader):
     if downloader=='wget':
         os.system(f"wget {todownload} -P {folder}")
     if downloader=='curl':
-        os.system(f"curl -LJO {todownload} -o " + os.path.join(folder, filename))
+        os.system(f"curl -Lo {filename} {todownload}")
+        curdir = os.getcwd()
+        os.rename(os.path.join(curdir, filename), os.path.join(folder, filename))
 
 def run(command, choosedowner):
     #out = getoutput(f"{command}")
@@ -182,20 +184,19 @@ def on_ui_tabs():
         gr.Markdown(
         """
         ### ⬇️ Batchlinks Downloader
-        this tool will read the textbox and download every links from top to bottom one by one
-        put your links down below. Supported link: MEGA, Huggingface
-        use hashtag to separate downloaded items based on their download location
-        valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.
-        (For colab that uses sd-webui-additional-networks, use `#addnetlora`)
+        this tool will read the textbox and download every links from top to bottom one by one<br/>
+        put your links down below. Supported link: MEGA, Huggingface<br/>
+        use hashtag to separate downloaded items based on their download location<br/>
+        valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.<br/>
+        (For colab that uses sd-webui-additional-networks, use `#addnetlora`)<br/>
         use double hashtag after links for comment
         """)
         with gr.Group():
-            file_output = gr.File(file_types=['text'])
-            
+          with gr.Row():
             with gr.Box():
-                command = gr.Textbox(show_label=False, placeholder="command")
-                out_text = gr.Textbox(show_label=False)
-                choose_downloader = gr.Radio(["gdown", "wget", "curl"])
+                command = gr.Textbox(label="Links", placeholder="type here", lines=5)
+                out_text = gr.Textbox(label="Output")
+                choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface download method (ignore if you don't understand)")
 
                 with gr.Row():
                     
@@ -203,8 +204,9 @@ def on_ui_tabs():
                     # btn_test = gr.Button("test")
                     btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
                     # btn_test.click(test, outputs=out_text)
-                    file_output.change(uploaded, file_output, command)
                     # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
                     # btn_upload.upload(uploaded, btn_upload, file_output)
+            file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
+            file_output.change(uploaded, file_output, command)
     return (batchlinks, "Batchlinks Downloader", "batchlinks"),
 script_callbacks.on_ui_tabs(on_ui_tabs)
