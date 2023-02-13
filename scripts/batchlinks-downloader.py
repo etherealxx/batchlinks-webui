@@ -15,9 +15,17 @@ typechecker = [
     "addnetlora", "loraaddnet", "additionalnetworks", "addnet"
     ]
 
+modelpath = "/content/stable-diffusion-webui/models/Stable-diffusion"
+embedpath = "/content/stable-diffusion-webui/embeddings"
+vaepath = "/content/stable-diffusion-webui/models/VAE"
+lorapath = "/content/stable-diffusion-webui/models/Lora"
+addnetlorapath = "/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora"
+hynetpath = "/content/stable-diffusion-webui/models/hypernetworks"
+
 newlines = ['\n', '\r\n', '\r']
 currentlink = ''
-currentfolder = '/content/stable-diffusion-webui/models/Stable-diffusion'
+currentfolder = modelpath
+finalwrite = []
 
 #these code below handle mega.nz
 def unbuffered(proc, stream='stdout'):
@@ -96,16 +104,56 @@ def hfdown(todownload, folder, downloader):
     filename = todownload.rsplit('/', 1)[-1]
     if downloader=='gdown':
         os.system(f"gdown {todownload} -O " + os.path.join(folder, filename))
-    if downloader=='wget':
+    elif downloader=='wget':
         os.system(f"wget {todownload} -P {folder}")
-    if downloader=='curl':
+    elif downloader=='curl':
         os.system(f"curl -Lo {filename} {todownload}")
         curdir = os.getcwd()
         os.rename(os.path.join(curdir, filename), os.path.join(folder, filename))
 
+def writeall(towritedict):
+    finalwrite = []
+    modelbox, vaebox, lorabox, addnetlorabox, embedbox, hynetbox = [], [], [], [], [], []
+    for file, dir in towritedict.items():
+        if dir == modelpath:
+            modelbox.append(file)
+        elif dir == vaepath:
+            vaebox.append(file)
+        elif dir == lorapath:
+            lorabox.append(file)
+        elif dir == addnetlorapath:
+            addnetlorabox.append(file)
+        elif dir == embedpath:
+            embedbox.append(file)
+        elif dir == hynetbox:
+            hynetbox.append(file)
+
+    finalwrite.append("All done!")
+    finalwrite.append("Downloaded files: ")
+
+    writepart(modelbox, modelpath)
+    writepart(vaebox, vaepath)
+    writepart(lorabox, lorapath)
+    writepart(addnetlorabox, addnetlorapath)
+    writepart(embedbox, embedpath)
+    writepart(hynetbox, hynetbox)
+
+    finaloutput = list_to_text(finalwrite)
+    finalwrite = []
+    return finaloutput
+
+def writepart(box, path):
+    if len(box) > 0:
+        finalwrite.append("⬇️" + path + "⬇️")
+        for item in box:
+            finalwrite.append(item)
+
 def run(command, choosedowner):
     #out = getoutput(f"{command}")
-    currentfolder = '/content/stable-diffusion-webui/models/Stable-diffusion'
+    newfiles = []
+    newfilesdict = dict()
+    currentfolder = modelpath
+    totrack = os.listdir(currentfolder)
     links = extract_links(command)
     installmega()
     for listpart in links:
@@ -114,31 +162,44 @@ def run(command, choosedowner):
             print()
             print(currentlink)
             transfare(currentlink, currentfolder)
+            tocompare = os.listdir(currentfolder)
+            for filename in tocompare:
+                if filename not in totrack:
+                    #newfiles.append(filename)
+                    newfilesdict[filename] = currentfolder
+
         if listpart.startswith("https://huggingface.co"):
             currentlink = listpart
             print()
             print(currentlink)
             hfdown(currentlink, currentfolder, choosedowner)
+            for filename in tocompare:
+                if filename not in totrack:
+                    #newfiles.append(filename)
+                    newfilesdict[filename] = currentfolder
 
         else:
             for prefix in typechecker:
                 if listpart.startswith("#" + prefix):
                     if prefix in ["embedding", "embeddings", "embed", "embeds"]:
-                        currentfolder = '/content/stable-diffusion-webui/embeddings'
+                        currentfolder = embedpath
                     elif prefix in ["model", "models", "checkpoint", "checkpoints"]:
-                        currentfolder = '/content/stable-diffusion-webui/models/Stable-diffusion'
+                        currentfolder = modelpath
                     elif prefix in ["vae", "vaes"]:
-                        currentfolder = '/content/stable-diffusion-webui/models/VAE'
+                        currentfolder = vaepath
                     elif prefix in ["lora", "loras"]:
-                        currentfolder = '/content/stable-diffusion-webui/models/Lora'
+                        currentfolder = lorapath
                     elif prefix in ["hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",]:
-                        currentfolder = '/content/stable-diffusion-webui/models/hypernetworks'
+                        currentfolder = hynetpath
                     elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
-                        currentfolder = '/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora'
+                        currentfolder = addnetlorapath
                     os.makedirs(currentfolder, exist_ok=True)
                     print(currentfolder)
+                    totrack = os.listdir(currentfolder)
+    
+    downloadedfiles = writeall(newfilesdict)
 
-    return "all done!"
+    return downloadedfiles
 
 def extract_links(string):
     links = []
