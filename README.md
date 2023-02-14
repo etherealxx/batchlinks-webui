@@ -39,10 +39,6 @@
     </li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
 -->
@@ -65,11 +61,12 @@ Copy this line into your colab installation cell. Or into a new cell if you alre
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 -->
 
-This extension will streamline your downloads session on your colab session.
+This extension will streamline your downloads session on your colab session. Paste the links you need to download (or you can upload a txt file containing the links), use the hashstag syntax to choose the download location (see below), and hit the `Download All` button to download them!
 
 ## Example
 
-Look at this example
+Look at this example<br/>
+<img src="images/example.jpg" alt="Logo" height="500"><br/>
 
 ```
 #model
@@ -86,7 +83,14 @@ https://mega.nz/file/gAxTWBAI#uL7EZay-OND5G6ELJlGfUNG0s7Q4TynZKqFdvs0v0tc ##agen
 https://mega.nz/file/oU43FSTY#vwAfsAb7RKJ4xtsSP7uzrKpWhh1y8BdpIBFurwsVP2o ##agent8-dreambooth
 ```
 
-This piece of line will be read from top to bottom. Every hashtag, it will change the current output directory to said directory (see below). So what this example do is it will download `AOM2` model to the model folder, then it will download the vae and put it to the Vae folder. Next it will download two embed, `bad prompt` and `bad artist`. Next it will download several LoRAs from CivitAI and MEGA, and put it to the Lora folder.
+This piece of lines will be read from top to bottom. Every hashtag, it will change the current output directory to said directory (see below). So what this example do is it will download `AOM2` model to the model folder, then it will download the vae and put it to the Vae folder. Next it will download two embed, `bad prompt` and `bad artist`. Next it will download several LoRAs from CivitAI and MEGA, and put it to the Lora folder.
+
+You can also copy that example and paste it to a `.txt` file to use later. You can load a `.txt` file containing that piece of lines directly from the UI.
+
+When the items is downloading, you can inspect the running code on the colab cell, or just take a coffee and chill☕
+
+When the download is complete, the downloaded file will be listed<br/>
+<img src="images/downloaded.jpg" alt="Logo" height="300"><br/>
 
 ## Syntax
 
@@ -116,7 +120,7 @@ Additional note: If you use some colab that doesn't support native LoRA on webui
 
 ### How to get the direct links
 
-See [here]()
+See [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)
 
 ### Huggingface's download method
 
@@ -128,64 +132,6 @@ So there's three supported method: `gdown`, `wget`, and `curl`. Use whatever, re
 
 -->
 
-<!-- GETTING STARTED -->
-
-<!-- 
-## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-
-* npm
-
-  ```sh
-  npm install npm@latest -g
-  ```
-
-### Installation
-
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
-
-1. Get a free API Key at [https://example.com](https://example.com)
-
-2. Clone the repo
-
-   ```sh
-   git clone https://github.com/your_username_/Project-Name.git
-   ```
-
-3. Install NPM packages
-
-   ```sh
-   npm install
-   ```
-
-4. Enter your API in `config.js`
-
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- USAGE EXAMPLES -->
-
-<!--
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
- -->
-
-<!-- ROADMAP -->
-
 ## Roadmap
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
@@ -193,17 +139,23 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 - [ ] Supports Windows local installation
 - [ ] Support customizable hashtag from the UI
 - [ ] aria2 for huggingface download method
+- [ ] Using threading/subprocess instead of os.system to download files
+- [ ] completed download will use the webui's notification.mp3
+
+## Known Bugs
+
+- File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.
 
 <!-- CONTRIBUTING -->
 
-<!-- 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+I just learned python few months ago, by just looking at other peoples project and sometimes asking ChatGPT. Gradio is new for me. I literally just learn it in one day to make this extension, so expect some bugs.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+However, if you have a suggestion or code-fixing that would make this better, please fork the repo and create a pull request. Don't forget to explain the solution you provided on the commit comment, so we can learn together!😁
 Don't forget to give the project a star! Thanks again!
 
+<!-- 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
