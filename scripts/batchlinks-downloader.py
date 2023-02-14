@@ -1,8 +1,12 @@
+#github.com/etherealxx
 import os
-import time
+from time import sleep
 import gradio as gr
-from modules import scripts, script_callbacks
+from modules import script_callbacks #,scripts
+from modules.paths import script_path
 import urllib.request, subprocess, contextlib #these handle mega.nz
+import requests #this handle civit
+from tqdm import tqdm
 #from IPython.display import display, clear_output
 from pathlib import Path
 
@@ -15,9 +19,17 @@ typechecker = [
     "addnetlora", "loraaddnet", "additionalnetworks", "addnet"
     ]
 
+modelpath = os.path.join(script_path, "models/Stable-diffusion")
+embedpath = os.path.join(script_path, "embeddings")
+vaepath = os.path.join(script_path, "models/VAE")
+lorapath = os.path.join(script_path, "models/Lora")
+addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
+hynetpath = os.path.join(script_path, "models/hypernetworks")
+
 newlines = ['\n', '\r\n', '\r']
 currentlink = ''
-currentfolder = '/content/stable-diffusion-webui/models/Stable-diffusion'
+currentfolder = modelpath
+finalwrite = []
 
 #these code below handle mega.nz
 def unbuffered(proc, stream='stdout'):
@@ -70,52 +82,142 @@ def installmega():
 
     if not os.path.exists("/usr/bin/mega-cmd"):
         #ocr.loadingAn()
-        print("Installing MEGA ...")
+        print('[1;32mInstalling MEGA ...')
+        print('[0m')
         ocr.runSh('sudo apt-get -y update')
         ocr.runSh('sudo apt-get -y install libmms0 libc-ares2 libc6 libcrypto++6 libgcc1 libmediainfo0v5 libpcre3 libpcrecpp0v5 libssl1.1 libstdc++6 libzen0v5 zlib1g apt-transport-https')
         ocr.runSh('sudo curl -sL -o /var/cache/apt/archives/MEGAcmd.deb https://mega.nz/linux/MEGAsync/Debian_9.0/amd64/megacmd-Debian_9.0_amd64.deb', output=True)
         ocr.runSh('sudo dpkg -i /var/cache/apt/archives/MEGAcmd.deb', output=True)
-        print("MEGA is installed.")
+        print('[1;32mMEGA is installed.')
+        print('[0m')
         #clear_output()
 #these code above handle mega.nz
 
 # def updatetext(text):
 #     return gr.update(value=text)
 
-# def test():
-#     updatetext("one")
-#     time.sleep(3)
-#     updatetext("two")
-#     time.sleep(3)
-#     updatetext("three")
-#     time.sleep(3)
-#     updatetext("four")
-#     time.sleep(3)
-#     return "done"
+def civitdown(url, folder):
+    filename = url.rsplit('/', 1)[-1] + ".bdgh"
+    pathtodown = os.path.join(folder, filename)
+    max_retries = 5
+    retry_delay = 10
+
+    while True:
+
+        downloaded_size = 0
+        headers = {}
+
+        progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {filename}. (will be renamed correctly after downloading)", initial=downloaded_size, leave=False)
+
+        with open(pathtodown, "ab") as f:
+            while True:
+                try:
+                    response = requests.get(url, headers=headers, stream=True)
+                    total_size = int(response.headers.get("Content-Length", 0))
+                    # if total_size == 0:
+                    #     total_size = downloaded_size
+                    # progress.total = total_size 
+
+                    for chunk in response.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                            progress.update(len(chunk))
+
+                    downloaded_size = os.path.getsize(pathtodown)
+                    break
+                except ConnectionError as e:
+                    max_retries -= 1
+
+                    if max_retries == 0:
+                        raise e
+
+                    sleep(retry_delay)
+
+        progress.close()
+        actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
+        #%cd {folder}
+        actualpath = os.path.join(folder, actualfilename)
+        os.rename(pathtodown, actualpath)
+        downloaded_size = os.path.getsize(actualpath)
+        # Check if the download was successful
+        if downloaded_size >= total_size:
+            print(f"{actualfilename} successfully downloaded.")
+            break
+        else:
+            print(f"Error: File download failed. Retrying...")
+
 def hfdown(todownload, folder, downloader):
     filename = todownload.rsplit('/', 1)[-1]
     if downloader=='gdown':
         os.system(f"gdown {todownload} -O " + os.path.join(folder, filename))
-    if downloader=='wget':
+    elif downloader=='wget':
         os.system(f"wget {todownload} -P {folder}")
-    if downloader=='curl':
-        os.system(f"curl -LJO {todownload} -o " + os.path.join(folder, filename))
+    elif downloader=='curl':
+        os.system(f"curl -Lo {filename} {todownload}")
+        curdir = os.getcwd()
+        os.rename(os.path.join(curdir, filename), os.path.join(folder, filename))
+
+def writeall(towritedict):
+    print(towritedict)
+    global finalwrite
+    finalwrite = []
+    modelbox, vaebox, lorabox, addnetlorabox, embedbox, hynetbox = [], [], [], [], [], []
+    for namefile, namedir in towritedict.items():
+        if namedir == modelpath:
+            modelbox.append(namefile)
+        elif namedir == vaepath:
+            vaebox.append(namefile)
+        elif namedir == lorapath:
+            lorabox.append(namefile)
+        elif namedir == addnetlorapath:
+            addnetlorabox.append(namefile)
+        elif namedir == embedpath:
+            embedbox.append(namefile)
+        elif namedir == hynetbox:
+            hynetbox.append(namefile)
+
+    finalwrite.append("All done!")
+    finalwrite.append("Downloaded files: ")
+
+    writepart(modelbox, modelpath)
+    writepart(vaebox, vaepath)
+    writepart(lorabox, lorapath)
+    writepart(addnetlorabox, addnetlorapath)
+    writepart(embedbox, embedpath)
+    writepart(hynetbox, hynetbox)
+
+    finaloutput = list_to_text(finalwrite)
+    finalwrite = []
+    return finaloutput
+
+def writepart(box, path):
+    global finalwrite
+    if len(box) > 0:
+        finalwrite.append("⬇️" + path + "⬇️")
+        for item in box:
+            finalwrite.append(item)
 
 def run(command, choosedowner, progress=gr.Progress()):
     #out = getoutput(f"{command}")
+    #newfiles = []
+    newfilesdict = dict()
+    currentfolder = modelpath
+    totrack = os.listdir(currentfolder)
     progress(0.0, desc="Extracting links...")
-    currentfolder = '/content/stable-diffusion-webui/models/Stable-diffusion'
     links = extract_links(command)
     steps = 0
-    totalsteps = 2
+    totalsteps = 3
     for listpart in links:
-        if listpart.startswith("https://mega.nz") or listpart.startswith("https://huggingface.co"):
+        if listpart.startswith("https://mega.nz") or listpart.startswith("https://huggingface.co") or listpart.startswith("https://civitai.com"):
             totalsteps +=1
     steps +=1
     progress(round(steps/totalsteps, 1), desc="Installing Mega...")
     #print(links)
     installmega()
     steps +=1
+    print('[1;32mBatchLinks Downloads starting...')
+    print('[0m')
+    tocompare, totrack = [], []
     for listpart in links:
         if listpart.startswith("https://mega.nz"):
             currentlink = listpart
@@ -124,6 +226,12 @@ def run(command, choosedowner, progress=gr.Progress()):
             print(currentlink)
             transfare(currentlink, currentfolder)
             steps +=1
+            #sleep(2)
+            s = set(totrack)
+            trackcompare = [x for x in tocompare if x not in s]
+            if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
+                newfilesdict[trackcompare[0]] = currentfolder
+            totrack = tocompare
         if listpart.startswith("https://huggingface.co"):
             progress(round(steps/totalsteps, 1), desc="Downloading from " + currentlink)
             currentlink = listpart
@@ -131,35 +239,60 @@ def run(command, choosedowner, progress=gr.Progress()):
             print(currentlink)
             hfdown(currentlink, currentfolder, choosedowner)
             steps +=1
+            tocompare = os.listdir(currentfolder)
+            s = set(totrack)
+            trackcompare = [x for x in tocompare if x not in s]
+            if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
+                newfilesdict[trackcompare[0]] = currentfolder
+            totrack = tocompare
+
+        if listpart.startswith("https://civitai.com"):
+            progress(round(steps/totalsteps, 1), desc="Downloading from " + currentlink)
+            currentlink = listpart
+            print()
+            print(currentlink)
+            civitdown(currentlink, currentfolder)
+            steps +=1
+            tocompare = os.listdir(currentfolder)
+            s = set(totrack)
+            trackcompare = [x for x in tocompare if x not in s]
+            if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
+                newfilesdict[trackcompare[0]] = currentfolder
+            totrack = tocompare
 
         else:
             for prefix in typechecker:
                 if listpart.startswith("#" + prefix):
                     if prefix in ["embedding", "embeddings", "embed", "embeds"]:
-                        currentfolder = '/content/stable-diffusion-webui/embeddings'
+                        currentfolder = embedpath
                     elif prefix in ["model", "models", "checkpoint", "checkpoints"]:
-                        currentfolder = '/content/stable-diffusion-webui/models/Stable-diffusion'
+                        currentfolder = modelpath
                     elif prefix in ["vae", "vaes"]:
-                        currentfolder = '/content/stable-diffusion-webui/models/VAE'
+                        currentfolder = vaepath
                     elif prefix in ["lora", "loras"]:
-                        currentfolder = '/content/stable-diffusion-webui/models/Lora'
+                        currentfolder = lorapath
                     elif prefix in ["hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",]:
-                        currentfolder = '/content/stable-diffusion-webui/models/hypernetworks'
+                        currentfolder = hynetpath
                     elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
-                        currentfolder = '/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora'
+                        currentfolder = addnetlorapath
                     os.makedirs(currentfolder, exist_ok=True)
                     print(currentfolder)
+                    totrack = os.listdir(currentfolder)
 
-    return "all done!"
+    print(newfilesdict)
+    progress(round(steps/totalsteps, 1), desc="Printing result...")
+    downloadedfiles = writeall(newfilesdict)
+    steps +=1
+    print('[1;32mBatchLinks Downloads finished!')
+    print('[0m')
+    return downloadedfiles
 
 def extract_links(string):
     links = []
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz"):
-            links.append(line)
-        if line.startswith("https://huggingface.co"):
+        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com"):
             links.append(line)
         else:
             for prefix in typechecker:
@@ -180,7 +313,7 @@ def uploaded(textpath):
 
         with open(file_paths, 'r') as file:
             for line in file:
-                if line.startswith("https://mega.nz") or line.startswith("mega.nz"):
+                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
@@ -191,34 +324,42 @@ def uploaded(textpath):
         text = list_to_text(links)
         return text    
 
+# def debug():
+#     count = 0
+#     while True:
+#         print(os.listdir(lorapath))
+#         print('time spent: ' + str(count))
+#         count +=1
+#         sleep(1)
+
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
         gr.Markdown(
         """
         ### ⬇️ Batchlinks Downloader
-        this tool will read the textbox and download every links from top to bottom one by one
-        put your links down below. Supported link: MEGA, Huggingface
-        use hashtag to separate downloaded items based on their download location
-        valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.
-        (For colab that uses sd-webui-additional-networks, use `#addnetlora`)
+        this tool will read the textbox and download every links from top to bottom one by one<br/>
+        put your links down below. Supported link: MEGA, Huggingface<br/>
+        use hashtag to separate downloaded items based on their download location<br/>
+        valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.<br/>
+        (For colab that uses sd-webui-additional-networks, use `#addnetlora`)<br/>
         use double hashtag after links for comment
         """)
         with gr.Group():
-            file_output = gr.File(file_types=['text'])
-            
+          with gr.Row():
             with gr.Box():
-                command = gr.Textbox(show_label=False, placeholder="command")
-                out_text = gr.Textbox(show_label=False)
-                choose_downloader = gr.Radio(["gdown", "wget", "curl"])
+                command = gr.Textbox(label="Links", placeholder="type here", lines=5)
+                out_text = gr.Textbox(label="Output")
+                choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface download method (ignore if you don't understand)")
 
                 with gr.Row():
                     
                     btn_run = gr.Button("Download All!")
-                    # btn_test = gr.Button("test")
+                    #btn_debug = gr.Button("Debug")
                     btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
-                    # btn_test.click(test, outputs=out_text)
-                    file_output.change(uploaded, file_output, command)
+                    #btn_debug.click(debug)
                     # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
                     # btn_upload.upload(uploaded, btn_upload, file_output)
+            file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
+            file_output.change(uploaded, file_output, command)
     return (batchlinks, "Batchlinks Downloader", "batchlinks"),
 script_callbacks.on_ui_tabs(on_ui_tabs)
