@@ -1,8 +1,11 @@
+#github.com/etherealxx
 import os
 import time
 import gradio as gr
 from modules import scripts, script_callbacks
 import urllib.request, subprocess, contextlib #these handle mega.nz
+import requests #this handle civit
+from tqdm import tqdm
 #from IPython.display import display, clear_output
 from pathlib import Path
 
@@ -90,16 +93,55 @@ def installmega():
 # def updatetext(text):
 #     return gr.update(value=text)
 
-# def test():
-#     updatetext("one")
-#     time.sleep(3)
-#     updatetext("two")
-#     time.sleep(3)
-#     updatetext("three")
-#     time.sleep(3)
-#     updatetext("four")
-#     time.sleep(3)
-#     return "done"
+def civitdown(url, folder):
+    filename = url.rsplit('/', 1)[-1] + ".bdgh"
+    pathtodown = os.path.join(folder, filename)
+    max_retries = 5
+    retry_delay = 10
+
+    while True:
+
+        downloaded_size = 0
+        headers = {}
+
+        progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {filename}. (will be renamed correctly after downloading)", initial=downloaded_size, leave=False)
+
+        with open(pathtodown, "ab") as f:
+            while True:
+                try:
+                    response = requests.get(url, headers=headers, stream=True)
+                    total_size = int(response.headers.get("Content-Length", 0))
+                    # if total_size == 0:
+                    #     total_size = downloaded_size
+                    # progress.total = total_size 
+
+                    for chunk in response.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                            progress.update(len(chunk))
+
+                    downloaded_size = os.path.getsize(pathtodown)
+                    break
+                except ConnectionError as e:
+                    max_retries -= 1
+
+                    if max_retries == 0:
+                        raise e
+
+                    time.sleep(retry_delay)
+
+        progress.close()
+        actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
+        #%cd {folder}
+        os.rename(pathtodown, os.path.join(folder, actualfilename))
+        downloaded_size = os.path.getsize(pathtodown)
+        # Check if the download was successful
+        if downloaded_size >= total_size:
+            print(f"{actualfilename} successfully downloaded.")
+            break
+        else:
+            print(f"Error: File download failed. Retrying...")
+
 def hfdown(todownload, folder, downloader):
     filename = todownload.rsplit('/', 1)[-1]
     if downloader=='gdown':
@@ -166,11 +208,9 @@ def run(command, choosedowner):
             print()
             print(currentlink)
             transfare(currentlink, currentfolder)
-            tocompare = os.listdir(currentfolder)
-            for filename in tocompare:
-                if filename not in totrack:
-                    #newfiles.append(filename)
-                    newfilesdict[filename] = currentfolder
+            s = set(totrack)
+            trackcompare = [x for x in tocompare if x not in s]
+            newfilesdict[trackcompare[0]] = currentfolder
 
         if listpart.startswith("https://huggingface.co"):
             currentlink = listpart
@@ -185,6 +225,16 @@ def run(command, choosedowner):
             #     if filename not in totrack:
             #         #newfiles.append(filename)
             #         newfilesdict[filename] = currentfolder
+
+        if listpart.startswith("https://civitai.com"):
+            currentlink = listpart
+            print()
+            print(currentlink)
+            civitdown(currentlink, currentfolder)
+            tocompare = os.listdir(currentfolder)
+            s = set(totrack)
+            trackcompare = [x for x in tocompare if x not in s]
+            newfilesdict[trackcompare[0]] = currentfolder
 
         else:
             for prefix in typechecker:
@@ -218,9 +268,7 @@ def extract_links(string):
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz"):
-            links.append(line)
-        if line.startswith("https://huggingface.co"):
+        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com"):
             links.append(line)
         else:
             for prefix in typechecker:
@@ -241,7 +289,7 @@ def uploaded(textpath):
 
         with open(file_paths, 'r') as file:
             for line in file:
-                if line.startswith("https://mega.nz") or line.startswith("mega.nz"):
+                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
