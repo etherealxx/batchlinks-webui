@@ -206,11 +206,10 @@ def run(command, choosedowner, progress=gr.Progress()):
     progress(0.0, desc="Extracting links...")
     links = extract_links(command)
     steps = 0
-    totalsteps = 3
+    totalsteps = 2
     for listpart in links:
         if listpart.startswith("https://mega.nz") or listpart.startswith("https://huggingface.co") or listpart.startswith("https://civitai.com"):
             totalsteps +=1
-    steps +=1
     progress(round(steps/totalsteps, 1), desc="Installing Mega...")
     #print(links)
     installmega()
@@ -218,6 +217,7 @@ def run(command, choosedowner, progress=gr.Progress()):
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     tocompare, totrack = [], []
+    
     for listpart in links:
         if listpart.startswith("https://mega.nz"):
             currentlink = listpart
@@ -233,8 +233,8 @@ def run(command, choosedowner, progress=gr.Progress()):
                 newfilesdict[trackcompare[0]] = currentfolder
             totrack = tocompare
         if listpart.startswith("https://huggingface.co"):
-            progress(round(steps/totalsteps, 1), desc="Downloading from " + currentlink)
             currentlink = listpart
+            progress(round(steps/totalsteps, 1), desc="Downloading from " + currentlink)
             print()
             print(currentlink)
             hfdown(currentlink, currentfolder, choosedowner)
