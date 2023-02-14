@@ -7,7 +7,7 @@
 <h3 align="center">BatchLinks Downloader</h3>
 
 <p align="center">
-    Batch-downloading models in colab made simple.
+    Batch-downloading models in SD webui colab made simple.
     <br />
     <a href="https://github.com/etherealxx/batchlinks-downloader"><strong></strong></a>
     <br />
@@ -50,7 +50,13 @@
 Copy this line into your colab installation cell. Or into a new cell if you already launched the webui.
 
 ```
-!git clone https://github.com/etherealxx/batchlinks-downloader /content/stable-diffusion-webui/extensions/batchlinks-downloader
+!git clone https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
+```
+
+or, if your colab use the newer version of webui (gradio version above 3.16.0) you can use this instead (it adds a little progress bar)
+
+```
+!git clone -b gradio-v3-16-2 https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
 ```
 
 **Keep in mind that this extension wont work on your local Windows installation!** (atleast for now, this is just for colab).
@@ -61,7 +67,7 @@ Copy this line into your colab installation cell. Or into a new cell if you alre
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 -->
 
-This extension will streamline your downloads session on your colab session. Paste the links you need to download (or you can upload a txt file containing the links), use the hashstag syntax to choose the download location (see below), and hit the `Download All` button to download them!
+This extension will streamline your downloads on your [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) colab session. Paste the links you need to download (or you can upload a txt file containing the links), use the hashstag syntax to choose the download location (see below), and hit the `Download All` button to download them!
 
 ## Example
 
@@ -145,6 +151,7 @@ So there's three supported method: `gdown`, `wget`, and `curl`. Use whatever, re
 ## Known Bugs
 
 - File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.
+- Progress bar (the yellow bar) doesn't progress as expected (v3-16-2 branch)
 
 <!-- CONTRIBUTING -->
 
