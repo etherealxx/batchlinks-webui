@@ -51,10 +51,10 @@
 
 ## Installation
 
-Copy this line into your colab installation cell, **before the launch.py line*.
+Copy this line into your colab installation cell. Or into a new cell if you already launched the webui.
 
 ```
-`!git clone https://github.com/etherealxx/batchlinks-downloader /content/stable-diffusion-webui/extensions/batchlinks-downloader
+!git clone https://github.com/etherealxx/batchlinks-downloader /content/stable-diffusion-webui/extensions/batchlinks-downloader
 ```
 
 **Keep in mind that this extension wont work on your local Windows installation!** (atleast for now, this is just for colab).
@@ -90,7 +90,7 @@ This piece of line will be read from top to bottom. Every hashtag, it will chang
 
 ## Syntax
 
-**Hashtag** - Hashtag means change current output directory to this directory. `#model` means every links below this hashtag, will be downloaded to `/content/stable-diffusion-webui/models/Stable-diffusion`, until it hits another hashtag, which will change the output directory again. See below for valid hashtags.
+**Hashtag** - Hashtag means change current output directory to this directory. `#model` means every links below this hashtag, will be downloaded to */content/stable-diffusion-webui/models/Stable-diffusion*, until it hits another hashtag, which will change the output directory again. See below for valid hashtags.
 
 Additional note: If you use some colab that doesn't support native LoRA on webui (that means, using `sd-webui-additional-networks` extension in order to work), like [camenduru](https://github.com/camenduru/stable-diffusion-webui-colab)'s colab, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
 
@@ -102,17 +102,17 @@ Additional note: If you use some colab that doesn't support native LoRA on webui
 
 ### Valid Hashtags
 
-`#model`, `#models`, `#checkpoint`, or `#checkpoints` will put the downloaded file to `/content/stable-diffusion-webui/models/Stable-diffusion`
+`#model`, `#models`, `#checkpoint`, or `#checkpoints` will put the downloaded file to */content/stable-diffusion-webui/models/Stable-diffusion*
 
-`#embedding`, `#embeddings`, `#embed`, or `#embeds` will put the downloaded file to `/content/stable-diffusion-webui/embeddings`
+`#embedding`, `#embeddings`, `#embed`, or `#embeds` will put the downloaded file to */content/stable-diffusion-webui/embeddings*
 
-`#vae` or `#vaes` will put the downloaded file to `/content/stable-diffusion-webui/models/VAE`
+`#vae` or `#vaes` will put the downloaded file to */content/stable-diffusion-webui/models/VAE*
 
-`#hypernetwork`, `#hypernetworks`, `#hypernet`, `#hypernets`, `#hynet`, or `#hynets` will put the downloaded file to `/content/stable-diffusion-webui/models/hypernetworks`
+`#hypernetwork`, `#hypernetworks`, `#hypernet`, `#hypernets`, `#hynet`, or `#hynets` will put the downloaded file to */content/stable-diffusion-webui/models/hypernetworks*
 
-`#lora` or `#loras` will put the downloaded file to `/content/stable-diffusion-webui/models/Lora`
+`#lora` or `#loras` will put the downloaded file to */content/stable-diffusion-webui/models/Lora*
 
-`#addnetlora`, `#loraaddnet`, `#additionalnetworks`, or `#addnet` will put the downloaded file to `/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora`
+`#addnetlora`, `#loraaddnet`, `#additionalnetworks`, or `#addnet` will put the downloaded file to */content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora*
 
 ### How to get the direct links
 
@@ -123,18 +123,6 @@ See [here]()
 So there's three supported method: `gdown`, `wget`, and `curl`. Use whatever, really. The difference between them are actually very little. Myself love using gdown since the output is cleaner than the others.
 
 <!-- 
-### Built With
-
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -202,7 +190,7 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
 - [ ] Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.6, which doesn't support progress bar.)
-- [ ] Supports Winddows local installation
+- [ ] Supports Windows local installation
 - [ ] Support customizable hashtag from the UI
 - [ ] aria2 for huggingface download method
 
