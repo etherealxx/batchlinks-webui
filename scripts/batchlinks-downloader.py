@@ -4,6 +4,7 @@ from time import sleep
 import gradio as gr
 from modules import script_callbacks #,scripts
 from modules.paths import script_path
+from modules.shared import cmd_opts #check for gradio queue
 import urllib.request, subprocess, contextlib #these handle mega.nz
 import requests #this handle civit
 from tqdm import tqdm
@@ -205,11 +206,17 @@ def run(command, choosedowner):
     newfilesdict = dict()
     currentfolder = modelpath
     totrack = os.listdir(currentfolder)
+    usemega = False
     global currentcondition
     currentcondition = 'Extracting links...'
     links = extract_links(command)
-    currentcondition = 'Installing Mega...'
-    installmega()
+    for item in links:
+        if item.startswith('https://mega.nz'):
+            usemega = True
+            break
+    if usemega == True:
+        currentcondition = 'Installing Mega...'
+        installmega()
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     tocompare, totrack = [], []
@@ -388,8 +395,9 @@ def on_ui_tabs():
           with gr.Row():
             with gr.Box():
                 #command = gr.Textbox(label="Links", placeholder="type here", lines=5)
-                logging = gr.Radio(["Turn On Logging"], show_label=False)
-                logging.change(debug, outputs=debug_txt, every=1)
+                if cmd_opts.gradio_queue:
+                    logging = gr.Radio(["Turn On Logging"], show_label=False)
+                    logging.change(debug, outputs=debug_txt, every=1)
                 out_text = gr.Textbox(label="Output")
                 choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface download method (ignore if you don't understand)")
 
