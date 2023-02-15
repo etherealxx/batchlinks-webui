@@ -339,7 +339,7 @@ def uploaded(textpath):
 #         count +=1
 #         sleep(1)
 count = 0
-def debug():
+def keeplog():
     # global count
     # count +=1
     # return 'time spent: ' + str(count)
@@ -379,7 +379,13 @@ def on_ui_tabs():
             """)
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
-          debug_txt = gr.Textbox(label="Log", interactive=False)
+          try:
+            if cmd_opts.gradio_queue:
+                logbox = gr.Textbox(label="Log", interactive=False)
+            else:
+                logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
+          except AttributeError:
+            pass
           ##this giant mess is because i know nothing about gradio
           #with gr.Row():
             #with gr.Column(scale=1):
@@ -398,7 +404,7 @@ def on_ui_tabs():
                 try:
                   if cmd_opts.gradio_queue:
                       logging = gr.Radio(["Turn On Logging"], show_label=False)
-                      logging.change(debug, outputs=debug_txt, every=1)
+                      logging.change(keeplog, outputs=logbox, every=1)
                   else:
                     print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging on the extension")
                 except AttributeError:

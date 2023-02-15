@@ -53,19 +53,17 @@ Copy this line into your colab installation cell. Or into a new cell if you alre
 !git clone https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
 ```
 
+<!--
 or, if your colab use the newer version of webui (gradio version above 3.16.0) you can use this instead (it adds a little progress bar)
 
 ```
 !git clone -b gradio-v3-16-2 https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
 ```
+-->
 
 **Keep in mind that this extension wont work on your local Windows installation!** (atleast for now, this is just for colab).
 
 ## About
-
-<!--
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
--->
 
 This extension will streamline your downloads on your [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui) colab session. Paste the links you need to download (or you can upload a txt file containing the links), use the hashstag syntax to choose the download location (see below), and hit the `Download All` button to download them!
 
@@ -138,10 +136,15 @@ So there's three supported method: `gdown`, `wget`, and `curl`. Use whatever, re
 
 -->
 
+## Logging
+
+If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), or webui forks that supports `--gradio-queue` args on launch.py, use it and you will be able to enable logging by pressing the `Turn On Logging` radio button. Logging will tell you what are you actually downloading right now on the webui.<br/>
+<img src="images/logging.jpg" alt="Log" height="50"><br/>
+
 ## Roadmap
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
-- [ ] Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.6, which doesn't support progress bar.)
+- [ ] Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.9, which doesn't support progress bar.)
 - [ ] Supports Windows local installation
 - [ ] Support customizable hashtag from the UI
 - [ ] aria2 for huggingface download method
@@ -152,6 +155,7 @@ So there's three supported method: `gdown`, `wget`, and `curl`. Use whatever, re
 
 - File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.
 - Progress bar (the yellow bar) doesn't progress as expected (v3-16-2 branch)
+- The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)
 
 <!-- CONTRIBUTING -->
 
