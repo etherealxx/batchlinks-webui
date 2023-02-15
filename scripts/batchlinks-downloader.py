@@ -4,6 +4,7 @@ from time import sleep
 import gradio as gr
 from modules import script_callbacks #,scripts
 from modules.paths import script_path
+from modules.shared import cmd_opts #check for gradio queue
 import urllib.request, subprocess, contextlib #these handle mega.nz
 import requests #this handle civit
 from tqdm import tqdm
@@ -30,6 +31,8 @@ newlines = ['\n', '\r\n', '\r']
 currentlink = ''
 currentfolder = modelpath
 finalwrite = []
+currentcondition = ''
+logging = False
 
 #these code below handle mega.nz
 def unbuffered(proc, stream='stdout'):
@@ -203,8 +206,17 @@ def run(command, choosedowner):
     newfilesdict = dict()
     currentfolder = modelpath
     totrack = os.listdir(currentfolder)
+    usemega = False
+    global currentcondition
+    currentcondition = 'Extracting links...'
     links = extract_links(command)
-    installmega()
+    for item in links:
+        if item.startswith('https://mega.nz'):
+            usemega = True
+            break
+    if usemega == True:
+        currentcondition = 'Installing Mega...'
+        installmega()
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     tocompare, totrack = [], []
@@ -213,6 +225,7 @@ def run(command, choosedowner):
             currentlink = listpart
             print()
             print(currentlink)
+            currentcondition = f'Downloading {currentlink}...'
             transfare(currentlink, currentfolder)
             #sleep(2)
             s = set(totrack)
@@ -225,6 +238,7 @@ def run(command, choosedowner):
             currentlink = listpart
             print()
             print(currentlink)
+            currentcondition = f'Downloading {currentlink}...'
             hfdown(currentlink, currentfolder, choosedowner)
             tocompare = os.listdir(currentfolder)
             s = set(totrack)
@@ -241,6 +255,7 @@ def run(command, choosedowner):
             currentlink = listpart
             print()
             print(currentlink)
+            currentcondition = f'Downloading {currentlink}...'
             civitdown(currentlink, currentfolder)
             tocompare = os.listdir(currentfolder)
             s = set(totrack)
@@ -272,9 +287,11 @@ def run(command, choosedowner):
                     #print(totrack)
 
     print(newfilesdict)
+    currentcondition = 'Writing output...'
     downloadedfiles = writeall(newfilesdict)
     print('[1;32mBatchLinks Downloads finished!')
     print('[0m')
+    currentcondition = 'Done!'
     return downloadedfiles
 
 def extract_links(string):
@@ -321,35 +338,91 @@ def uploaded(textpath):
 #         print('time spent: ' + str(count))
 #         count +=1
 #         sleep(1)
+count = 0
+def keeplog():
+    # global count
+    # count +=1
+    # return 'time spent: ' + str(count)
+    #if ticked:
+    global currentcondition
+    global logging
+    if logging == False:
+        currentcondition = "Logging activated."
+        logging = True
+    return currentcondition
+
+def empty():
+  return ''
 
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
-        gr.Markdown(
-        """
-        ### ⬇️ Batchlinks Downloader
-        this tool will read the textbox and download every links from top to bottom one by one<br/>
-        put your links down below. Supported link: MEGA, Huggingface<br/>
-        use hashtag to separate downloaded items based on their download location<br/>
-        valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.<br/>
-        (For colab that uses sd-webui-additional-networks, use `#addnetlora`)<br/>
-        use double hashtag after links for comment
-        """)
+        with gr.Row():
+          with gr.Column(scale=2):
+            gr.Markdown(
+            """
+            ### ⬇️ Batchlinks Downloader
+            This tool will read the textbox and download every links from top to bottom one by one<br/>
+            Put your links down below. Supported link: Huggingface, CivitAI, MEGA<br/>
+            Use hashtag to separate downloaded items based on their download location<br/>
+            Valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.<br/>
+            (For colab that uses sd-webui-additional-networks, use `#addnetlora`)<br/>
+            Use double hashtag after links for comment
+            """)
+          with gr.Column(scale=1):
+            gr.Markdown(
+            """
+            [Readme Page](https://github.com/etherealxx/batchlinks-webui)<br/>
+            [Example](https://github.com/etherealxx/batchlinks-webui#example)<br/>
+            [Syntax](https://github.com/etherealxx/batchlinks-webui#syntax)<br/>
+            [Valid Hashtags](https://github.com/etherealxx/batchlinks-webui#valid-hashtags)<br/>
+            [Here's how you can get the direct links](https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md)
+            """)
         with gr.Group():
+          command = gr.Textbox(label="Links", placeholder="type here", lines=5)
+          try:
+            if cmd_opts.gradio_queue:
+                logbox = gr.Textbox(label="Log", interactive=False)
+            else:
+                logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
+          except AttributeError:
+            pass
+          ##this giant mess is because i know nothing about gradio
+          #with gr.Row():
+            #with gr.Column(scale=1):
+              #debug_check = gr.Checkbox(value=False, label="debug")
+              #btn_startlog = gr.Button("Start Logging")
+              #btn_startlog.click(debug, outputs=debug_txt, every=1)
+              #debug_check.change(debug, inputs=debug_check, outputs=debug_txt, every=1)
+              #btw_stoplog = gr.Button("Stop Logging")
+              #btw_stoplog.click(empty, outputs=debug_txt, cancels=[btn_startlog])
+            #debug_txt.blur(debug, outputs=debug_txt, every=1)
+            #with gr.Column(scale=4):
+              #dummy1 = gr.Textbox("", interactive=False, visible=False)
           with gr.Row():
             with gr.Box():
-                command = gr.Textbox(label="Links", placeholder="type here", lines=5)
+                #command = gr.Textbox(label="Links", placeholder="type here", lines=5)
+                try:
+                  if cmd_opts.gradio_queue:
+                      logging = gr.Radio(["Turn On Logging"], show_label=False)
+                      logging.change(keeplog, outputs=logbox, every=1)
+                  else:
+                    print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging on the extension")
+                except AttributeError:
+                  print("Batchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension would still runs fine.")
+                  pass
                 out_text = gr.Textbox(label="Output")
                 choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface download method (ignore if you don't understand)")
 
                 with gr.Row():
                     
-                    btn_run = gr.Button("Download All!")
-                    #btn_debug = gr.Button("Debug")
+                    btn_run = gr.Button("Download All!", variant="primary")
+                    #btn_debug = gr.Button(debug, output=debug_txt, every=1)
                     btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
-                    #btn_debug.click(debug)
+                    #btn_debug.click(debug, outputs=debug_txt, every=1)
                     # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
                     # btn_upload.upload(uploaded, btn_upload, file_output)
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
+        #batchlinks.load(debug, output=debug_txt, every=1)
     return (batchlinks, "Batchlinks Downloader", "batchlinks"),
 script_callbacks.on_ui_tabs(on_ui_tabs)
