@@ -395,9 +395,15 @@ def on_ui_tabs():
           with gr.Row():
             with gr.Box():
                 #command = gr.Textbox(label="Links", placeholder="type here", lines=5)
-                if cmd_opts.gradio_queue:
-                    logging = gr.Radio(["Turn On Logging"], show_label=False)
-                    logging.change(debug, outputs=debug_txt, every=1)
+                try:
+                  if cmd_opts.gradio_queue:
+                      logging = gr.Radio(["Turn On Logging"], show_label=False)
+                      logging.change(debug, outputs=debug_txt, every=1)
+                  else:
+                    print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging on the extension")
+                except AttributeError:
+                  print("Batchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension would still runs fine.")
+                  pass
                 out_text = gr.Textbox(label="Output")
                 choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface download method (ignore if you don't understand)")
 
