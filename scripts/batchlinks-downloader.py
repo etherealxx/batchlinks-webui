@@ -120,9 +120,6 @@ def installmega():
         #clear_output()
 #these code above handle mega.nz
 
-# def updatetext(text):
-#     return gr.update(value=text)
-
 def civitdown(url, folder):
     filename = url.rsplit('/', 1)[-1] + ".bdgh"
     pathtodown = os.path.join(folder, filename)
@@ -186,23 +183,8 @@ def hfdown(todownload, folder, downloader):
 
 def writeall(olddict):
     newdict = trackall()
-    # print(towritedict)
     global finalwrite
     finalwrite = []
-    # modelbox, vaebox, lorabox, addnetlorabox, embedbox, hynetbox = [], [], [], [], [], []
-    # for namefile, namedir in towritedict.items():
-    #     if namedir == modelpath:
-    #         modelbox.append(namefile)
-    #     elif namedir == vaepath:
-    #         vaebox.append(namefile)
-    #     elif namedir == lorapath:
-    #         lorabox.append(namefile)
-    #     elif namedir == addnetlorapath:
-    #         addnetlorabox.append(namefile)
-    #     elif namedir == embedpath:
-    #         embedbox.append(namefile)
-    #     elif namedir == hynetbox:
-    #         hynetbox.append(namefile)
 
     finalwrite.append("All done!")
     finalwrite.append("Downloaded files: ")
@@ -215,13 +197,6 @@ def writeall(olddict):
                     exec(f"finalwrite.append('⬇️' + {newtype}path + '⬇️')")
                     for item in trackcompare:
                         finalwrite.append(item)
-
-    # writepart(modelbox, modelpath)
-    # writepart(vaebox, vaepath)
-    # writepart(lorabox, lorapath)
-    # writepart(addnetlorabox, addnetlorapath)
-    # writepart(embedbox, embedpath)
-    # writepart(hynetbox, hynetbox)
 
     finaloutput = list_to_text(finalwrite)
     finalwrite = []
@@ -242,12 +217,8 @@ def trackall():
     return filesdict
 
 def run(command, choosedowner):
-    #out = getoutput(f"{command}")
-    #newfiles = []
     oldfilesdict = trackall()
-    # newfilesdict = dict()
     currentfolder = modelpath
-    # totrack = os.listdir(currentfolder)
     usemega = False
     global currentcondition
     currentcondition = 'Extracting links...'
@@ -261,7 +232,6 @@ def run(command, choosedowner):
         installmega()
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
-    # tocompare, totrack = [], []
     for listpart in links:
         if listpart.startswith("https://mega.nz"):
             currentlink = listpart
@@ -269,12 +239,6 @@ def run(command, choosedowner):
             print(currentlink)
             currentcondition = f'Downloading {currentlink}...'
             transfare(currentlink, currentfolder)
-            #sleep(2)
-            # s = set(totrack)
-            # trackcompare = [x for x in tocompare if x not in s]
-            # if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
-            #     newfilesdict[trackcompare[0]] = currentfolder
-            # totrack = tocompare
 
         if listpart.startswith("https://huggingface.co"):
             currentlink = listpart
@@ -282,29 +246,13 @@ def run(command, choosedowner):
             print(currentlink)
             currentcondition = f'Downloading {currentlink}...'
             hfdown(currentlink, currentfolder, choosedowner)
-            # tocompare = os.listdir(currentfolder)
-            # s = set(totrack)
-            # trackcompare = [x for x in tocompare if x not in s]
-            # if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
-            #     newfilesdict[trackcompare[0]] = currentfolder
-            # totrack = tocompare
-            # for filename in tocompare:
-            #     if filename not in totrack:
-            #         #newfiles.append(filename)
-            #         newfilesdict[filename] = currentfolder
 
-        if listpart.startswith("https://civitai.com"):
+        if listpart.startswith("https://civitai.com/api/download/models/"):
             currentlink = listpart
             print()
             print(currentlink)
             currentcondition = f'Downloading {currentlink}...'
             civitdown(currentlink, currentfolder)
-            # tocompare = os.listdir(currentfolder)
-            # s = set(totrack)
-            # trackcompare = [x for x in tocompare if x not in s]
-            # if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
-            #     newfilesdict[trackcompare[0]] = currentfolder
-            # totrack = tocompare
 
         else:
             for prefix in typechecker:
@@ -322,13 +270,7 @@ def run(command, choosedowner):
                     elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
                         currentfolder = addnetlorapath
                     os.makedirs(currentfolder, exist_ok=True)
-                    # print(currentfolder)
-                    # totrack = os.listdir(currentfolder)
-                    #debug
-                    #print("totrack")
-                    #print(totrack)
 
-    # print(newfilesdict)
     currentcondition = 'Writing output...'
     downloadedfiles = writeall(oldfilesdict)
     print('[1;32mBatchLinks Downloads finished!')
@@ -341,7 +283,7 @@ def extract_links(string):
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com"):
+        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/"):
             links.append(line)
         else:
             for prefix in typechecker:
@@ -362,30 +304,18 @@ def uploaded(textpath):
 
         with open(file_paths, 'r') as file:
             for line in file:
-                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com"):
+                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
-                        # print("checking" + prefix) //debug
                         if line.startswith("#" + prefix):
                             links.append(line.strip())
 
         text = list_to_text(links)
         return text    
 
-# def debug():
-#     count = 0
-#     while True:
-#         print(os.listdir(lorapath))
-#         print('time spent: ' + str(count))
-#         count +=1
-#         sleep(1)
 count = 0
 def keeplog():
-    # global count
-    # count +=1
-    # return 'time spent: ' + str(count)
-    #if ticked:
     global currentcondition
     global logging
     if logging == False:
