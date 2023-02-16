@@ -139,7 +139,7 @@ So there's three supported method: `gdown`, `wget`, and `curl`. Use whatever, re
 ## Logging
 
 If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), or webui forks that supports `--gradio-queue` args on launch.py, use it and you will be able to enable logging by pressing the `Turn On Logging` radio button. Logging will tell you what are you actually downloading right now on the webui.<br/>
-<img src="images/logging.jpg" alt="Log" height="50"><br/>
+<img src="images/logging.jpg" alt="Log" height="160"><br/>
 
 ## Roadmap
 
@@ -153,7 +153,7 @@ If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMAT
 
 ## Known Bugs
 
-- File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.
+- ~~File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.~~ Fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 - Progress bar (the yellow bar) doesn't progress as expected (v3-16-2 branch)
 - The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)
 
