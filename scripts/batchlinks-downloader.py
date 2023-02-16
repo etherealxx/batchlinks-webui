@@ -11,6 +11,30 @@ from tqdm import tqdm
 #from IPython.display import display, clear_output
 from pathlib import Path
 
+script_dir = os.path.dirname(os.path.realpath(__file__))
+extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
+#Version checking{
+version_dir = os.path.join(extension_dir, "version.txt")
+with open(version_dir, 'r') as file:
+    curverall = file.readlines()
+currentversion = curverall[0].strip()
+
+try:
+    versionurl = "https://raw.githubusercontent.com/etherealxx/batchlinks-webui/main/version.txt"
+    versionresp = requests.get(versionurl)
+    version_lines = versionresp.text.splitlines()
+    latestversion = version_lines[0].strip()
+except requests.exceptions.RequestException:
+    latestversion = '??'
+
+if latestversion != '??':
+    if currentversion == latestversion:
+        latestversiontext = ""
+    else:
+        latestversiontext = f"[Latest version: {latestversion}]"
+else:
+    latestversiontext = ""
+#}
 typechecker = [
     "embedding", "embeddings", "embed", "embeds",
     "model", "models", "checkpoint", "checkpoints",
@@ -160,34 +184,44 @@ def hfdown(todownload, folder, downloader):
         curdir = os.getcwd()
         os.rename(os.path.join(curdir, filename), os.path.join(folder, filename))
 
-def writeall(towritedict):
-    print(towritedict)
+def writeall(olddict):
+    newdict = trackall()
+    # print(towritedict)
     global finalwrite
     finalwrite = []
-    modelbox, vaebox, lorabox, addnetlorabox, embedbox, hynetbox = [], [], [], [], [], []
-    for namefile, namedir in towritedict.items():
-        if namedir == modelpath:
-            modelbox.append(namefile)
-        elif namedir == vaepath:
-            vaebox.append(namefile)
-        elif namedir == lorapath:
-            lorabox.append(namefile)
-        elif namedir == addnetlorapath:
-            addnetlorabox.append(namefile)
-        elif namedir == embedpath:
-            embedbox.append(namefile)
-        elif namedir == hynetbox:
-            hynetbox.append(namefile)
+    # modelbox, vaebox, lorabox, addnetlorabox, embedbox, hynetbox = [], [], [], [], [], []
+    # for namefile, namedir in towritedict.items():
+    #     if namedir == modelpath:
+    #         modelbox.append(namefile)
+    #     elif namedir == vaepath:
+    #         vaebox.append(namefile)
+    #     elif namedir == lorapath:
+    #         lorabox.append(namefile)
+    #     elif namedir == addnetlorapath:
+    #         addnetlorabox.append(namefile)
+    #     elif namedir == embedpath:
+    #         embedbox.append(namefile)
+    #     elif namedir == hynetbox:
+    #         hynetbox.append(namefile)
 
     finalwrite.append("All done!")
     finalwrite.append("Downloaded files: ")
+    for oldtype, olddir in olddict.items():
+        for newtype, newdir in newdict.items():
+            if newtype == oldtype:
+                s = set(olddir)
+                trackcompare = [x for x in newdir if x not in s]
+                if len(trackcompare) > 0:
+                    exec(f"finalwrite.append('⬇️' + {newtype}path + '⬇️')")
+                    for item in trackcompare:
+                        finalwrite.append(item)
 
-    writepart(modelbox, modelpath)
-    writepart(vaebox, vaepath)
-    writepart(lorabox, lorapath)
-    writepart(addnetlorabox, addnetlorapath)
-    writepart(embedbox, embedpath)
-    writepart(hynetbox, hynetbox)
+    # writepart(modelbox, modelpath)
+    # writepart(vaebox, vaepath)
+    # writepart(lorabox, lorapath)
+    # writepart(addnetlorabox, addnetlorapath)
+    # writepart(embedbox, embedpath)
+    # writepart(hynetbox, hynetbox)
 
     finaloutput = list_to_text(finalwrite)
     finalwrite = []
@@ -200,12 +234,20 @@ def writepart(box, path):
         for item in box:
             finalwrite.append(item)
 
+def trackall():
+    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
+    filesdict = dict()
+    for x in typemain:
+        exec(f"filesdict['{x}'] = os.listdir({x}path)")
+    return filesdict
+
 def run(command, choosedowner):
     #out = getoutput(f"{command}")
     #newfiles = []
-    newfilesdict = dict()
+    oldfilesdict = trackall()
+    # newfilesdict = dict()
     currentfolder = modelpath
-    totrack = os.listdir(currentfolder)
+    # totrack = os.listdir(currentfolder)
     usemega = False
     global currentcondition
     currentcondition = 'Extracting links...'
@@ -219,7 +261,7 @@ def run(command, choosedowner):
         installmega()
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
-    tocompare, totrack = [], []
+    # tocompare, totrack = [], []
     for listpart in links:
         if listpart.startswith("https://mega.nz"):
             currentlink = listpart
@@ -228,11 +270,11 @@ def run(command, choosedowner):
             currentcondition = f'Downloading {currentlink}...'
             transfare(currentlink, currentfolder)
             #sleep(2)
-            s = set(totrack)
-            trackcompare = [x for x in tocompare if x not in s]
-            if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
-                newfilesdict[trackcompare[0]] = currentfolder
-            totrack = tocompare
+            # s = set(totrack)
+            # trackcompare = [x for x in tocompare if x not in s]
+            # if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
+            #     newfilesdict[trackcompare[0]] = currentfolder
+            # totrack = tocompare
 
         if listpart.startswith("https://huggingface.co"):
             currentlink = listpart
@@ -240,12 +282,12 @@ def run(command, choosedowner):
             print(currentlink)
             currentcondition = f'Downloading {currentlink}...'
             hfdown(currentlink, currentfolder, choosedowner)
-            tocompare = os.listdir(currentfolder)
-            s = set(totrack)
-            trackcompare = [x for x in tocompare if x not in s]
-            if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
-                newfilesdict[trackcompare[0]] = currentfolder
-            totrack = tocompare
+            # tocompare = os.listdir(currentfolder)
+            # s = set(totrack)
+            # trackcompare = [x for x in tocompare if x not in s]
+            # if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
+            #     newfilesdict[trackcompare[0]] = currentfolder
+            # totrack = tocompare
             # for filename in tocompare:
             #     if filename not in totrack:
             #         #newfiles.append(filename)
@@ -257,12 +299,12 @@ def run(command, choosedowner):
             print(currentlink)
             currentcondition = f'Downloading {currentlink}...'
             civitdown(currentlink, currentfolder)
-            tocompare = os.listdir(currentfolder)
-            s = set(totrack)
-            trackcompare = [x for x in tocompare if x not in s]
-            if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
-                newfilesdict[trackcompare[0]] = currentfolder
-            totrack = tocompare
+            # tocompare = os.listdir(currentfolder)
+            # s = set(totrack)
+            # trackcompare = [x for x in tocompare if x not in s]
+            # if len(trackcompare) > 0 and 0 in range(len(trackcompare)):
+            #     newfilesdict[trackcompare[0]] = currentfolder
+            # totrack = tocompare
 
         else:
             for prefix in typechecker:
@@ -280,15 +322,15 @@ def run(command, choosedowner):
                     elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
                         currentfolder = addnetlorapath
                     os.makedirs(currentfolder, exist_ok=True)
-                    print(currentfolder)
-                    totrack = os.listdir(currentfolder)
+                    # print(currentfolder)
+                    # totrack = os.listdir(currentfolder)
                     #debug
                     #print("totrack")
                     #print(totrack)
 
-    print(newfilesdict)
+    # print(newfilesdict)
     currentcondition = 'Writing output...'
-    downloadedfiles = writeall(newfilesdict)
+    downloadedfiles = writeall(oldfilesdict)
     print('[1;32mBatchLinks Downloads finished!')
     print('[0m')
     currentcondition = 'Done!'
@@ -359,8 +401,8 @@ def on_ui_tabs():
         with gr.Row():
           with gr.Column(scale=2):
             gr.Markdown(
-            """
-            ### ⬇️ Batchlinks Downloader
+            f"""
+            ### ⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}
             This tool will read the textbox and download every links from top to bottom one by one<br/>
             Put your links down below. Supported link: Huggingface, CivitAI, MEGA<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
