@@ -11,6 +11,30 @@ from tqdm import tqdm
 #from IPython.display import display, clear_output
 from pathlib import Path
 
+script_dir = os.path.dirname(os.path.realpath(__file__))
+extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
+#Version checking{
+version_dir = os.path.join(extension_dir, "version.txt")
+with open(version_dir, 'r') as file:
+    curverall = file.readlines()
+currentversion = curverall[0].strip()
+
+try:
+    versionurl = "https://raw.githubusercontent.com/etherealxx/batchlinks-webui/main/version.txt"
+    versionresp = requests.get(versionurl)
+    version_lines = versionresp.text.splitlines()
+    latestversion = version_lines[0].strip()
+except requests.exceptions.RequestException:
+    latestversion = '??'
+
+if latestversion != '??':
+    if currentversion == latestversion:
+        latestversiontext = ""
+    else:
+        latestversiontext = f"[Latest version: {latestversion}]"
+else:
+    latestversiontext = ""
+#}
 typechecker = [
     "embedding", "embeddings", "embed", "embeds",
     "model", "models", "checkpoint", "checkpoints",
@@ -179,6 +203,9 @@ def writeall(olddict):
     #         embedbox.append(namefile)
     #     elif namedir == hynetbox:
     #         hynetbox.append(namefile)
+
+    finalwrite.append("All done!")
+    finalwrite.append("Downloaded files: ")
     for oldtype, olddir in olddict.items():
         for newtype, newdir in newdict.items():
             if newtype == oldtype:
@@ -188,10 +215,6 @@ def writeall(olddict):
                     exec(f"finalwrite.append('⬇️' + {newtype}path + '⬇️')")
                     for item in trackcompare:
                         finalwrite.append(item)
-
-
-    finalwrite.append("All done!")
-    finalwrite.append("Downloaded files: ")
 
     # writepart(modelbox, modelpath)
     # writepart(vaebox, vaepath)
@@ -212,10 +235,10 @@ def writepart(box, path):
             finalwrite.append(item)
 
 def trackall():
-    typemain = ["embed", "model", "vae", "lora", "hynet", "addnetlora"]
+    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
     filesdict = dict()
     for x in typemain:
-        exec(f"filesdict[{x}] = os.listdir({x}path)")
+        exec(f"filesdict['{x}'] = os.listdir({x}path)")
     return filesdict
 
 def run(command, choosedowner):
@@ -378,8 +401,8 @@ def on_ui_tabs():
         with gr.Row():
           with gr.Column(scale=2):
             gr.Markdown(
-            """
-            ### ⬇️ Batchlinks Downloader
+            f"""
+            ### ⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}
             This tool will read the textbox and download every links from top to bottom one by one<br/>
             Put your links down below. Supported link: Huggingface, CivitAI, MEGA<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
