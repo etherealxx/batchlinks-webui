@@ -53,6 +53,9 @@ Copy this line into your colab installation cell. Or into a new cell if you alre
 !git clone https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
 ```
 
+or, you can copy the url of this repo and install it via webui and restart the UI.<br/>
+<img src="images/ext_installer.jpg" alt="Logo" height="300"><br/>
+(If 'gradio no interface is running' or 'bad gateway' shows up when restarting the UI, that means you need to restart the cell anyway 😅)
 <!--
 or, if your colab use the newer version of webui (gradio version above 3.16.0) you can use this instead (it adds a little progress bar)
 
@@ -136,10 +139,14 @@ So there's three supported method: `gdown`, `wget`, and `curl`. Use whatever, re
 
 -->
 
-## Logging
+### Logging
 
 If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), or webui forks that supports `--gradio-queue` args on launch.py, use it and you will be able to enable logging by pressing the `Turn On Logging` radio button. Logging will tell you what are you actually downloading right now on the webui.<br/>
 <img src="images/logging.jpg" alt="Log" height="160"><br/>
+
+### Notification
+
+If there's `notification.mp3` on your webui installation folder (the one who plays when image generation is complete), this extension will also use that sound file to notify completed batch download.
 
 ## Roadmap
 
@@ -149,13 +156,14 @@ If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMAT
 - [ ] Support customizable hashtag from the UI
 - [ ] aria2 for huggingface download method
 - [ ] Using threading/subprocess instead of os.system to download files
-- [ ] completed download will use the webui's notification.mp3
+- [x] completed download will use the webui's notification.mp3
 
 ## Known Bugs
 
 - ~~File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.~~ Fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 - Progress bar (the yellow bar) doesn't progress as expected (v3-16-2 branch)
 - The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)
+- Sometimes notification sound doesn't play when downloading same file twice in a row
 
 <!-- CONTRIBUTING -->
 
