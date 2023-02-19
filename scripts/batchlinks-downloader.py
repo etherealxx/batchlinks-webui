@@ -11,12 +11,13 @@ from tqdm import tqdm
 #from IPython.display import display, clear_output
 from pathlib import Path
 import inspect
+import platform
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
 #Version checking{
 version_dir = os.path.join(extension_dir, "version.txt")
-with open(version_dir, 'r') as file:
+with open(version_dir, 'r', encoding='utf-8') as file:
     curverall = file.readlines()
 currentversion = curverall[0].strip()
 
@@ -52,6 +53,12 @@ lorapath = os.path.join(script_path, "models/Lora")
 addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
 hynetpath = os.path.join(script_path, "models/hypernetworks")
 
+if platform.system() == "Windows":
+    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
+    for x in typemain:
+        exec(f"{x}path = {x}path.replace('/', '\\\\')")
+        #exec(f"print({x}path)")
+
 newlines = ['\n', '\r\n', '\r']
 currentlink = ''
 currentfolder = modelpath
@@ -79,21 +86,24 @@ def unbuffered(proc, stream='stdout'):
             yield out
 
 def transfare(todownload, folder):
-    import codecs
-    decoder = codecs.getincrementaldecoder("UTF-8")()
-    cmd = ["mega-get", todownload, folder]
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-    )
-    for line in unbuffered(proc):
-      if not line.startswith("Download"):
-        print(f"\r{line}", end="")
-      else:
-        print(f"\n{line}")
-
+    #import codecs
+    #decoder = codecs.getincrementaldecoder("UTF-8")()
+    if platform.system() == "Windows":
+        localappdata = os.environ['LOCALAPPDATA']
+        os.system(f"{localappdata}\\MEGAcmd\\mega-get.bat {todownload} {folder}")
+    else:
+        cmd = ["mega-get", todownload, folder]
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+        for line in unbuffered(proc):
+            if not line.startswith("Download"):
+                print(f"\r{line}", end="")
+            else:
+                print(f"\n{line}")
 
 def installmega():
     HOME = os.path.expanduser("~")
@@ -116,6 +126,19 @@ def installmega():
         ocr.runSh('sudo apt-get -y install libmms0 libc-ares2 libc6 libcrypto++6 libgcc1 libmediainfo0v5 libpcre3 libpcrecpp0v5 libssl1.1 libstdc++6 libzen0v5 zlib1g apt-transport-https')
         ocr.runSh('sudo curl -sL -o /var/cache/apt/archives/MEGAcmd.deb https://mega.nz/linux/MEGAsync/Debian_9.0/amd64/megacmd-Debian_9.0_amd64.deb', output=True)
         ocr.runSh('sudo dpkg -i /var/cache/apt/archives/MEGAcmd.deb', output=True)
+        print('[1;32mMEGA is installed.')
+        print('[0m')
+
+def installmegawin():
+    userprofile = os.environ['USERPROFILE']
+    localappdata = os.environ['LOCALAPPDATA']
+    if not os.path.exists(f"{localappdata}\\MEGAcmd\\mega-get.bat"):
+        print('[1;32mInstalling MEGA ...')
+        print('[0m')
+        os.system(f"curl -o {userprofile}\\Downloads\\MEGAcmdSetup64.exe https://mega.nz/MEGAcmdSetup64.exe")
+        sleep(1)
+        os.system(f"{userprofile}\\Downloads\\MEGAcmdSetup64.exe /S")
+        sleep(4)
         print('[1;32mMEGA is installed.')
         print('[0m')
         #clear_output()
@@ -173,14 +196,26 @@ def civitdown(url, folder):
 
 def hfdown(todownload, folder, downloader):
     filename = todownload.rsplit('/', 1)[-1]
-    if downloader=='gdown':
-        os.system(f"gdown {todownload} -O " + os.path.join(folder, filename))
-    elif downloader=='wget':
-        os.system(f"wget {todownload} -P {folder}")
-    elif downloader=='curl':
-        os.system(f"curl -Lo {filename} {todownload}")
-        curdir = os.getcwd()
-        os.rename(os.path.join(curdir, filename), os.path.join(folder, filename))
+    filepath = os.path.join(folder, filename)
+    if platform.system() == "Windows":
+        if downloader=='gdown':
+            import gdown
+            gdown.download(todownload, filepath, quiet=False)
+        elif downloader=='wget':
+            #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
+            import wget
+            wget.download(todownload, filepath)
+        elif downloader=='curl':
+            os.system(f"curl -Lo \"{filepath}\" {todownload}")
+    else:
+        if downloader=='gdown':
+            os.system(f"gdown {todownload} -O {filepath}")
+        elif downloader=='wget':
+            os.system(f"wget {todownload} -P {folder}")
+        elif downloader=='curl':
+            os.system(f"curl -Lo {filename} {todownload}")
+            curdir = os.getcwd()
+            os.rename(os.path.join(curdir, filename), filepath)
 
 def writeall(olddict):
     newdict = trackall()
@@ -231,7 +266,10 @@ def run(command, choosedowner):
             break
     if usemega == True:
         currentcondition = 'Installing Mega...'
-        installmega()
+        if platform.system() == "Windows":
+            installmegawin()
+        else:
+            installmega()
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     for listpart in links:
@@ -275,6 +313,7 @@ def run(command, choosedowner):
 
     currentcondition = 'Writing output...'
     downloadedfiles = writeall(oldfilesdict)
+    print()
     print('[1;32mBatchLinks Downloads finished!')
     print('[0m')
     currentcondition = 'Done!'
