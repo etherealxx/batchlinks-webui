@@ -10,8 +10,9 @@ import requests #this handle civit
 from tqdm import tqdm
 #from IPython.display import display, clear_output
 from pathlib import Path
+import inspect
 
-script_dir = os.path.dirname(os.path.realpath(__file__))
+script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
 #Version checking{
 version_dir = os.path.join(extension_dir, "version.txt")
@@ -213,6 +214,7 @@ def trackall():
     typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
     filesdict = dict()
     for x in typemain:
+        exec(f"os.makedirs({x}path, exist_ok=True)")
         exec(f"filesdict['{x}'] = os.listdir({x}path)")
     return filesdict
 

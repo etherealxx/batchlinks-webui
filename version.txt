@@ -1,4 +1,4 @@
-v1.1.2
+v1.1.3
 (^current version^)
 
 commit "alpha" is v0.1.0 (09b1d81806e5bfc4d1783ccf644359fabc372fb7)
