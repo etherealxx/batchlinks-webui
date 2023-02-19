@@ -1,4 +1,5 @@
 <br />
+
 <div align="center">
   <a href="https://github.com/etherealxx/batchlinks-downloader">
     <img src="images/batchlinks_logo.png" alt="Logo" height="150">
@@ -11,11 +12,11 @@
     <br />
     <a href="https://github.com/etherealxx/batchlinks-downloader"><strong></strong></a>
     <br />
-    <br />
     <a href="https://github.com/etherealxx/etherportal-webui-colab/issues">Report Bug</a>
     ·
     <a href="https://github.com/etherealxx/etherportal-webui-colab/discussions/new?category=ideas">Request Feature</a>
   </p>
+
 </div>
 
 <!-- TABLE OF CONTENTS -->
@@ -55,7 +56,7 @@ Copy this line into your colab installation cell. Or into a new cell if you alre
 
 or, you can copy the url of this repo and install it via webui and restart the UI.<br/>
 <img src="images/ext_installer.jpg" alt="Logo" height="300"><br/>
-(If 'gradio no interface is running' or 'bad gateway' shows up when restarting the UI, that means you need to restart the cell anyway 😅)
+(If `gradio no interface is running` or `bad gateway` shows up when restarting the UI, that means you need to restart the cell anyway 😅)
 <!--
 or, if your colab use the newer version of webui (gradio version above 3.16.0) you can use this instead (it adds a little progress bar)
 
@@ -64,7 +65,7 @@ or, if your colab use the newer version of webui (gradio version above 3.16.0) y
 ```
 -->
 
-**Keep in mind that this extension wont work on your local Windows installation!** (atleast for now, this is just for colab).
+While it's not recommended to use this extension on your local installation, you can use this extension on Windows. [More here](https://github.com/etherealxx/batchlinks-webui#local-installation-support)
 
 ## About
 
@@ -148,11 +149,17 @@ If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMAT
 
 If there's `notification.mp3` on your webui installation folder (the one who plays when image generation is complete), this extension will also use that sound file to notify completed batch download.
 
+### Local Installation Support
+
+This extension is tested to work on Windows 11. Maybe works on Debian-based linux (but you better inspect the source code first).
+On Windows, this extension will install [MEGAcmd](https://github.com/meganz/MEGAcmd) for MEGA file download.
+MacOS is not supported.
+
 ## Roadmap
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
 - [ ] Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.9, which doesn't support progress bar.)
-- [ ] Supports Windows local installation
+- [x] Supports Windows local installation
 - [ ] Support customizable hashtag from the UI
 - [ ] aria2 for huggingface download method
 - [ ] Using threading/subprocess instead of os.system to download files
@@ -164,6 +171,7 @@ If there's `notification.mp3` on your webui installation folder (the one who pla
 - Progress bar (the yellow bar) doesn't progress as expected (v3-16-2 branch)
 - ~~The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)~~ Seems like fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 - Sometimes notification sound doesn't play when downloading same file twice in a row
+- Windows: The delay between file is downloaded and the output shows is pretty long, and even sometimes the notification comes at the wrong time.
 
 <!-- CONTRIBUTING -->
 
@@ -171,8 +179,8 @@ If there's `notification.mp3` on your webui installation folder (the one who pla
 
 I just learned python few months ago, by just looking at other peoples project and sometimes asking ChatGPT. Gradio is new for me. I literally just learn it in one day to make this extension, so expect some bugs.
 
-However, if you have a suggestion or code-fixing that would make this better, please fork the repo and create a pull request. Don't forget to explain the solution you provided on the commit comment, so we can learn together!😁
-Don't forget to give the project a star! Thanks again!
+However, if you have a suggestion or code-fixing that would make this better, please fork the repo and create a pull request. Don't forget to explain the solution you provided on the commit comment, so we can learn together!😁<br/>
+A star on this project would be nice! Thanks again!
 
 <!-- 
 1. Fork the Project
@@ -196,3 +204,4 @@ My Youtube - [MJ Devlog](youtube.com/@mjdevlog)
 * [Camenduru's Webui Huggingface](https://github.com/camenduru/stable-diffusion-webui-huggingface) - I use his extension as my base (my gradio skill sucks T.T)
 * [SD Civitai Browser](https://github.com/Vetchems/sd-civitai-browser) - Civit download script
 * [Mega-to-Google-Drive](https://github.com/menukaonline/Mega-to-Google-Drive) - MEGA download script
+* [MEGAcmd](https://github.com/meganz/MEGAcmd)

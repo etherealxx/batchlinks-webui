@@ -17,7 +17,7 @@ script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
 #Version checking{
 version_dir = os.path.join(extension_dir, "version.txt")
-with open(version_dir, 'r') as file:
+with open(version_dir, 'r', encoding='utf-8') as file:
     curverall = file.readlines()
 currentversion = curverall[0].strip()
 
@@ -56,7 +56,7 @@ hynetpath = os.path.join(script_path, "models/hypernetworks")
 if platform.system() == "Windows":
     typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
     for x in typemain:
-        exec(f"{x}path = {x}path.replace('/', '\\')")
+        exec(f"{x}path = {x}path.replace('/', '\\\\')")
         #exec(f"print({x}path)")
 
 newlines = ['\n', '\r\n', '\r']
@@ -86,24 +86,24 @@ def unbuffered(proc, stream='stdout'):
             yield out
 
 def transfare(todownload, folder):
-    import codecs
-    decoder = codecs.getincrementaldecoder("UTF-8")()
+    #import codecs
+    #decoder = codecs.getincrementaldecoder("UTF-8")()
     if platform.system() == "Windows":
         localappdata = os.environ['LOCALAPPDATA']
-        cmd = [f"{localappdata}\\MEGAcmd\\mega-get.bat ", todownload, folder]
+        os.system(f"{localappdata}\\MEGAcmd\\mega-get.bat {todownload} {folder}")
     else:
         cmd = ["mega-get", todownload, folder]
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-    )
-    for line in unbuffered(proc):
-      if not line.startswith("Download"):
-        print(f"\r{line}", end="")
-      else:
-        print(f"\n{line}")
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+        for line in unbuffered(proc):
+            if not line.startswith("Download"):
+                print(f"\r{line}", end="")
+            else:
+                print(f"\n{line}")
 
 def installmega():
     HOME = os.path.expanduser("~")
@@ -132,9 +132,15 @@ def installmega():
 def installmegawin():
     userprofile = os.environ['USERPROFILE']
     localappdata = os.environ['LOCALAPPDATA']
-    if os.path.exist(f"{localappdata}\\MEGAcmd\\mega-get.bat"):
+    if not os.path.exists(f"{localappdata}\\MEGAcmd\\mega-get.bat"):
+        print('[1;32mInstalling MEGA ...')
+        print('[0m')
         os.system(f"curl -o {userprofile}\\Downloads\\MEGAcmdSetup64.exe https://mega.nz/MEGAcmdSetup64.exe")
-        sleep(5)
+        sleep(1)
+        os.system(f"{userprofile}\\Downloads\\MEGAcmdSetup64.exe /S")
+        sleep(4)
+        print('[1;32mMEGA is installed.')
+        print('[0m')
         #clear_output()
 #these code above handle mega.nz
 
@@ -307,6 +313,7 @@ def run(command, choosedowner):
 
     currentcondition = 'Writing output...'
     downloadedfiles = writeall(oldfilesdict)
+    print()
     print('[1;32mBatchLinks Downloads finished!')
     print('[0m')
     currentcondition = 'Done!'
