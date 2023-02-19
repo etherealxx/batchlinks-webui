@@ -11,6 +11,7 @@ from tqdm import tqdm
 #from IPython.display import display, clear_output
 from pathlib import Path
 import inspect
+import platform
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
@@ -52,6 +53,12 @@ lorapath = os.path.join(script_path, "models/Lora")
 addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
 hynetpath = os.path.join(script_path, "models/hypernetworks")
 
+if platform.system() == "Windows":
+    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
+    for x in typemain:
+        exec(f"{x}path = {x}path.replace('/', '\\')")
+        #exec(f"print({x}path)")
+
 newlines = ['\n', '\r\n', '\r']
 currentlink = ''
 currentfolder = modelpath
@@ -81,7 +88,11 @@ def unbuffered(proc, stream='stdout'):
 def transfare(todownload, folder):
     import codecs
     decoder = codecs.getincrementaldecoder("UTF-8")()
-    cmd = ["mega-get", todownload, folder]
+    if platform.system() == "Windows":
+        localappdata = os.environ['LOCALAPPDATA']
+        cmd = [f"{localappdata}\\MEGAcmd\\mega-get.bat ", todownload, folder]
+    else:
+        cmd = ["mega-get", todownload, folder]
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
@@ -93,7 +104,6 @@ def transfare(todownload, folder):
         print(f"\r{line}", end="")
       else:
         print(f"\n{line}")
-
 
 def installmega():
     HOME = os.path.expanduser("~")
@@ -118,6 +128,13 @@ def installmega():
         ocr.runSh('sudo dpkg -i /var/cache/apt/archives/MEGAcmd.deb', output=True)
         print('[1;32mMEGA is installed.')
         print('[0m')
+
+def installmegawin():
+    userprofile = os.environ['USERPROFILE']
+    localappdata = os.environ['LOCALAPPDATA']
+    if os.path.exist(f"{localappdata}\\MEGAcmd\\mega-get.bat"):
+        os.system(f"curl -o {userprofile}\\Downloads\\MEGAcmdSetup64.exe https://mega.nz/MEGAcmdSetup64.exe")
+        sleep(5)
         #clear_output()
 #these code above handle mega.nz
 
@@ -173,14 +190,26 @@ def civitdown(url, folder):
 
 def hfdown(todownload, folder, downloader):
     filename = todownload.rsplit('/', 1)[-1]
-    if downloader=='gdown':
-        os.system(f"gdown {todownload} -O " + os.path.join(folder, filename))
-    elif downloader=='wget':
-        os.system(f"wget {todownload} -P {folder}")
-    elif downloader=='curl':
-        os.system(f"curl -Lo {filename} {todownload}")
-        curdir = os.getcwd()
-        os.rename(os.path.join(curdir, filename), os.path.join(folder, filename))
+    filepath = os.path.join(folder, filename)
+    if platform.system() == "Windows":
+        if downloader=='gdown':
+            import gdown
+            gdown.download(todownload, filepath, quiet=False)
+        elif downloader=='wget':
+            #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
+            import wget
+            wget.download(todownload, filepath)
+        elif downloader=='curl':
+            os.system(f"curl -Lo \"{filepath}\" {todownload}")
+    else:
+        if downloader=='gdown':
+            os.system(f"gdown {todownload} -O {filepath}")
+        elif downloader=='wget':
+            os.system(f"wget {todownload} -P {folder}")
+        elif downloader=='curl':
+            os.system(f"curl -Lo {filename} {todownload}")
+            curdir = os.getcwd()
+            os.rename(os.path.join(curdir, filename), filepath)
 
 def writeall(olddict):
     newdict = trackall()
@@ -231,7 +260,10 @@ def run(command, choosedowner):
             break
     if usemega == True:
         currentcondition = 'Installing Mega...'
-        installmega()
+        if platform.system() == "Windows":
+            installmegawin()
+        else:
+            installmega()
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     for listpart in links:
