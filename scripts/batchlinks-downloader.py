@@ -12,7 +12,6 @@ from tqdm import tqdm
 from pathlib import Path
 import inspect
 import platform
-import sys
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
@@ -38,6 +37,17 @@ if latestversion != '??':
 else:
     latestversiontext = ""
 #}
+
+try:
+    global gradiostate
+    if cmd_opts.gradio_queue:
+        gradiostate = True
+    else:
+        gradiostate = False
+except AttributeError:
+    gradiostate = False
+    pass
+
 typechecker = [
     "embedding", "embeddings", "embed", "embeds",
     "model", "models", "checkpoint", "checkpoints",
@@ -65,6 +75,7 @@ currentlink = ''
 currentfolder = modelpath
 finalwrite = []
 currentcondition = ''
+currentsuboutput = ''
 logging = False
 
 def runwithsubprocess(rawcommand):
@@ -92,24 +103,52 @@ def runwithsubprocess(rawcommand):
 
         # Return the list of arguments as a command and arguments list
         return new_command_parts
-    
+
+    currentprocess = ''
+
     commandtorun = construct_command(rawcommand)
+    if gradiostate == False and not rawcommand.startswith("aria"):
+        subprocess.run(commandtorun, stderr=subprocess.STDOUT, universal_newlines=True)
+    else:
+        process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
 
-    process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ariacomplete = False
+        global currentsuboutput
+        while True:
+            # Read the output from the process
+            nextline = process.stdout.readline()
+            if nextline == '' and process.poll() is not None:
+                break
+            # Check if the line contains progress information
+            if "%" in nextline.strip() or rawcommand.startswith("curl"):#"INFO" in nextline.strip() or "NOTICE" in nextline.strip():
+            # if loadingprogress == False:
+                #     print('[1;32mThe progress bar is on the logging box in the UI')
+                #     print('[0m')
+                # loadingprogress = True
+                #print(nextline, end='\r')
+                # sys.stdout.write('\r' + nextline)
+                # sys.stdout.flush()
+                stripnext = nextline.strip()
+                print("\r", end="")
+                print(f"\r{stripnext}", end='')
+            elif rawcommand.startswith("aria2"):
+                if "Download complete" in nextline.strip():
+                    ariacomplete = True
+                    print(nextline, end='')
+                else:
+                    if ariacomplete == False:
+                        stripnext = nextline.strip()
+                        print("\r", end="")
+                        print(f"\r{stripnext}", end='')
+                    else:
+                        print(nextline, end='')
+            else:
+                # loadingprogress = False
+                print(nextline, end='')
+            currentsuboutput = nextline
 
-    # Create an empty variable to store the output
-    global currentcondition
-    currentcondition = ""
-
-    for line in process.stdout:
-        # Print the output to the terminal and flush the buffer if it contains a newline character
-        sys.stdout.write(line)
-        if "\n" in line:
-            sys.stdout.flush()
-            # Add the output to the variable
-            currentcondition = line
-
-    process.wait()
+        process.wait()
+        currentsuboutput = ''
 
 #these code below handle mega.nz
 def unbuffered(proc, stream='stdout'):
@@ -144,11 +183,14 @@ def transfare(todownload, folder):
             stderr=subprocess.STDOUT,
             universal_newlines=True,
         )
+        global currentsuboutput
         for line in unbuffered(proc):
             if not line.startswith("Download"):
+                currentsuboutput = line
                 print(f"\r{line}", end="")
             else:
                 print(f"\n{line}")
+        currentsuboutput = ''
 
 def installmega():
     HOME = os.path.expanduser("~")
@@ -201,7 +243,8 @@ def civitdown(url, folder):
         headers = {}
 
         progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {filename}. (will be renamed correctly after downloading)", initial=downloaded_size, leave=False)
-
+        global currentsuboutput
+                
         with open(pathtodown, "ab") as f:
             while True:
                 try:
@@ -215,8 +258,10 @@ def civitdown(url, folder):
                         if chunk:
                             f.write(chunk)
                             progress.update(len(chunk))
+                            currentsuboutput = str(progress)
 
                     downloaded_size = os.path.getsize(pathtodown)
+                    currentsuboutput = ''
                     break
                 except ConnectionError as e:
                     max_retries -= 1
@@ -254,13 +299,27 @@ def hfdown(todownload, folder, downloader):
             runwithsubprocess(f"curl -Lo \"{filepath}\" {todownload}")
     else:
         if downloader=='gdown':
-            runwithsubprocess(f"gdown {todownload} -O {filepath}")
+            runwithsubprocess(f"gdown {todownload} -O \"{filepath}\"")
         elif downloader=='wget':
-            runwithsubprocess(f"wget {todownload} -P {folder}")
+            runwithsubprocess(f"wget {todownload} -P \"{folder}\"")
         elif downloader=='curl':
             runwithsubprocess(f"curl -Lo {filename} {todownload}")
             curdir = os.getcwd()
             os.rename(os.path.join(curdir, filename), filepath)
+        elif downloader=='aria2':
+            ariachecker = "dpkg-query -W -f='${Status}' aria2"
+            checkaria = subprocess.getoutput(ariachecker)
+            if "no packages found matching aria2" in checkaria:
+                global currentcondition
+                tempcondition = currentcondition
+                currentcondition = "Installing aria2..."
+                print('[1;32mInstalling aria2 ...')
+                print('[0m')
+                runwithsubprocess(f"apt-get -y install -qq aria2")
+                print('[1;32maria2 installed!')
+                print('[0m')
+                currentcondition = tempcondition
+            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload} -d \"{folder}\" -o {filename}")
 
 def writeall(olddict):
     newdict = trackall()
@@ -325,7 +384,7 @@ def run(command, choosedowner):
             currentcondition = f'Downloading {currentlink}...'
             transfare(currentlink, currentfolder)
 
-        if listpart.startswith("https://huggingface.co"):
+        if listpart.startswith("https://huggingface.co") or listpart.startswith("https://cdn.discordapp.com/attachments"):
             currentlink = listpart
             print()
             print(currentlink)
@@ -369,7 +428,7 @@ def extract_links(string):
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/"):
+        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments"):
             links.append(line)
         else:
             for prefix in typechecker:
@@ -390,7 +449,7 @@ def uploaded(textpath):
 
         with open(file_paths, 'r') as file:
             for line in file:
-                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/"):
+                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
@@ -403,11 +462,15 @@ def uploaded(textpath):
 count = 0
 def keeplog():
     global currentcondition
+    global currentsuboutput
     global logging
     if logging == False:
         currentcondition = "Logging activated."
         logging = True
-    return currentcondition
+    if currentsuboutput == '':
+        return currentcondition
+    else:
+        return f"{currentcondition}\n{currentsuboutput}"
 
 def empty():
   return ''
@@ -469,7 +532,11 @@ def on_ui_tabs():
                   print("Batchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension would still runs fine.")
                   pass
                 out_text = gr.Textbox(label="Output")
-                choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface download method (ignore if you don't understand)")
+
+                if platform.system() == "Windows":
+                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
+                else:
+                    choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
 
                 with gr.Row():
                     

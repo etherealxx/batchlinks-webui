@@ -106,7 +106,7 @@ When the download is complete, the downloaded file will be listed<br/>
 
 Additional note: If you use some colab that doesn't support native LoRA on webui (that means, using `sd-webui-additional-networks` extension in order to work), like [camenduru](https://github.com/camenduru/stable-diffusion-webui-colab)'s colab, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
 
-**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), and [CivitAI](https://civitai.com/). Every links other than that will be ignored.  Keep in mind the only supported links are direct download links (see below). For Huggingface, there will be three different method of downloading offered (see below). For MEGA, it will use `mega-cmd` to download. For CivitAI, it will use `requests`.
+**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), [CivitAI](https://civitai.com/), and Discord attachments. Every links other than that will be ignored.  Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface and Discord attachments, there will be three different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For CivitAI, it will use `requests`.
 
 **Double Hashtag** - Double hashtag means comment. You can put double hashtag in the same line of the link and it will be ignored (keep in mind to put the link first then the double hashtag)
 
@@ -132,7 +132,7 @@ See [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtoge
 
 ### Huggingface's download method
 
-So there's three supported method: `gdown`, `wget`, and `curl`. Use whatever, really. The difference between them are actually very little. Myself love using gdown since the output is cleaner than the others.
+So there's four supported method: `gdown`, `wget`, `curl` and `aria2`. Use whatever, really. The difference between them are actually little. Myself love using gdown since the output is cleaner than the others.
 
 <!-- 
 
@@ -161,8 +161,8 @@ MacOS is not supported.
 - [ ] Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.9, which doesn't support progress bar.)
 - [x] Supports Windows local installation
 - [ ] Support customizable hashtag from the UI
-- [ ] aria2 for huggingface download method
-- [ ] Using threading/subprocess instead of os.system to download files
+- [x] aria2 for huggingface download method
+- [x] Using threading/subprocess instead of os.system to download files
 - [x] completed download will use the webui's notification.mp3
 
 ## Known Bugs
@@ -172,6 +172,7 @@ MacOS is not supported.
 - ~~The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)~~ Seems like fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 - Sometimes notification sound doesn't play when downloading same file twice in a row
 - Windows: The delay between file is downloaded and the output shows is pretty long, and even sometimes the notification comes at the wrong time.
+- Links that has bracket in it needs to be 'escaped' (For example, `Baka-DiffusionV1(Fp16).safetensors` must be typed `Baka-DiffusionV1\(Fp16\).safetensors`)
 
 <!-- CONTRIBUTING -->
 
