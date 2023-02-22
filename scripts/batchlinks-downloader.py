@@ -12,6 +12,7 @@ from tqdm import tqdm
 from pathlib import Path
 import inspect
 import platform
+import sys
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
@@ -66,6 +67,50 @@ finalwrite = []
 currentcondition = ''
 logging = False
 
+def runwithsubprocess(rawcommand):
+    def construct_command(command_string):
+        # Split the command string into a list of arguments
+        command_parts = command_string.split()
+
+        # Loop through the list of arguments and convert any quoted strings into single arguments
+        # This allows arguments with spaces to be correctly split into separate arguments
+        new_command_parts = []
+        quote_started = False
+        for part in command_parts:
+            if part.startswith('"'):
+                quote_started = True
+                new_part = part[1:]
+            elif part.endswith('"'):
+                quote_started = False
+                new_part = new_command_parts[-1] + " " + part[:-1]
+                new_command_parts[-1] = new_part
+            elif quote_started:
+                new_part = new_command_parts[-1] + " " + part
+                new_command_parts[-1] = new_part
+            else:
+                new_command_parts.append(part)
+
+        # Return the list of arguments as a command and arguments list
+        return new_command_parts
+    
+    commandtorun = construct_command(rawcommand)
+
+    process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Create an empty variable to store the output
+    global currentcondition
+    currentcondition = ""
+
+    for line in process.stdout:
+        # Print the output to the terminal and flush the buffer if it contains a newline character
+        sys.stdout.write(line)
+        if "\n" in line:
+            sys.stdout.flush()
+            # Add the output to the variable
+            currentcondition = line
+
+    process.wait()
+
 #these code below handle mega.nz
 def unbuffered(proc, stream='stdout'):
     stream = getattr(proc, stream)
@@ -90,7 +135,7 @@ def transfare(todownload, folder):
     #decoder = codecs.getincrementaldecoder("UTF-8")()
     if platform.system() == "Windows":
         localappdata = os.environ['LOCALAPPDATA']
-        os.system(f"{localappdata}\\MEGAcmd\\mega-get.bat {todownload} {folder}")
+        runwithsubprocess(f"{localappdata}\\MEGAcmd\\mega-get.bat {todownload} {folder}")
     else:
         cmd = ["mega-get", todownload, folder]
         proc = subprocess.Popen(
@@ -135,9 +180,9 @@ def installmegawin():
     if not os.path.exists(f"{localappdata}\\MEGAcmd\\mega-get.bat"):
         print('[1;32mInstalling MEGA ...')
         print('[0m')
-        os.system(f"curl -o {userprofile}\\Downloads\\MEGAcmdSetup64.exe https://mega.nz/MEGAcmdSetup64.exe")
+        runwithsubprocess(f"curl -o {userprofile}\\Downloads\\MEGAcmdSetup64.exe https://mega.nz/MEGAcmdSetup64.exe")
         sleep(1)
-        os.system(f"{userprofile}\\Downloads\\MEGAcmdSetup64.exe /S")
+        runwithsubprocess(f"{userprofile}\\Downloads\\MEGAcmdSetup64.exe /S")
         sleep(4)
         print('[1;32mMEGA is installed.')
         print('[0m')
@@ -206,14 +251,14 @@ def hfdown(todownload, folder, downloader):
             import wget
             wget.download(todownload, filepath)
         elif downloader=='curl':
-            os.system(f"curl -Lo \"{filepath}\" {todownload}")
+            runwithsubprocess(f"curl -Lo \"{filepath}\" {todownload}")
     else:
         if downloader=='gdown':
-            os.system(f"gdown {todownload} -O {filepath}")
+            runwithsubprocess(f"gdown {todownload} -O {filepath}")
         elif downloader=='wget':
-            os.system(f"wget {todownload} -P {folder}")
+            runwithsubprocess(f"wget {todownload} -P {folder}")
         elif downloader=='curl':
-            os.system(f"curl -Lo {filename} {todownload}")
+            runwithsubprocess(f"curl -Lo {filename} {todownload}")
             curdir = os.getcwd()
             os.rename(os.path.join(curdir, filename), filepath)
 
