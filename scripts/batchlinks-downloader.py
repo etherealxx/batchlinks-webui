@@ -54,7 +54,9 @@ typechecker = [
     "vae", "vaes",
     "lora", "loras",
     "hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",
-    "addnetlora", "loraaddnet", "additionalnetworks", "addnet"
+    "addnetlora", "loraaddnet", "additionalnetworks", "addnet",
+    "controlnet", "cnet",
+    "extension", "extensions", "ext"
     ]
 
 modelpath = os.path.join(script_path, "models/Stable-diffusion")
@@ -63,9 +65,11 @@ vaepath = os.path.join(script_path, "models/VAE")
 lorapath = os.path.join(script_path, "models/Lora")
 addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
 hynetpath = os.path.join(script_path, "models/hypernetworks")
+cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
+extpath = os.path.join(script_path, "extensions")
 
 if platform.system() == "Windows":
-    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
+    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora", "cnet", "ext"]
     for x in typemain:
         exec(f"{x}path = {x}path.replace('/', '\\\\')")
         #exec(f"print({x}path)")
@@ -350,7 +354,7 @@ def writepart(box, path):
             finalwrite.append(item)
 
 def trackall():
-    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
+    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora", "cnet", "ext"]
     filesdict = dict()
     for x in typemain:
         exec(f"os.makedirs({x}path, exist_ok=True)")
@@ -398,6 +402,16 @@ def run(command, choosedowner):
             currentcondition = f'Downloading {currentlink}...'
             civitdown(currentlink, currentfolder)
 
+        if listpart.startswith("https://github.com"):
+            splits = listpart.split("/")
+            currentlink = "/".join(splits[:5])
+            foldername = listpart.rsplit('/', 1)[-1]
+            folderpath = os.path.join(extpath, foldername)
+            print()
+            print(currentlink)
+            currentcondition = f'Cloning {currentlink}...'
+            runwithsubprocess(f"git clone {currentlink} {folderpath}")
+
         else:
             for prefix in typechecker:
                 if listpart.startswith("#" + prefix):
@@ -413,6 +427,8 @@ def run(command, choosedowner):
                         currentfolder = hynetpath
                     elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
                         currentfolder = addnetlorapath
+                    elif prefix in ["controlnet", "cnet"]:
+                        currentfolder = cnetpath
                     os.makedirs(currentfolder, exist_ok=True)
 
     currentcondition = 'Writing output...'
@@ -428,7 +444,7 @@ def extract_links(string):
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments"):
+        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com"):
             links.append(line)
         else:
             for prefix in typechecker:
@@ -449,7 +465,7 @@ def uploaded(textpath):
 
         with open(file_paths, 'r') as file:
             for line in file:
-                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments"):
+                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:

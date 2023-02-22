@@ -106,7 +106,7 @@ When the download is complete, the downloaded file will be listed<br/>
 
 Additional note: If you use some colab that doesn't support native LoRA on webui (that means, using `sd-webui-additional-networks` extension in order to work), like [camenduru](https://github.com/camenduru/stable-diffusion-webui-colab)'s colab, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
 
-**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), [CivitAI](https://civitai.com/), and Discord attachments. Every links other than that will be ignored.  Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface and Discord attachments, there will be three different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For CivitAI, it will use `requests`.
+**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), [CivitAI](https://civitai.com/), Discord attachments (https://cdn.discordapp.com/attachments/), and [Github](https://github.com). Every links other than that will be ignored.  Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface and Discord attachments, there will be three different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For CivitAI, it will use `requests`. For Github, currently it only supports `git clone`, useful to clone extension repo into the webui extension folder.
 
 **Double Hashtag** - Double hashtag means comment. You can put double hashtag in the same line of the link and it will be ignored (keep in mind to put the link first then the double hashtag)
 
@@ -125,6 +125,10 @@ Additional note: If you use some colab that doesn't support native LoRA on webui
 `#lora` or `#loras` will put the downloaded file to */content/stable-diffusion-webui/models/Lora*
 
 `#addnetlora`, `#loraaddnet`, `#additionalnetworks`, or `#addnet` will put the downloaded file to */content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora*
+
+`#controlnet` or `#cnet` will put the downloaded file to */content/stable-diffusion-webui/extensions/sd-webui-controlnet/models*
+
+Github links doesn't need hashtag. It will always cloned to */content/stable-diffusion-webui/extensions/(reponame)*
 
 ### How to get the direct links
 
@@ -163,7 +167,8 @@ MacOS is not supported.
 - [ ] Support customizable hashtag from the UI
 - [x] aria2 for huggingface download method
 - [x] Using threading/subprocess instead of os.system to download files
-- [x] completed download will use the webui's notification.mp3
+- [x] Completed download will use the webui's notification.mp3
+- [ ] Other download sites (s-ul.eu, github, gitgud, catbox)
 
 ## Known Bugs
 
