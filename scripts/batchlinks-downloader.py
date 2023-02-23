@@ -38,7 +38,7 @@ else:
     latestversiontext = ""
 #}
 typechecker = [
-    "embedding", "embeddings", "embed", "embeds",
+    "embedding", "embeddings", "embed", "embeds", "textualinversion"
     "model", "models", "checkpoint", "checkpoints",
     "vae", "vaes",
     "lora", "loras",
@@ -52,6 +52,7 @@ vaepath = os.path.join(script_path, "models/VAE")
 lorapath = os.path.join(script_path, "models/Lora")
 addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
 hynetpath = os.path.join(script_path, "models/hypernetworks")
+aestheticembeddingpath = os.path.join(script_path, "extensions/stable-diffusion-webui-aesthetic-gradients/aesthetic_embeddings")
 
 if platform.system() == "Windows":
     typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora"]
@@ -194,26 +195,122 @@ def civitdown(url, folder):
         else:
             print(f"Error: File download failed. Retrying...")
 
+def civitdown2_get_json(url):
+  import re
+  m = re.search(r'https://civitai.com/models/(\d+)', url)
+  model_id = m.group(1)
+
+  api_url = "https://civitai.com/api/v1/models/" + model_id
+
+  import requests
+  txt = requests.get(api_url).text
+
+  import json
+  return json.loads(txt)
+
+def civitdown2_get_save_directory(model_type, default_folder):
+  if model_type == "Checkpoint":
+    return modelpath
+  elif model_type == "Hypernetwork":
+    return hynetpath
+  elif model_type == "TextualInversion":
+    return embedpath
+  elif model_type == "AestheticGradient":
+    return aestheticembeddingpath
+  elif model_type == "VAE":
+    return vaepath
+  elif model_type == "LORA":
+    return lorapath
+  else:
+    return default_folder
+
+def download_url(url, filename, downloader):
+    from shlex import quote
+    s_url = quote(url)
+    s_filename = quote(filename)
+    if platform.system() == "Windows":
+        if downloader=='gdown':
+            import gdown
+            gdown.download(url, filename, quiet=False)
+        elif downloader=='wget':
+            import wget
+            wget.download(url, filename)
+        elif downloader=='curl':
+            os.system(f"curl -Lo {s_filename} {url}")
+    else:
+        if downloader=='gdown':
+            os.system(f"gdown {s_url} -O {s_filename}")
+        elif downloader=='wget':
+            os.system(f"wget {s_url} -o {s_filename}")
+        elif downloader=='curl':
+            os.system(f"curl -Lo {s_filename} {s_url}")
+            curdir = os.getcwd()
+            os.rename(os.path.join(curdir, filename), filename)
+
+
+def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
+  from PIL import Image
+  img = Image.open(imagejpg_save_path)
+  img_resized = img.resize((img.width // 2, img.height // 2))
+  img_resized.save(imagepng_save_path)
+  os.remove(imagejpg_save_path)
+
+
+def civitdown2(url, folder, downloader):
+  model = civitdown2_get_json(url)
+
+  save_directory = civitdown2_get_save_directory(model['type'], folder)
+
+  data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
+  data_filename = model['modelVersions'][0]['files'][0]['name']
+  image_url = model['modelVersions'][0]['images'][0]['url']
+
+  import pathlib
+  if model['type'] == "TextualInversion":
+    image_filename_jpg = pathlib.PurePath(data_filename).stem + ".preview.jpg"
+    image_filename_png = pathlib.PurePath(data_filename).stem + ".preview.png"
+  else:
+    image_filename_jpg = pathlib.PurePath(data_filename).stem + ".jpg"
+    image_filename_png = pathlib.PurePath(data_filename).stem + ".png"
+
+  data_save_path = os.path.join(save_directory, data_filename)
+  imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
+  imagepng_save_path = os.path.join(save_directory, image_filename_png)
+
+  download_url(data_url, data_save_path, downloader)
+  download_url(image_url, imagejpg_save_path, downloader)
+  civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
+  print(f"{data_save_path} successfully downloaded.")
+
+
 def hfdown(todownload, folder, downloader):
     filename = todownload.rsplit('/', 1)[-1]
     filepath = os.path.join(folder, filename)
+
+    from shlex import quote
+    s_url = quote(url)
+    s_filepath = quote(filepath)
+    s_todownload = quote(todownload)
+    s_folder = quote(folder)
+    s_filename = quote(filename)
+
     if platform.system() == "Windows":
         if downloader=='gdown':
             import gdown
             gdown.download(todownload, filepath, quiet=False)
         elif downloader=='wget':
-            #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
+            #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + s_todownload)
             import wget
             wget.download(todownload, filepath)
         elif downloader=='curl':
-            os.system(f"curl -Lo \"{filepath}\" {todownload}")
+            os.system(f"curl -Lo {s_filepath} {s_todownload}")
     else:
         if downloader=='gdown':
-            os.system(f"gdown {todownload} -O {filepath}")
+            os.system(f"gdown {s_todownload} -O {s_filepath}")
         elif downloader=='wget':
-            os.system(f"wget {todownload} -P {folder}")
+            os.system(f"wget {s_todownload} -P {s_folder}")
         elif downloader=='curl':
-            os.system(f"curl -Lo {filename} {todownload}")
+            os.system(f"curl -Lo {s_filename} {s_todownload}")
             curdir = os.getcwd()
             os.rename(os.path.join(curdir, filename), filepath)
 
@@ -294,10 +391,17 @@ def run(command, choosedowner):
             currentcondition = f'Downloading {currentlink}...'
             civitdown(currentlink, currentfolder)
 
+        if listpart.startswith("https://civitai.com/models/"):
+            currentlink = listpart
+            print()
+            print(currentlink)
+            currentcondition = f'Downloading {currentlink}...'
+            civitdown2(currentlink, currentfolder, choosedowner)
+
         else:
             for prefix in typechecker:
                 if listpart.startswith("#" + prefix):
-                    if prefix in ["embedding", "embeddings", "embed", "embeds"]:
+                    if prefix in ["embedding", "embeddings", "embed", "embeds","textualinversion"]:
                         currentfolder = embedpath
                     elif prefix in ["model", "models", "checkpoint", "checkpoints"]:
                         currentfolder = modelpath
@@ -324,7 +428,7 @@ def extract_links(string):
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/"):
+        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://civitai.com/models/"):
             links.append(line)
         else:
             for prefix in typechecker:
