@@ -12,6 +12,7 @@ from tqdm import tqdm
 from pathlib import Path
 import inspect
 import platform
+from shlex import quote
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
@@ -176,11 +177,14 @@ def unbuffered(proc, stream='stdout'):
 def transfare(todownload, folder):
     #import codecs
     #decoder = codecs.getincrementaldecoder("UTF-8")()
+    todownload_s = quote(todownload)
+    folder_s = quote(folder)
     if platform.system() == "Windows":
         localappdata = os.environ['LOCALAPPDATA']
-        runwithsubprocess(f"{localappdata}\\MEGAcmd\\mega-get.bat {todownload} {folder}")
+        megagetloc = os.path.join(quote(localappdata), "MEGAcmd", "mega-get.bat")
+        runwithsubprocess(f"{megagetloc} {todownload_s} {folder_s}")
     else:
-        cmd = ["mega-get", todownload, folder]
+        cmd = ["mega-get", todownload_s, folder_s]
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -223,12 +227,14 @@ def installmega():
 def installmegawin():
     userprofile = os.environ['USERPROFILE']
     localappdata = os.environ['LOCALAPPDATA']
-    if not os.path.exists(f"{localappdata}\\MEGAcmd\\mega-get.bat"):
+    megagetloc = os.path.join(quote(localappdata), "MEGAcmd", "mega-get.bat")
+    megacmdloc = os.path.join(quote(userprofile), "Downloads", "MEGAcmdSetup64.exe")
+    if not os.path.exists(megagetloc):
         print('[1;32mInstalling MEGA ...')
         print('[0m')
-        runwithsubprocess(f"curl -o {userprofile}\\Downloads\\MEGAcmdSetup64.exe https://mega.nz/MEGAcmdSetup64.exe")
+        runwithsubprocess(f"curl -o {megacmdloc} https://mega.nz/MEGAcmdSetup64.exe")
         sleep(1)
-        runwithsubprocess(f"{userprofile}\\Downloads\\MEGAcmdSetup64.exe /S")
+        runwithsubprocess(f"{megacmdloc} /S")
         sleep(4)
         print('[1;32mMEGA is installed.')
         print('[0m')
@@ -240,6 +246,7 @@ def civitdown(url, folder):
     pathtodown = os.path.join(folder, filename)
     max_retries = 5
     retry_delay = 10
+    url_s = quote(url)
 
     while True:
 
@@ -252,7 +259,7 @@ def civitdown(url, folder):
         with open(pathtodown, "ab") as f:
             while True:
                 try:
-                    response = requests.get(url, headers=headers, stream=True)
+                    response = requests.get(url_s, headers=headers, stream=True)
                     total_size = int(response.headers.get("Content-Length", 0))
                     # if total_size == 0:
                     #     total_size = downloaded_size
@@ -289,25 +296,27 @@ def civitdown(url, folder):
             print(f"Error: File download failed. Retrying...")
 
 def hfdown(todownload, folder, downloader):
-    filename = todownload.rsplit('/', 1)[-1]
-    filepath = os.path.join(folder, filename)
+    filename = quote(todownload.rsplit('/', 1)[-1])
+    filepath = quote(os.path.join(folder, filename))
+    todownload_s = quote(todownload)
+    folder_s = quote(folder)
     if platform.system() == "Windows":
         if downloader=='gdown':
             import gdown
-            gdown.download(todownload, filepath, quiet=False)
+            gdown.download(todownload_s, filepath, quiet=False)
         elif downloader=='wget':
             #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
             import wget
-            wget.download(todownload, filepath)
+            wget.download(todownload_s, filepath)
         elif downloader=='curl':
-            runwithsubprocess(f"curl -Lo \"{filepath}\" {todownload}")
+            runwithsubprocess(f"curl -Lo {filepath} {todownload_s}")
     else:
         if downloader=='gdown':
-            runwithsubprocess(f"gdown {todownload} -O \"{filepath}\"")
+            runwithsubprocess(f"gdown {todownload_s} -O {filepath}")
         elif downloader=='wget':
-            runwithsubprocess(f"wget {todownload} -P \"{folder}\"")
+            runwithsubprocess(f"wget {todownload_s} -P {folder_s}")
         elif downloader=='curl':
-            runwithsubprocess(f"curl -Lo {filename} {todownload}")
+            runwithsubprocess(f"curl -Lo {filename} {todownload_s}")
             curdir = os.getcwd()
             os.rename(os.path.join(curdir, filename), filepath)
         elif downloader=='aria2':
@@ -323,7 +332,7 @@ def hfdown(todownload, folder, downloader):
                 print('[1;32maria2 installed!')
                 print('[0m')
                 currentcondition = tempcondition
-            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload} -d \"{folder}\" -o {filename}")
+            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename}")
 
 def writeall(olddict):
     newdict = trackall()
@@ -405,8 +414,8 @@ def run(command, choosedowner):
         if listpart.startswith("https://github.com"):
             splits = listpart.split("/")
             currentlink = "/".join(splits[:5])
-            foldername = listpart.rsplit('/', 1)[-1]
-            folderpath = os.path.join(extpath, foldername)
+            foldername = quote(listpart.rsplit('/', 1)[-1])
+            folderpath = quote(os.path.join(extpath, foldername))
             print()
             print(currentlink)
             currentcondition = f'Cloning {currentlink}...'
