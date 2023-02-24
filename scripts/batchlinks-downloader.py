@@ -9,7 +9,7 @@ import urllib.request, subprocess, contextlib #these handle mega.nz
 import requests #this handle civit
 from tqdm import tqdm
 #from IPython.display import display, clear_output
-from pathlib import Path
+import pathlib
 import inspect
 import platform
 from shlex import quote
@@ -50,15 +50,31 @@ except AttributeError:
     pass
 
 typechecker = [
-    "embedding", "embeddings", "embed", "embeds",
+    "embedding", "embeddings", "embed", "embeds", "textualinversion", "ti",
     "model", "models", "checkpoint", "checkpoints",
     "vae", "vaes",
     "lora", "loras",
     "hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",
     "addnetlora", "loraaddnet", "additionalnetworks", "addnet",
+    "aestheticembedding", "aestheticembed",
     "controlnet", "cnet",
     "extension", "extensions", "ext"
     ]
+
+typemain = [
+    "model", "vae", "embed",
+    "hynet", "lora", "addnetlora",
+    "aestheticembed", "cnet", "ext"
+]
+
+# supportedlinks = [
+#     "https://mega.nz",
+#     "https://huggingface.co",
+#     "https://civitai.com/api/download/models/",
+#     "https://civitai.com/models/"
+#     "https://cdn.discordapp.com/attachments",
+#     "https://github.com",
+# ]
 
 modelpath = os.path.join(script_path, "models/Stable-diffusion")
 embedpath = os.path.join(script_path, "embeddings")
@@ -66,12 +82,12 @@ vaepath = os.path.join(script_path, "models/VAE")
 lorapath = os.path.join(script_path, "models/Lora")
 addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
 hynetpath = os.path.join(script_path, "models/hypernetworks")
+aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webui-aesthetic-gradients/aesthetic_embeddings")
 cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
 extpath = os.path.join(script_path, "extensions")
 
 if platform.system() == "Windows":
-    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora", "cnet", "ext"]
-    for x in typemain:
+    for x in typemain: 
         exec(f"{x}path = {x}path.replace('/', '\\\\')")
         #exec(f"print({x}path)")
 
@@ -81,9 +97,116 @@ currentfolder = modelpath
 finalwrite = []
 currentcondition = ''
 currentsuboutput = ''
+processid = ''
 logging = False
+#currentiterfolder = ''
+prockilled = False
+currentfoldertrack = []
 
-def runwithsubprocess(rawcommand):
+#debuggingpurpose{
+    #Hello debuggers! This will track every files when the extension is launched, and
+    #you can remove every downloaded files after with hashtag '#debugdebugdebug', for debugging purposes on colab
+    #(Note: You need to fill the textbox with only a single line of #debugdebugdebug and nothing more)
+    #uncomment the `take_snapshot()` to use this feature.
+import shutil
+snapshot = []
+paths_to_scan = []
+
+# take a snapshot of the directories
+def take_snapshot():
+    snapshotdir = os.path.join(script_path, 'snapshot.txt')
+    global snapshot
+    global paths_to_scan
+    paths_to_scan = []
+    for x in typemain:
+        exec(f"paths_to_scan.append({x}path)")
+    if os.path.exists(snapshotdir):
+        with open(snapshotdir, 'r') as f:
+            # snapshottemp = f.read()
+            # #print(f"snapshottemp: {snapshottemp}")
+            # snapshot = eval(snapshottemp)
+            snapshot = [line.strip() for line in f.readlines()]
+            #print(f"snapshot: {snapshot}")
+        print("Batchlinks extension: snapshot already exist.")
+        return
+    else:
+        snapshot = []
+        for path in paths_to_scan:
+            if os.path.exists(path):
+                pathtemp = os.listdir(path)
+                for file in pathtemp:
+                    pathoffile = os.path.join(path, file)
+                    snapshot.append(pathoffile)
+                # for file in os.listdir(path):
+                #     file_path = os.path.join(path, file)
+                #     if os.path.isdir(file_path):
+                #         snapshot[path][file_path + os.sep] = set(os.listdir(file_path))
+                #     else:
+                #         snapshot[path][file_path] = None
+        with open(snapshotdir, 'w') as f:
+            # f.write(str(snapshot))
+            for item in snapshot:
+                f.write(f"{item}\n")
+        print("Batchlinks extension: snapshot taken.")
+
+# rewind everything to a fresh state
+def global_rewind():
+    global paths_to_scan
+    global path
+    global currentsuboutput
+    removedall, removed_files, removed_dirs, new_snapshot = [], [], [], []
+    print('[1;32mDebug rewind initiated...')
+    print('[0m')
+    for path in paths_to_scan:
+        if os.path.exists(path):
+            pathtemp = os.listdir(path)
+            for file in pathtemp:
+                pathoffile = os.path.join(path, file)
+                new_snapshot.append(pathoffile)
+    toremoves = [x for x in new_snapshot if x not in snapshot]
+    for fileordir in toremoves:
+        if os.path.exists(fileordir):
+            if os.path.isdir(fileordir):
+                shutil.rmtree(fileordir)
+                removed_dirs.append(fileordir)
+            else:
+                os.remove(fileordir)
+                removed_files.append(fileordir)
+    # for path in paths_to_scan:
+    #     for file in os.listdir(path):
+    #         file_path = os.path.join(path, file)
+    #         if os.path.isdir(file_path):
+    #             snapshot_subdirs = snapshot[path].get(file_path + os.sep, set())
+    #             current_subdirs = set(os.listdir(file_path))
+    #             removed_subdirs = snapshot_subdirs - current_subdirs
+    #             for subdir in removed_subdirs:
+    #                 subdir_path = os.path.join(file_path, subdir)
+    #                 shutil.rmtree(subdir_path)
+    #                 removed_dirs.append(subdir_path)
+    #         else:
+    #             if file_path not in snapshot[path]:
+    #                 os.remove(file_path)
+    #                 removed_files.append(file_path)
+    if removed_files or removed_dirs:
+        print("Removed files:")
+        removedall.append("Removed files:")
+        for file in removed_files:
+            print(file)
+            removedall.append(file)
+        print("Removed directories:")
+        removedall.append("Removed directories:")
+        for dir in removed_dirs:
+            print(dir)
+            removedall.append(dir)
+    print('[1;32mrewind completed')
+    print('[0m')
+    return removedall
+
+# Take a snapshot of the directories
+take_snapshot()
+# }
+
+def runwithsubprocess(rawcommand, folder=None):
     def construct_command(command_string):
         # Split the command string into a list of arguments
         command_parts = command_string.split()
@@ -107,15 +230,24 @@ def runwithsubprocess(rawcommand):
                 new_command_parts.append(part)
 
         # Return the list of arguments as a command and arguments list
+        print(f"debug new_command_parts: {new_command_parts}")
         return new_command_parts
 
     currentprocess = ''
 
     commandtorun = construct_command(rawcommand)
+    global prockilled
     if gradiostate == False and not rawcommand.startswith("aria"):
         subprocess.run(commandtorun, stderr=subprocess.STDOUT, universal_newlines=True)
     else:
+        if folder != None:
+            print("debug folderforsavestate: " + folder)
+            savestate_folder(folder)
+            print("debug currentfoldertrack: " + str(currentfoldertrack))
         process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        global processid
+        processid = process.pid
+        print("debug processid: " + str(processid))
 
         ariacomplete = False
         global currentsuboutput
@@ -125,14 +257,7 @@ def runwithsubprocess(rawcommand):
             if nextline == '' and process.poll() is not None:
                 break
             # Check if the line contains progress information
-            if "%" in nextline.strip() or rawcommand.startswith("curl"):#"INFO" in nextline.strip() or "NOTICE" in nextline.strip():
-            # if loadingprogress == False:
-                #     print('[1;32mThe progress bar is on the logging box in the UI')
-                #     print('[0m')
-                # loadingprogress = True
-                #print(nextline, end='\r')
-                # sys.stdout.write('\r' + nextline)
-                # sys.stdout.flush()
+            if "%" in nextline.strip() or rawcommand.startswith("curl"):
                 stripnext = nextline.strip()
                 print("\r", end="")
                 print(f"\r{stripnext}", end='')
@@ -148,18 +273,25 @@ def runwithsubprocess(rawcommand):
                     else:
                         print(nextline, end='')
             else:
-                # loadingprogress = False
                 print(nextline, end='')
             currentsuboutput = nextline
 
         process.wait()
         currentsuboutput = ''
+        processid = ''
+        if prockilled == True:
+            rewind_folder(folder)
+            print('[1;31mOperation Cancelled')
+            print('[0m')
+            global currentcondition
+            currentcondition = 'Operation Cancelled'
+            return
 
 #these code below handle mega.nz
 def unbuffered(proc, stream='stdout'):
     stream = getattr(proc, stream)
     with contextlib.closing(stream):
-        while True:
+        while prockilled == False:
             out = []
             last = stream.read(1)
             # Don't loop forever
@@ -182,7 +314,7 @@ def transfare(todownload, folder):
     if platform.system() == "Windows":
         localappdata = os.environ['LOCALAPPDATA']
         megagetloc = os.path.join(quote(localappdata), "MEGAcmd", "mega-get.bat")
-        runwithsubprocess(f"{megagetloc} {todownload_s} {folder_s}")
+        runwithsubprocess(f"{megagetloc} {todownload_s} {folder_s}", folder_s)
     else:
         cmd = ["mega-get", todownload_s, folder_s]
         proc = subprocess.Popen(
@@ -191,18 +323,29 @@ def transfare(todownload, folder):
             stderr=subprocess.STDOUT,
             universal_newlines=True,
         )
+        global processid
+        processid = proc.pid
+
         global currentsuboutput
         for line in unbuffered(proc):
-            if not line.startswith("Download"):
-                currentsuboutput = line
-                print(f"\r{line}", end="")
+            if prockilled == False:
+                if not line.startswith("Download"):
+                    currentsuboutput = line
+                    print(f"\r{line}", end="")
+                else:
+                    print(f"\n{line}")
             else:
-                print(f"\n{line}")
+                currentsuboutput = ''
+                print('[1;31mOperation Cancelled')
+                print('[0m')
+                global currentcondition
+                currentcondition = 'Operation Cancelled'
+                return
         currentsuboutput = ''
 
 def installmega():
     HOME = os.path.expanduser("~")
-    ocr_file = Path(f"{HOME}/.ipython/ocr.py")
+    ocr_file = pathlib.Path(f"{HOME}/.ipython/ocr.py")
     if not ocr_file.exists():
         hCode = "https://raw.githubusercontent.com/biplobsd/" \
                     "OneClickRun/master/res/ocr.py"
@@ -248,16 +391,16 @@ def civitdown(url, folder):
     retry_delay = 10
     url_s = quote(url)
 
-    while True:
+    while prockilled == False:
 
         downloaded_size = 0
         headers = {}
 
         progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {filename}. (will be renamed correctly after downloading)", initial=downloaded_size, leave=False)
         global currentsuboutput
-                
+        global currentcondition        
         with open(pathtodown, "ab") as f:
-            while True:
+            while prockilled == False:
                 try:
                     response = requests.get(url_s, headers=headers, stream=True)
                     total_size = int(response.headers.get("Content-Length", 0))
@@ -265,11 +408,14 @@ def civitdown(url, folder):
                     #     total_size = downloaded_size
                     # progress.total = total_size 
 
+                    
                     for chunk in response.iter_content(chunk_size=1024):
-                        if chunk:
-                            f.write(chunk)
-                            progress.update(len(chunk))
-                            currentsuboutput = str(progress)
+                        if chunk and prockilled == False:
+                                f.write(chunk)
+                                progress.update(len(chunk))
+                                currentsuboutput = str(progress)
+                        else:
+                            break
 
                     downloaded_size = os.path.getsize(pathtodown)
                     currentsuboutput = ''
@@ -283,6 +429,16 @@ def civitdown(url, folder):
                     sleep(retry_delay)
 
         progress.close()
+        if prockilled == True:
+            if os.path.exists(pathtodown):
+                os.remove(pathtodown)
+            print('[1;31mOperation Cancelled')
+            print('[0m')
+            currentcondition = 'Operation Cancelled'
+            currentsuboutput = ''
+            return "Operation Cancelled"
+        
+        
         actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
         #%cd {folder}
         actualpath = os.path.join(folder, actualfilename)
@@ -295,30 +451,106 @@ def civitdown(url, folder):
         else:
             print(f"Error: File download failed. Retrying...")
 
-def hfdown(todownload, folder, downloader):
-    filename = quote(todownload.rsplit('/', 1)[-1])
-    filepath = quote(os.path.join(folder, filename))
-    todownload_s = quote(todownload)
-    folder_s = quote(folder)
+#thank you @rti7743 for this part {
+def civitdown2_get_json(url):
+  import re
+  m = re.search(r'https://civitai.com/models/(\d+)', url)
+  model_id = m.group(1)
+
+  api_url = "https://civitai.com/api/v1/models/" + model_id
+
+  import requests
+  txt = requests.get(api_url).text
+
+  import json
+  return json.loads(txt)
+
+def civitdown2_get_save_directory(model_type, default_folder):
+  if model_type == "Checkpoint":
+    return modelpath
+  elif model_type == "Hypernetwork":
+    return hynetpath
+  elif model_type == "TextualInversion":
+    return embedpath
+  elif model_type == "AestheticGradient":
+    return aestheticembedpath
+  elif model_type == "VAE":
+    return vaepath
+  elif model_type == "LORA":
+    return lorapath
+  else:
+    return default_folder
+
+def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
+  from PIL import Image
+  img = Image.open(imagejpg_save_path)
+  img_resized = img.resize((img.width // 2, img.height // 2))
+  img_resized.save(imagepng_save_path)
+  os.remove(imagejpg_save_path)
+
+def civitdown2(url, folder, downloader):
+  model = civitdown2_get_json(url)
+
+  save_directory = civitdown2_get_save_directory(model['type'], folder)
+
+  data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
+  data_filename = model['modelVersions'][0]['files'][0]['name']
+  image_url = model['modelVersions'][0]['images'][0]['url']
+
+  import pathlib
+  if model['type'] == "TextualInversion":
+    image_filename_jpg = pathlib.PurePath(data_filename).stem + ".preview.jpg"
+    image_filename_png = pathlib.PurePath(data_filename).stem + ".preview.png"
+  else:
+    image_filename_jpg = pathlib.PurePath(data_filename).stem + ".jpg"
+    image_filename_png = pathlib.PurePath(data_filename).stem + ".png"
+
+  data_save_path = os.path.join(save_directory, data_filename)
+  imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
+  imagepng_save_path = os.path.join(save_directory, image_filename_png)
+
+  print(f"debug download_url({data_url}, {data_save_path}, {downloader})")
+  if prockilled == False:
+    hfdown(data_url, data_save_path, downloader, True)
+  if prockilled == False:
+    hfdown(image_url, imagejpg_save_path, downloader, True)
+  if prockilled == False:
+    civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
+    print(f"{data_save_path} successfully downloaded.")
+#}
+
+def hfdown(todownload, folder, downloader, iscivit):
+    if iscivit:
+        filename = pathlib.Path(folder).name
+        filepath = quote(folder)
+        todownload_s = todownload
+        folder_s = pathlib.Path(folder).parent.resolve()
+    else:
+        filename = quote(todownload.rsplit('/', 1)[-1])
+        filepath = quote(os.path.join(folder, filename))
+        todownload_s = quote(todownload)
+        folder_s = quote(folder)
+    #savestate_folder(folder_s)
     if platform.system() == "Windows":
         if downloader=='gdown':
             import gdown
-            gdown.download(todownload_s, filepath, quiet=False)
+            gdown.download(todownload, filepath, quiet=False)
         elif downloader=='wget':
             #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
             import wget
-            wget.download(todownload_s, filepath)
+            wget.download(todownload, filepath)
         elif downloader=='curl':
             runwithsubprocess(f"curl -Lo {filepath} {todownload_s}")
     else:
         if downloader=='gdown':
-            runwithsubprocess(f"gdown {todownload_s} -O {filepath}")
+            print(f"debug gdown {todownload_s} -O {filepath}")
+            runwithsubprocess(f"gdown {todownload_s} -O {filepath}", folder_s)
         elif downloader=='wget':
-            runwithsubprocess(f"wget {todownload_s} -P {folder_s}")
+            runwithsubprocess(f"wget -O {filepath} {todownload_s} --progress=bar:force", folder_s)
         elif downloader=='curl':
-            runwithsubprocess(f"curl -Lo {filename} {todownload_s}")
-            curdir = os.getcwd()
-            os.rename(os.path.join(curdir, filename), filepath)
+            runwithsubprocess(f"curl -Lo {filepath} {todownload_s}", folder_s)
+            # curdir = os.getcwd()
+            # os.rename(os.path.join(curdir, filename), filepath)
         elif downloader=='aria2':
             ariachecker = "dpkg-query -W -f='${Status}' aria2"
             checkaria = subprocess.getoutput(ariachecker)
@@ -332,7 +564,35 @@ def hfdown(todownload, folder, downloader):
                 print('[1;32maria2 installed!')
                 print('[0m')
                 currentcondition = tempcondition
-            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename}")
+            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename}", folder_s)
+    if prockilled == True:
+        #rewind_folder(folder_s)
+        pass
+
+def savestate_folder(folder):
+    global currentfoldertrack
+    currentfoldertrack = []
+    listfile = os.listdir(folder)
+    for file in listfile:
+        pathoffile = os.path.join(folder, file)
+        currentfoldertrack.append(pathoffile)
+
+def rewind_folder(folder):
+    listfilenew = os.listdir(folder)
+    newerfoldertrack = []
+    for file in listfilenew:
+        pathoffile = os.path.join(folder, file)
+        newerfoldertrack.append(pathoffile)
+    toremove = [x for x in newerfoldertrack if x not in currentfoldertrack]
+    print("debug toremove: " + str(toremove))
+    for fileordir in toremove:
+        if os.path.exists(fileordir):
+            if os.path.isdir(fileordir):
+                shutil.rmtree(fileordir)
+                print("Removed incomplete download: " + fileordir)
+            else:
+                os.remove(fileordir)
+            print("Removed incomplete download: " + fileordir)
 
 def writeall(olddict):
     newdict = trackall()
@@ -363,7 +623,6 @@ def writepart(box, path):
             finalwrite.append(item)
 
 def trackall():
-    typemain = ["model", "vae", "embed", "hynet", "lora", "addnetlora", "cnet", "ext"]
     filesdict = dict()
     for x in typemain:
         exec(f"os.makedirs({x}path, exist_ok=True)")
@@ -371,6 +630,15 @@ def trackall():
     return filesdict
 
 def run(command, choosedowner):
+    global prockilled
+    prockilled = False
+    if command.strip() == '#debugdebugdebug' and snapshot != {}:
+        removed_files = global_rewind()
+        texttowrite = ["⬇️Removed files⬇️"]
+        for item in removed_files:
+            texttowrite.append(item)
+        writefinal = list_to_text(texttowrite)
+        return writefinal
     oldfilesdict = trackall()
     currentfolder = modelpath
     usemega = False
@@ -389,56 +657,71 @@ def run(command, choosedowner):
             installmega()
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
+    print('prockilled: ' + str(prockilled))
+    
     for listpart in links:
-        if listpart.startswith("https://mega.nz"):
-            currentlink = listpart
-            print()
-            print(currentlink)
-            currentcondition = f'Downloading {currentlink}...'
-            transfare(currentlink, currentfolder)
+        if prockilled == False:
+            if listpart.startswith("https://mega.nz"):
+                currentlink = listpart
+                print()
+                print(currentlink)
+                currentcondition = f'Downloading {currentlink}...'
+                transfare(currentlink, currentfolder)
 
-        if listpart.startswith("https://huggingface.co") or listpart.startswith("https://cdn.discordapp.com/attachments"):
-            currentlink = listpart
-            print()
-            print(currentlink)
-            currentcondition = f'Downloading {currentlink}...'
-            hfdown(currentlink, currentfolder, choosedowner)
+            elif listpart.startswith("https://huggingface.co") or listpart.startswith("https://cdn.discordapp.com/attachments"):
+                currentlink = listpart
+                print()
+                print(currentlink)
+                currentcondition = f'Downloading {currentlink}...'
+                hfdown(currentlink, currentfolder, choosedowner, False)
 
-        if listpart.startswith("https://civitai.com/api/download/models/"):
-            currentlink = listpart
-            print()
-            print(currentlink)
-            currentcondition = f'Downloading {currentlink}...'
-            civitdown(currentlink, currentfolder)
+            elif listpart.startswith("https://civitai.com/api/download/models/"):
+                currentlink = listpart
+                print()
+                print(currentlink)
+                currentcondition = f'Downloading {currentlink}...'
+                civitdown(currentlink, currentfolder)
 
-        if listpart.startswith("https://github.com"):
-            splits = listpart.split("/")
-            currentlink = "/".join(splits[:5])
-            foldername = quote(listpart.rsplit('/', 1)[-1])
-            folderpath = quote(os.path.join(extpath, foldername))
-            print()
-            print(currentlink)
-            currentcondition = f'Cloning {currentlink}...'
-            runwithsubprocess(f"git clone {currentlink} {folderpath}")
+            elif listpart.startswith("https://github.com"):
+                splits = listpart.split("/")
+                currentlink = "/".join(splits[:5])
+                foldername = quote(listpart.rsplit('/', 1)[-1])
+                folderpath = quote(os.path.join(extpath, foldername))
+                print()
+                print(currentlink)
+                currentcondition = f'Cloning {currentlink}...'
+                runwithsubprocess(f"git clone {currentlink} {folderpath}")
 
+            elif listpart.startswith("https://civitai.com/models/"):
+                currentlink = listpart
+                print()
+                print(currentlink)
+                currentcondition = f'Downloading {currentlink}...'
+                civitdown2(currentlink, currentfolder, choosedowner)
+
+            else:
+                for prefix in typechecker:
+                    if listpart.startswith("#" + prefix):
+                        if prefix in ["embedding", "embeddings", "embed", "embeds","textualinversion", "ti"]:
+                            currentfolder = embedpath
+                        elif prefix in ["model", "models", "checkpoint", "checkpoints"]:
+                            currentfolder = modelpath
+                        elif prefix in ["vae", "vaes"]:
+                            currentfolder = vaepath
+                        elif prefix in ["lora", "loras"]:
+                            currentfolder = lorapath
+                        elif prefix in ["hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",]:
+                            currentfolder = hynetpath
+                        elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
+                            currentfolder = addnetlorapath
+                        elif prefix in ["controlnet", "cnet"]:
+                            currentfolder = cnetpath
+                        elif prefix in ["aestheticembedding", "aestheticembed"]:
+                            currentfolder = aestheticembedpath
+                        os.makedirs(currentfolder, exist_ok=True)
         else:
-            for prefix in typechecker:
-                if listpart.startswith("#" + prefix):
-                    if prefix in ["embedding", "embeddings", "embed", "embeds"]:
-                        currentfolder = embedpath
-                    elif prefix in ["model", "models", "checkpoint", "checkpoints"]:
-                        currentfolder = modelpath
-                    elif prefix in ["vae", "vaes"]:
-                        currentfolder = vaepath
-                    elif prefix in ["lora", "loras"]:
-                        currentfolder = lorapath
-                    elif prefix in ["hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",]:
-                        currentfolder = hynetpath
-                    elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
-                        currentfolder = addnetlorapath
-                    elif prefix in ["controlnet", "cnet"]:
-                        currentfolder = cnetpath
-                    os.makedirs(currentfolder, exist_ok=True)
+            currentcondition = 'Operation cancelled'
+            return "Operation cancelled"
 
     currentcondition = 'Writing output...'
     downloadedfiles = writeall(oldfilesdict)
@@ -453,12 +736,26 @@ def extract_links(string):
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com"):
+        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
             links.append(line)
         else:
             for prefix in typechecker:
                 if line.startswith("#" + prefix):
                     links.append(line)
+        # stoploop = False
+        # for checklink in supportedlinks:
+        #     if line.startswith(checklink) and not stoploop:
+        #         links.append(line)
+        #         print(f"added {line}")
+        #         stoploop = True
+
+        # for prefix in typechecker:
+        #     if line.startswith("#" + prefix) and not stoploop:
+        #         links.append(line)
+        #         print(f"added {line}")
+        #         stoploop = True
+
+    #print(f"links: {links}")
     return links
 
 def list_to_text(lst):
@@ -474,12 +771,19 @@ def uploaded(textpath):
 
         with open(file_paths, 'r') as file:
             for line in file:
-                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com"):
+                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
                         if line.startswith("#" + prefix):
                             links.append(line.strip())
+                # for checklink in supportedlinks:
+                #     if line.startswith(checklink):
+                #         links.append(line.strip())
+                #     else:
+                #         for prefix in typechecker:
+                #             if line.startswith("#" + prefix):
+                #                 links.append(line.strip())
 
         text = list_to_text(links)
         return text    
@@ -500,6 +804,22 @@ def keeplog():
 def empty():
   return ''
 
+def cancelrun():
+    import signal
+    global processid
+    global prockilled
+    print("debug processid: " + str(processid))
+    if not processid == '':
+      
+      os.kill(processid, signal.SIGTERM)
+        #os.killpg(os.getpgid(processid.pid), signal.SIGTERM)
+    prockilled = True
+    if prockilled == True:
+        print()
+        print("This should kill")
+        print()
+    return "Operation Cancelled"
+
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
         with gr.Row():
@@ -517,6 +837,7 @@ def on_ui_tabs():
           with gr.Column(scale=1):
             gr.Markdown(
             """
+            Click these links for more:<br/>
             [Readme Page](https://github.com/etherealxx/batchlinks-webui)<br/>
             [Example](https://github.com/etherealxx/batchlinks-webui#example)<br/>
             [Syntax](https://github.com/etherealxx/batchlinks-webui#syntax)<br/>
@@ -564,13 +885,26 @@ def on_ui_tabs():
                     choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
 
                 with gr.Row():
-                    
-                    btn_run = gr.Button("Download All!", variant="primary")
+                    with gr.Column(scale=2, min_width=100):
+                        btn_run = gr.Button("Download All!", variant="primary")
                     #btn_debug = gr.Button(debug, output=debug_txt, every=1)
-                    btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
                     #btn_debug.click(debug, outputs=debug_txt, every=1)
                     # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
                     # btn_upload.upload(uploaded, btn_upload, file_output)
+                    with gr.Column(scale=1, min_width=100):
+                        try:
+                            if cmd_opts.gradio_queue:
+                                btn_cancel = gr.Button("Cancel")
+                        except AttributeError:
+                            pass
+
+                run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
+                try:
+                    if cmd_opts.gradio_queue:
+                        btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+                except AttributeError:
+                    pass
+
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
         #batchlinks.load(debug, output=debug_txt, every=1)

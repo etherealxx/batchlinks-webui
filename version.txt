@@ -1,7 +1,24 @@
-v1.3.0
+v2.0.0
 (^current version^)
 
-commit "alpha" is v0.1.0 (09b1d81806e5bfc4d1783ccf644359fabc372fb7)
-commit "Civit support, i hope it works." is v0.2.0 (2420ea4dd670ec71481a2ed43ff22c7c1a959543)
-commit "🪲Bug fix and 🖼️stuff" is v0.2.1 (c7a91b6e14ca6f35438e29ab7ad3d2e00d62c99b)
-commit "Merge pull request #1 from etherealxx/gradioevery" is v1.0.0 (a89e50fdfb5008f703750cf0e7878fc6c25f9219)
+Release notes:
+
+## v2.0.0
+- `aria2` as download method.
+- Cancel button for cancelling download process (`--gradio-queue` required)
+- Debug snapshot.<br/>
+When `take_snapshot()` is uncommented, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugdebugdebug` on the textbox (and nothing more), it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+- New hashtags: `#textualinversion`, `#ti`, `#aestheticembedding`, `#aestheticembed`, `#controlnet`, and `#cnet`
+- `shlex.quote` to properly quote links (Thanks **[@rti7743](https://github.com/rti7743)**!)
+- Supports cloning webui extensions
+- Supports download from CivitAI model links (Thanks **[@rti7743](https://github.com/rti7743)**!)
+- Supports for aesthetic gradients, controlnet model, and extensions path.
+- Uses `subprocess.Popen` instead of `os.system`
+
+
+Older releases:
+
+- commit "alpha" is v0.1.0 (09b1d81806e5bfc4d1783ccf644359fabc372fb7)
+- commit "Civit support, i hope it works." is v0.2.0 (2420ea4dd670ec71481a2ed43ff22c7c1a959543)
+- commit "🪲Bug fix and 🖼️stuff" is v0.2.1 (c7a91b6e14ca6f35438e29ab7ad3d2e00d62c99b)
+- commit "Merge pull request #1 from etherealxx/gradioevery" is v1.0.0 (a89e50fdfb5008f703750cf0e7878fc6c25f9219)
