@@ -13,6 +13,7 @@ import pathlib
 import inspect
 import platform
 from shlex import quote
+import signal
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
@@ -102,6 +103,9 @@ logging = False
 #currentiterfolder = ''
 prockilled = False
 currentfoldertrack = []
+everyprocessid = []
+
+globaldebug = True #set this to true to activate every debug features
 
 #debuggingpurpose{
     #Hello debuggers! This will track every files when the extension is launched, and
@@ -203,8 +207,13 @@ def global_rewind():
     return removedall
 
 # Take a snapshot of the directories
-take_snapshot()
+if globaldebug == True:
+    take_snapshot()
 # }
+
+def printdebug(toprint):
+    if globaldebug == True:
+        print(toprint)
 
 def runwithsubprocess(rawcommand, folder=None):
     def construct_command(command_string):
@@ -230,62 +239,64 @@ def runwithsubprocess(rawcommand, folder=None):
                 new_command_parts.append(part)
 
         # Return the list of arguments as a command and arguments list
-        print(f"debug new_command_parts: {new_command_parts}")
+        printdebug(f"debug new_command_parts: {new_command_parts}")
         return new_command_parts
 
     currentprocess = ''
 
     commandtorun = construct_command(rawcommand)
     global prockilled
-    if gradiostate == False and not rawcommand.startswith("aria"):
-        subprocess.run(commandtorun, stderr=subprocess.STDOUT, universal_newlines=True)
-    else:
-        if folder != None:
-            print("debug folderforsavestate: " + folder)
-            savestate_folder(folder)
-            print("debug currentfoldertrack: " + str(currentfoldertrack))
-        process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-        global processid
-        processid = process.pid
-        print("debug processid: " + str(processid))
+    global everyprocessid
+    # if gradiostate == False and not rawcommand.startswith("aria"):
+    #     subprocess.run(commandtorun, stderr=subprocess.STDOUT, universal_newlines=True)
+    # else:
+    if folder != None:
+        printdebug("debug folderforsavestate: " + str(folder))
+        savestate_folder(folder)
+        printdebug("debug currentfoldertrack: " + str(currentfoldertrack))
+    process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+    global processid
+    processid = process.pid
+    everyprocessid.append(processid)
+    printdebug("debug processid: " + str(processid))
 
-        ariacomplete = False
-        global currentsuboutput
-        while True:
-            # Read the output from the process
-            nextline = process.stdout.readline()
-            if nextline == '' and process.poll() is not None:
-                break
-            # Check if the line contains progress information
-            if "%" in nextline.strip() or rawcommand.startswith("curl"):
-                stripnext = nextline.strip()
-                print("\r", end="")
-                print(f"\r{stripnext}", end='')
-            elif rawcommand.startswith("aria2"):
-                if "Download complete" in nextline.strip():
-                    ariacomplete = True
-                    print(nextline, end='')
-                else:
-                    if ariacomplete == False:
-                        stripnext = nextline.strip()
-                        print("\r", end="")
-                        print(f"\r{stripnext}", end='')
-                    else:
-                        print(nextline, end='')
-            else:
+    ariacomplete = False
+    global currentsuboutput
+    while True:
+        # Read the output from the process
+        nextline = process.stdout.readline()
+        if nextline == '' and process.poll() is not None:
+            break
+        # Check if the line contains progress information
+        if "%" in nextline.strip() or rawcommand.startswith("curl"):
+            stripnext = nextline.strip()
+            print("\r", end="")
+            print(f"\r{stripnext}", end='')
+        elif rawcommand.startswith("aria2"):
+            if "Download complete" in nextline.strip():
+                ariacomplete = True
                 print(nextline, end='')
-            currentsuboutput = nextline
+            else:
+                if ariacomplete == False:
+                    stripnext = nextline.strip()
+                    print("\r", end="")
+                    print(f"\r{stripnext}", end='')
+                else:
+                    print(nextline, end='')
+        else:
+            print(nextline, end='')
+        currentsuboutput = nextline
 
-        process.wait()
-        currentsuboutput = ''
-        processid = ''
-        if prockilled == True:
-            rewind_folder(folder)
-            print('[1;31mOperation Cancelled')
-            print('[0m')
-            global currentcondition
-            currentcondition = 'Operation Cancelled'
-            return
+    process.wait()
+    currentsuboutput = ''
+    processid = ''
+    if prockilled == True:
+        rewind_folder(folder)
+        print('[1;31mOperation Cancelled')
+        print('[0m')
+        global currentcondition
+        currentcondition = 'Operation Cancelled'
+        return
 
 #these code below handle mega.nz
 def unbuffered(proc, stream='stdout'):
@@ -324,7 +335,9 @@ def transfare(todownload, folder):
             universal_newlines=True,
         )
         global processid
+        global everyprocessid
         processid = proc.pid
+        everyprocessid.append(processid)
 
         global currentsuboutput
         for line in unbuffered(proc):
@@ -509,7 +522,7 @@ def civitdown2(url, folder, downloader):
   imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
   imagepng_save_path = os.path.join(save_directory, image_filename_png)
 
-  print(f"debug download_url({data_url}, {data_save_path}, {downloader})")
+  printdebug(f"debug download_url({data_url}, {data_save_path}, {downloader})")
   if prockilled == False:
     hfdown(data_url, data_save_path, downloader, True)
   if prockilled == False:
@@ -543,7 +556,7 @@ def hfdown(todownload, folder, downloader, iscivit):
             runwithsubprocess(f"curl -Lo {filepath} {todownload_s}")
     else:
         if downloader=='gdown':
-            print(f"debug gdown {todownload_s} -O {filepath}")
+            printdebug(f"debug gdown {todownload_s} -O {filepath}")
             runwithsubprocess(f"gdown {todownload_s} -O {filepath}", folder_s)
         elif downloader=='wget':
             runwithsubprocess(f"wget -O {filepath} {todownload_s} --progress=bar:force", folder_s)
@@ -565,9 +578,9 @@ def hfdown(todownload, folder, downloader, iscivit):
                 print('[0m')
                 currentcondition = tempcondition
             runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename}", folder_s)
-    if prockilled == True:
-        #rewind_folder(folder_s)
-        pass
+    # if prockilled == True:
+    #     #rewind_folder(folder_s)
+    #     pass
 
 def savestate_folder(folder):
     global currentfoldertrack
@@ -584,7 +597,7 @@ def rewind_folder(folder):
         pathoffile = os.path.join(folder, file)
         newerfoldertrack.append(pathoffile)
     toremove = [x for x in newerfoldertrack if x not in currentfoldertrack]
-    print("debug toremove: " + str(toremove))
+    printdebug("debug toremove: " + str(toremove))
     for fileordir in toremove:
         if os.path.exists(fileordir):
             if os.path.isdir(fileordir):
@@ -632,7 +645,9 @@ def trackall():
 def run(command, choosedowner):
     global prockilled
     prockilled = False
-    if command.strip() == '#debugdebugdebug' and snapshot != {}:
+    global everyprocessid
+    everyprocessid = []
+    if command.strip() == '#debugdebugdebug' and snapshot != {} and globaldebug == True:
         removed_files = global_rewind()
         texttowrite = ["⬇️Removed files⬇️"]
         for item in removed_files:
@@ -657,7 +672,7 @@ def run(command, choosedowner):
             installmega()
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
-    print('prockilled: ' + str(prockilled))
+    printdebug('prockilled: ' + str(prockilled))
     
     for listpart in links:
         if prockilled == False:
@@ -725,10 +740,16 @@ def run(command, choosedowner):
 
     currentcondition = 'Writing output...'
     downloadedfiles = writeall(oldfilesdict)
+    for tokill in everyprocessid:
+        try:
+            os.kill(tokill, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
     print()
     print('[1;32mBatchLinks Downloads finished!')
     print('[0m')
     currentcondition = 'Done!'
+    printdebug(f"this should be the output: " + str(downloadedfiles))
     return downloadedfiles
 
 def extract_links(string):
@@ -805,16 +826,15 @@ def empty():
   return ''
 
 def cancelrun():
-    import signal
     global processid
     global prockilled
-    print("debug processid: " + str(processid))
+    printdebug("debug processid: " + str(processid))
     if not processid == '':
       
       os.kill(processid, signal.SIGTERM)
         #os.killpg(os.getpgid(processid.pid), signal.SIGTERM)
     prockilled = True
-    if prockilled == True:
+    if prockilled == True and globaldebug == True:
         print()
         print("This should kill")
         print()
@@ -873,7 +893,7 @@ def on_ui_tabs():
                       logging = gr.Radio(["Turn On Logging"], show_label=False)
                       logging.change(keeplog, outputs=logbox, every=1)
                   else:
-                    print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging on the extension")
+                    print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
                 except AttributeError:
                   print("Batchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension would still runs fine.")
                   pass
@@ -885,25 +905,30 @@ def on_ui_tabs():
                     choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
 
                 with gr.Row():
-                    with gr.Column(scale=2, min_width=100):
-                        btn_run = gr.Button("Download All!", variant="primary")
-                    #btn_debug = gr.Button(debug, output=debug_txt, every=1)
-                    #btn_debug.click(debug, outputs=debug_txt, every=1)
-                    # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
-                    # btn_upload.upload(uploaded, btn_upload, file_output)
-                    with gr.Column(scale=1, min_width=100):
-                        try:
-                            if cmd_opts.gradio_queue:
+                    try:
+                        if cmd_opts.gradio_queue:
+                            with gr.Column(scale=2, min_width=100):
+                                btn_run = gr.Button("Download All!", variant="primary")
+                            #btn_debug = gr.Button(debug, output=debug_txt, every=1)
+                            #btn_debug.click(debug, outputs=debug_txt, every=1)
+                            # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
+                            # btn_upload.upload(uploaded, btn_upload, file_output)
+                            with gr.Column(scale=1, min_width=100):
                                 btn_cancel = gr.Button("Cancel")
-                        except AttributeError:
-                            pass
+                        else:
+                            raise AttributeError
+                            #btn_run = gr.Button("Download All!", variant="primary")
+                    except AttributeError:
+                        btn_run = gr.Button("Download All!", variant="primary")
 
-                run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
                 try:
                     if cmd_opts.gradio_queue:
+                        run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
                         btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+                    else:
+                        raise AttributeError
                 except AttributeError:
-                    pass
+                    btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
 
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
