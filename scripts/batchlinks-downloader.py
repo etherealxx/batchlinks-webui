@@ -1,6 +1,6 @@
 #github.com/etherealxx
 import os
-from time import sleep
+import time
 import gradio as gr
 from modules import script_callbacks #,scripts
 from modules.paths import script_path
@@ -106,6 +106,29 @@ currentfoldertrack = []
 everyprocessid = []
 
 globaldebug = True #set this to true to activate every debug features
+
+def stopwatch(func):
+    """
+    A function that acts as a stopwatch for another function.
+
+    Args:
+    func (function): The function to be timed.
+
+    Returns:
+    The return value of the timed function.
+    """
+    def wrapper(*args, **kwargs):
+        if not globaldebug:
+            return func(*args, **kwargs)
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        minutes = int(elapsed_time // 60)
+        seconds = elapsed_time % 60
+        print(f"Time taken by {func.__name__}: {minutes:.0f}m {seconds:.2f}s")
+        return result
+    return wrapper
 
 #debuggingpurpose{
     #Hello debuggers! This will track every files when the extension is launched, and
@@ -391,9 +414,9 @@ def installmegawin():
         print('[1;32mInstalling MEGA ...')
         print('[0m')
         runwithsubprocess(f"curl -o {megacmdloc} https://mega.nz/MEGAcmdSetup64.exe")
-        sleep(1)
+        time.sleep(1)
         runwithsubprocess(f"{megacmdloc} /S")
-        sleep(4)
+        time.sleep(4)
         print('[1;32mMEGA is installed.')
         print('[0m')
         #clear_output()
@@ -441,7 +464,7 @@ def civitdown(url, folder):
                     if max_retries == 0:
                         raise e
 
-                    sleep(retry_delay)
+                    time.sleep(retry_delay)
 
         progress.close()
         if prockilled == True:
@@ -512,13 +535,12 @@ def civitdown2(url, folder, downloader, isdebugevery):
   data_filename = model['modelVersions'][0]['files'][0]['name']
   image_url = model['modelVersions'][0]['images'][0]['url']
 
-  import pathlib
   if model['type'] == "TextualInversion":
-    image_filename_jpg = pathlib.PurePath(data_filename).stem + ".preview.jpg"
-    image_filename_png = pathlib.PurePath(data_filename).stem + ".preview.png"
+      image_filename_jpg = pathlib.PurePath(data_filename).stem + ".preview.jpg"
+      image_filename_png = pathlib.PurePath(data_filename).stem + ".preview.png"
   else:
-    image_filename_jpg = pathlib.PurePath(data_filename).stem + ".jpg"
-    image_filename_png = pathlib.PurePath(data_filename).stem + ".png"
+      image_filename_jpg = pathlib.PurePath(data_filename).stem + ".jpg"
+      image_filename_png = pathlib.PurePath(data_filename).stem + ".png"
 
   data_save_path = os.path.join(save_directory, data_filename)
   imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
@@ -533,6 +555,20 @@ def civitdown2(url, folder, downloader, isdebugevery):
     hfdown(data_url, data_save_path, downloader, currentmode)
   if prockilled == False:
     hfdown(image_url, imagejpg_save_path, downloader, currentmode)
+
+  if isdebugevery:
+    additionalname = '-' + downloader
+
+    if model['type'] == "TextualInversion":
+      image_filename_jpg = pathlib.PurePath(data_filename).stem + additionalname + ".preview.jpg"
+      image_filename_png = pathlib.PurePath(data_filename).stem + additionalname + ".preview.png"
+    else:
+      image_filename_jpg = pathlib.PurePath(data_filename).stem + additionalname + ".jpg"
+      image_filename_png = pathlib.PurePath(data_filename).stem + additionalname + ".png"
+    
+    imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
+    imagepng_save_path = os.path.join(save_directory, image_filename_png)
+
   if prockilled == False:
     civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
     print(f"{data_save_path} successfully downloaded.")
@@ -586,15 +622,29 @@ def hfdown(todownload, folder, downloader, mode='default'):
                 print('[0m')
                 currentcondition = tempcondition
             runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
-        printdebug("mode: " + mode)
-        if mode=='debugevery' or mode=='civitdebugevery':
-            sleep(2)
+        printdebug("\nmode: " + mode)
+        if mode=='debugevery':
+            time.sleep(2)
             try:
                 os.rename(os.path.join(folder, filename), os.path.join(folder, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
                 printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
             except FileNotFoundError:
                 printdebug("rename failed somehow")
                 pass
+        elif mode=='civitdebugevery':
+            time.sleep(2)
+            printdebug("debug filename: " + str(filename))
+            printdebug("debug filename_s: " + str(filename_s))
+            printdebug("debug filepath: " + str(filepath))
+            printdebug("debug todownload_s: " + str(todownload_s))
+            printdebug("debug folder_s: " + str(folder_s))
+            try:
+                os.rename(folder, os.path.join(folder_s, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
+                printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
+            except FileNotFoundError:
+                printdebug("rename failed somehow")
+                pass
+
     # if prockilled == True:
     #     #rewind_folder(folder_s)
     #     pass
@@ -659,6 +709,7 @@ def trackall():
         exec(f"filesdict['{x}'] = os.listdir({x}path)")
     return filesdict
 
+@stopwatch
 def run(command, choosedowner):
     global prockilled
     prockilled = False
@@ -666,6 +717,7 @@ def run(command, choosedowner):
     everyprocessid = []
     everymethod = False
     global currentcondition
+
     if command.strip() == '#debugresetdownloads' and snapshot != {} and globaldebug == True:
         currentcondition = f'Removing downloaded files...'
         removed_files = global_rewind()
@@ -675,6 +727,7 @@ def run(command, choosedowner):
         writefinal = list_to_text(texttowrite)
         currentcondition = f'Removing done.'
         return writefinal
+    
     oldfilesdict = trackall()
     currentfolder = modelpath
     usemega = False
@@ -699,14 +752,14 @@ def run(command, choosedowner):
         if prockilled == False:
             if listpart.startswith("https://mega.nz"):
                 currentlink = listpart
-                print()
+                print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 transfare(currentlink, currentfolder)
 
             elif listpart.startswith("https://huggingface.co") or listpart.startswith("https://cdn.discordapp.com/attachments"):
                 currentlink = listpart
-                print()
+                print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 if everymethod == False:
@@ -718,7 +771,7 @@ def run(command, choosedowner):
 
             elif listpart.startswith("https://civitai.com/api/download/models/"):
                 currentlink = listpart
-                print()
+                print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 civitdown(currentlink, currentfolder)
@@ -728,14 +781,14 @@ def run(command, choosedowner):
                 currentlink = "/".join(splits[:5])
                 foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
                 folderpath = shlex.quote(os.path.join(extpath, foldername))
-                print()
+                print('\n')
                 print(currentlink)
                 currentcondition = f'Cloning {currentlink}...'
                 runwithsubprocess(f"git clone {currentlink} {folderpath}")
 
             elif listpart.startswith("https://civitai.com/models/"):
                 currentlink = listpart
-                print()
+                print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 if everymethod == False:
@@ -746,14 +799,17 @@ def run(command, choosedowner):
                             civitdown2(currentlink, currentfolder, xmethod, True)
             
             elif listpart.startswith("#debugeverymethod") and globaldebug == True:
+                print('\n')
                 everymethod = True
                 print('[1;32mDebugEveryMethod activated!')
                 print('[1;32mOne link will be downloaded with every possible download method.')
                 print('[0m')
 
             elif listpart.startswith("#debugresetdownloads") and snapshot != {} and globaldebug == True:
+                print('\n')
                 currentcondition = f'Removing downloaded files...'
                 removed_files = global_rewind()
+                oldfilesdict = trackall()
                 texttowrite = ["⬇️Removed files⬇️"]
                 for item in removed_files:
                     texttowrite.append(item)
