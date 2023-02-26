@@ -12,7 +12,7 @@ from tqdm import tqdm
 import pathlib
 import inspect
 import platform
-from shlex import quote
+import shlex
 import signal
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -109,8 +109,8 @@ globaldebug = True #set this to true to activate every debug features
 
 #debuggingpurpose{
     #Hello debuggers! This will track every files when the extension is launched, and
-    #you can remove every downloaded files after with hashtag '#debugdebugdebug', for debugging purposes on colab
-    #(Note: You need to fill the textbox with only a single line of #debugdebugdebug and nothing more)
+    #you can remove every downloaded files after with hashtag '#debugresetdownloads', for debugging purposes on colab
+    #(Note: You need to fill the textbox with only a single line of #debugresetdownloads and nothing more)
     #uncomment the `take_snapshot()` to use this feature.
 import shutil
 snapshot = []
@@ -216,35 +216,37 @@ def printdebug(toprint):
         print(toprint)
 
 def runwithsubprocess(rawcommand, folder=None):
-    def construct_command(command_string):
-        # Split the command string into a list of arguments
-        command_parts = command_string.split()
+    # def construct_command(command_string):
+    #     # Split the command string into a list of arguments
+    #     command_parts = command_string.split()
 
-        # Loop through the list of arguments and convert any quoted strings into single arguments
-        # This allows arguments with spaces to be correctly split into separate arguments
-        new_command_parts = []
-        quote_started = False
-        for part in command_parts:
-            if part.startswith('"'):
-                quote_started = True
-                new_part = part[1:]
-            elif part.endswith('"'):
-                quote_started = False
-                new_part = new_command_parts[-1] + " " + part[:-1]
-                new_command_parts[-1] = new_part
-            elif quote_started:
-                new_part = new_command_parts[-1] + " " + part
-                new_command_parts[-1] = new_part
-            else:
-                new_command_parts.append(part)
+    #     # Loop through the list of arguments and convert any quoted strings into single arguments
+    #     # This allows arguments with spaces to be correctly split into separate arguments
+    #     new_command_parts = []
+    #     quote_started = False
+    #     for part in command_parts:
+    #         if part.startswith('"'):
+    #             quote_started = True
+    #             new_part = part[1:]
+    #         elif part.endswith('"'):
+    #             quote_started = False
+    #             new_part = new_command_parts[-1] + " " + part[:-1]
+    #             new_command_parts[-1] = new_part
+    #         elif quote_started:
+    #             new_part = new_command_parts[-1] + " " + part
+    #             new_command_parts[-1] = new_part
+    #         else:
+    #             new_command_parts.append(part)
 
-        # Return the list of arguments as a command and arguments list
-        printdebug(f"debug new_command_parts: {new_command_parts}")
-        return new_command_parts
+    #     # Return the list of arguments as a command and arguments list
+    #     printdebug(f"debug new_command_parts: {new_command_parts}")
+    #     return new_command_parts
 
     currentprocess = ''
 
-    commandtorun = construct_command(rawcommand)
+    commandtorun = shlex.split(rawcommand) #construct_command(rawcommand)
+    printdebug(f"raw command: {rawcommand}")
+    printdebug(f"merged command: {commandtorun}")
     global prockilled
     global everyprocessid
     # if gradiostate == False and not rawcommand.startswith("aria"):
@@ -320,11 +322,11 @@ def unbuffered(proc, stream='stdout'):
 def transfare(todownload, folder):
     #import codecs
     #decoder = codecs.getincrementaldecoder("UTF-8")()
-    todownload_s = quote(todownload)
-    folder_s = quote(folder)
+    todownload_s = shlex.quote(todownload)
+    folder_s = shlex.quote(folder)
     if platform.system() == "Windows":
         localappdata = os.environ['LOCALAPPDATA']
-        megagetloc = os.path.join(quote(localappdata), "MEGAcmd", "mega-get.bat")
+        megagetloc = os.path.join(shlex.quote(localappdata), "MEGAcmd", "mega-get.bat")
         runwithsubprocess(f"{megagetloc} {todownload_s} {folder_s}", folder_s)
     else:
         cmd = ["mega-get", todownload_s, folder_s]
@@ -383,8 +385,8 @@ def installmega():
 def installmegawin():
     userprofile = os.environ['USERPROFILE']
     localappdata = os.environ['LOCALAPPDATA']
-    megagetloc = os.path.join(quote(localappdata), "MEGAcmd", "mega-get.bat")
-    megacmdloc = os.path.join(quote(userprofile), "Downloads", "MEGAcmdSetup64.exe")
+    megagetloc = os.path.join(shlex.quote(localappdata), "MEGAcmd", "mega-get.bat")
+    megacmdloc = os.path.join(shlex.quote(userprofile), "Downloads", "MEGAcmdSetup64.exe")
     if not os.path.exists(megagetloc):
         print('[1;32mInstalling MEGA ...')
         print('[0m')
@@ -398,11 +400,11 @@ def installmegawin():
 #these code above handle mega.nz
 
 def civitdown(url, folder):
-    filename = url.rsplit('/', 1)[-1] + ".bdgh"
+    filename = url.split('?')[0].rsplit('/', 1)[-1] + ".bdgh"
     pathtodown = os.path.join(folder, filename)
     max_retries = 5
     retry_delay = 10
-    url_s = quote(url)
+    # url_s = quote(url)
 
     while prockilled == False:
 
@@ -415,7 +417,7 @@ def civitdown(url, folder):
         with open(pathtodown, "ab") as f:
             while prockilled == False:
                 try:
-                    response = requests.get(url_s, headers=headers, stream=True)
+                    response = requests.get(url, headers=headers, stream=True)
                     total_size = int(response.headers.get("Content-Length", 0))
                     # if total_size == 0:
                     #     total_size = downloaded_size
@@ -501,7 +503,7 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
   img_resized.save(imagepng_save_path)
   os.remove(imagejpg_save_path)
 
-def civitdown2(url, folder, downloader):
+def civitdown2(url, folder, downloader, isdebugevery):
   model = civitdown2_get_json(url)
 
   save_directory = civitdown2_get_save_directory(model['type'], folder)
@@ -522,27 +524,33 @@ def civitdown2(url, folder, downloader):
   imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
   imagepng_save_path = os.path.join(save_directory, image_filename_png)
 
+  currentmode = 'civit'
+  if isdebugevery:
+      currentmode = 'civitdebugevery'
+
   printdebug(f"debug download_url({data_url}, {data_save_path}, {downloader})")
   if prockilled == False:
-    hfdown(data_url, data_save_path, downloader, True)
+    hfdown(data_url, data_save_path, downloader, currentmode)
   if prockilled == False:
-    hfdown(image_url, imagejpg_save_path, downloader, True)
+    hfdown(image_url, imagejpg_save_path, downloader, currentmode)
   if prockilled == False:
     civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
     print(f"{data_save_path} successfully downloaded.")
 #}
 
-def hfdown(todownload, folder, downloader, iscivit):
-    if iscivit:
+def hfdown(todownload, folder, downloader, mode='default'):
+    if mode=='civit' or mode=='civitdebugevery':
         filename = pathlib.Path(folder).name
-        filepath = quote(folder)
+        filename_s = shlex.quote(filename)
+        filepath = shlex.quote(folder)
         todownload_s = todownload
         folder_s = pathlib.Path(folder).parent.resolve()
     else:
-        filename = quote(todownload.rsplit('/', 1)[-1])
-        filepath = quote(os.path.join(folder, filename))
-        todownload_s = quote(todownload)
-        folder_s = quote(folder)
+        filename = todownload.rsplit('/', 1)[-1]
+        filename_s = shlex.quote(filename)
+        filepath = shlex.quote(os.path.join(folder, filename))
+        todownload_s = shlex.quote(todownload)
+        folder_s = shlex.quote(folder)
     #savestate_folder(folder_s)
     if platform.system() == "Windows":
         if downloader=='gdown':
@@ -577,7 +585,16 @@ def hfdown(todownload, folder, downloader, iscivit):
                 print('[1;32maria2 installed!')
                 print('[0m')
                 currentcondition = tempcondition
-            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename}", folder_s)
+            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
+        printdebug("mode: " + mode)
+        if mode=='debugevery' or mode=='civitdebugevery':
+            sleep(2)
+            try:
+                os.rename(os.path.join(folder, filename), os.path.join(folder, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
+                printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
+            except FileNotFoundError:
+                printdebug("rename failed somehow")
+                pass
     # if prockilled == True:
     #     #rewind_folder(folder_s)
     #     pass
@@ -647,17 +664,20 @@ def run(command, choosedowner):
     prockilled = False
     global everyprocessid
     everyprocessid = []
-    if command.strip() == '#debugdebugdebug' and snapshot != {} and globaldebug == True:
+    everymethod = False
+    global currentcondition
+    if command.strip() == '#debugresetdownloads' and snapshot != {} and globaldebug == True:
+        currentcondition = f'Removing downloaded files...'
         removed_files = global_rewind()
         texttowrite = ["⬇️Removed files⬇️"]
         for item in removed_files:
             texttowrite.append(item)
         writefinal = list_to_text(texttowrite)
+        currentcondition = f'Removing done.'
         return writefinal
     oldfilesdict = trackall()
     currentfolder = modelpath
     usemega = False
-    global currentcondition
     currentcondition = 'Extracting links...'
     links = extract_links(command)
     for item in links:
@@ -674,6 +694,7 @@ def run(command, choosedowner):
     print('[0m')
     printdebug('prockilled: ' + str(prockilled))
     
+    downmethod = ['gdown', 'wget', 'curl', 'aria2']
     for listpart in links:
         if prockilled == False:
             if listpart.startswith("https://mega.nz"):
@@ -688,7 +709,12 @@ def run(command, choosedowner):
                 print()
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                hfdown(currentlink, currentfolder, choosedowner, False)
+                if everymethod == False:
+                    hfdown(currentlink, currentfolder, choosedowner)
+                else:
+                    for xmethod in downmethod:
+                        if prockilled == False:
+                            hfdown(currentlink, currentfolder, xmethod, 'debugevery')
 
             elif listpart.startswith("https://civitai.com/api/download/models/"):
                 currentlink = listpart
@@ -700,8 +726,8 @@ def run(command, choosedowner):
             elif listpart.startswith("https://github.com"):
                 splits = listpart.split("/")
                 currentlink = "/".join(splits[:5])
-                foldername = quote(listpart.rsplit('/', 1)[-1])
-                folderpath = quote(os.path.join(extpath, foldername))
+                foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
+                folderpath = shlex.quote(os.path.join(extpath, foldername))
                 print()
                 print(currentlink)
                 currentcondition = f'Cloning {currentlink}...'
@@ -712,7 +738,27 @@ def run(command, choosedowner):
                 print()
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                civitdown2(currentlink, currentfolder, choosedowner)
+                if everymethod == False:
+                    civitdown2(currentlink, currentfolder, choosedowner, False)
+                else:
+                    for xmethod in downmethod:
+                        if prockilled == False:
+                            civitdown2(currentlink, currentfolder, xmethod, True)
+            
+            elif listpart.startswith("#debugeverymethod") and globaldebug == True:
+                everymethod = True
+                print('[1;32mDebugEveryMethod activated!')
+                print('[1;32mOne link will be downloaded with every possible download method.')
+                print('[0m')
+
+            elif listpart.startswith("#debugresetdownloads") and snapshot != {} and globaldebug == True:
+                currentcondition = f'Removing downloaded files...'
+                removed_files = global_rewind()
+                texttowrite = ["⬇️Removed files⬇️"]
+                for item in removed_files:
+                    texttowrite.append(item)
+                writefinal = list_to_text(texttowrite)
+                printdebug(str(writefinal))
 
             else:
                 for prefix in typechecker:
@@ -734,6 +780,7 @@ def run(command, choosedowner):
                         elif prefix in ["aestheticembedding", "aestheticembed"]:
                             currentfolder = aestheticembedpath
                         os.makedirs(currentfolder, exist_ok=True)
+                
         else:
             currentcondition = 'Operation cancelled'
             return "Operation cancelled"
@@ -758,6 +805,10 @@ def extract_links(string):
     for line in lines:
         line = line.split('##')[0].strip()
         if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
+            links.append(line)
+        elif line.startswith("#debugeverymethod"):
+            links.append(line)
+        elif line.startswith("#debugresetdownloads"):
             links.append(line)
         else:
             for prefix in typechecker:
