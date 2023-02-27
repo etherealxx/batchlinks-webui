@@ -40,15 +40,15 @@ else:
     latestversiontext = ""
 #}
 
-try:
-    global gradiostate
-    if cmd_opts.gradio_queue:
-        gradiostate = True
-    else:
-        gradiostate = False
-except AttributeError:
-    gradiostate = False
-    pass
+# try:
+#     global gradiostate
+#     if cmd_opts.gradio_queue:
+#         gradiostate = True
+#     else:
+#         gradiostate = False
+# except AttributeError:
+#     gradiostate = False
+#     pass
 
 typechecker = [
     "embedding", "embeddings", "embed", "embeds", "textualinversion", "ti",
@@ -104,6 +104,7 @@ logging = False
 prockilled = False
 currentfoldertrack = []
 everyprocessid = []
+remaininglinks = []
 
 globaldebug = True #set this to true to activate every debug features
 
@@ -526,7 +527,7 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
   img_resized.save(imagepng_save_path)
   os.remove(imagejpg_save_path)
 
-def civitdown2(url, folder, downloader, isdebugevery):
+def civitdown2(url, folder):
   model = civitdown2_get_json(url)
 
   save_directory = civitdown2_get_save_directory(model['type'], folder)
@@ -547,34 +548,18 @@ def civitdown2(url, folder, downloader, isdebugevery):
   imagepng_save_path = os.path.join(save_directory, image_filename_png)
 
   currentmode = 'civit'
-  if isdebugevery:
-      currentmode = 'civitdebugevery'
 
-  printdebug(f"debug download_url({data_url}, {data_save_path}, {downloader})")
   if prockilled == False:
-    hfdown(data_url, data_save_path, downloader, currentmode)
+    hfdown(data_url, data_save_path, currentmode)
   if prockilled == False:
-    hfdown(image_url, imagejpg_save_path, downloader, currentmode)
-
-  if isdebugevery:
-    additionalname = '-' + downloader
-
-    if model['type'] == "TextualInversion":
-      image_filename_jpg = pathlib.PurePath(data_filename).stem + additionalname + ".preview.jpg"
-      image_filename_png = pathlib.PurePath(data_filename).stem + additionalname + ".preview.png"
-    else:
-      image_filename_jpg = pathlib.PurePath(data_filename).stem + additionalname + ".jpg"
-      image_filename_png = pathlib.PurePath(data_filename).stem + additionalname + ".png"
-    
-    imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
-    imagepng_save_path = os.path.join(save_directory, image_filename_png)
+    hfdown(image_url, imagejpg_save_path, currentmode)
 
   if prockilled == False:
     civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
     print(f"{data_save_path} successfully downloaded.")
 #}
 
-def hfdown(todownload, folder, downloader, mode='default'):
+def hfdown(todownload, folder, mode='default'):
     if mode=='civit' or mode=='civitdebugevery':
         filename = pathlib.Path(folder).name
         filename_s = shlex.quote(filename)
@@ -588,62 +573,62 @@ def hfdown(todownload, folder, downloader, mode='default'):
         todownload_s = shlex.quote(todownload)
         folder_s = shlex.quote(folder)
     #savestate_folder(folder_s)
-    if platform.system() == "Windows":
-        if downloader=='gdown':
-            import gdown
-            gdown.download(todownload, filepath, quiet=False)
-        elif downloader=='wget':
-            #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
-            import wget
-            wget.download(todownload, filepath)
-        elif downloader=='curl':
-            runwithsubprocess(f"curl -Lo {filepath} {todownload_s}")
-    else:
-        if downloader=='gdown':
-            printdebug(f"debug gdown {todownload_s} -O {filepath}")
-            runwithsubprocess(f"gdown {todownload_s} -O {filepath}", folder_s)
-        elif downloader=='wget':
-            runwithsubprocess(f"wget -O {filepath} {todownload_s} --progress=bar:force", folder_s)
-        elif downloader=='curl':
-            runwithsubprocess(f"curl -Lo {filepath} {todownload_s}", folder_s)
+    # if platform.system() == "Windows":
+    #     if downloader=='gdown':
+    #         import gdown
+    #         gdown.download(todownload, filepath, quiet=False)
+    #     elif downloader=='wget':
+    #         #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
+    #         import wget
+    #         wget.download(todownload, filepath)
+    #     elif downloader=='curl':
+    #         runwithsubprocess(f"curl -Lo {filepath} {todownload_s}")
+    # else:
+    #     if downloader=='gdown':
+    #         printdebug(f"debug gdown {todownload_s} -O {filepath}")
+    #         runwithsubprocess(f"gdown {todownload_s} -O {filepath}", folder_s)
+    #     elif downloader=='wget':
+    #         runwithsubprocess(f"wget -O {filepath} {todownload_s} --progress=bar:force", folder_s)
+    #     elif downloader=='curl':
+    #         runwithsubprocess(f"curl -Lo {filepath} {todownload_s}", folder_s)
             # curdir = os.getcwd()
             # os.rename(os.path.join(curdir, filename), filepath)
-        elif downloader=='aria2':
-            ariachecker = "dpkg-query -W -f='${Status}' aria2"
-            checkaria = subprocess.getoutput(ariachecker)
-            if "no packages found matching aria2" in checkaria:
-                global currentcondition
-                tempcondition = currentcondition
-                currentcondition = "Installing aria2..."
-                print('[1;32mInstalling aria2 ...')
-                print('[0m')
-                runwithsubprocess(f"apt-get -y install -qq aria2")
-                print('[1;32maria2 installed!')
-                print('[0m')
-                currentcondition = tempcondition
-            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
-        printdebug("\nmode: " + mode)
-        if mode=='debugevery':
-            time.sleep(2)
-            try:
-                os.rename(os.path.join(folder, filename), os.path.join(folder, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
-                printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
-            except FileNotFoundError:
-                printdebug("rename failed somehow")
-                pass
-        elif mode=='civitdebugevery':
-            time.sleep(2)
-            printdebug("debug filename: " + str(filename))
-            printdebug("debug filename_s: " + str(filename_s))
-            printdebug("debug filepath: " + str(filepath))
-            printdebug("debug todownload_s: " + str(todownload_s))
-            printdebug("debug folder_s: " + str(folder_s))
-            try:
-                os.rename(folder, os.path.join(folder_s, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
-                printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
-            except FileNotFoundError:
-                printdebug("rename failed somehow")
-                pass
+
+    ariachecker = "dpkg-query -W -f='${Status}' aria2"
+    checkaria = subprocess.getoutput(ariachecker)
+    if "no packages found matching aria2" in checkaria:
+        global currentcondition
+        tempcondition = currentcondition
+        currentcondition = "Installing aria2..."
+        print('[1;32mInstalling aria2 ...')
+        print('[0m')
+        runwithsubprocess(f"apt-get -y install -qq aria2")
+        print('[1;32maria2 installed!')
+        print('[0m')
+        currentcondition = tempcondition
+    runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
+    # printdebug("\nmode: " + mode)
+    # if mode=='debugevery':
+    #     time.sleep(2)
+    #     try:
+    #         os.rename(os.path.join(folder, filename), os.path.join(folder, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
+    #         printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
+    #     except FileNotFoundError:
+    #         printdebug("rename failed somehow")
+    #         pass
+    # elif mode=='civitdebugevery':
+    #     time.sleep(2)
+    #     printdebug("debug filename: " + str(filename))
+    #     printdebug("debug filename_s: " + str(filename_s))
+    #     printdebug("debug filepath: " + str(filepath))
+    #     printdebug("debug todownload_s: " + str(todownload_s))
+    #     printdebug("debug folder_s: " + str(folder_s))
+    #     try:
+    #         os.rename(folder, os.path.join(folder_s, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
+    #         printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
+    #     except FileNotFoundError:
+    #         printdebug("rename failed somehow")
+    #         pass
 
     # if prockilled == True:
     #     #rewind_folder(folder_s)
@@ -690,7 +675,8 @@ def writeall(olddict):
                     exec(f"finalwrite.append('⬇️' + {newtype}path + '⬇️')")
                     for item in trackcompare:
                         finalwrite.append(item)
-
+    if bool(remaininglinks):
+        finalwrite.append("(There are still some files that have not been downloaded. Click the 'Resume Download' button to load the links that haven't been downloaded.)")
     finaloutput = list_to_text(finalwrite)
     finalwrite = []
     return finaloutput
@@ -709,15 +695,26 @@ def trackall():
         exec(f"filesdict['{x}'] = os.listdir({x}path)")
     return filesdict
 
+def currentfoldertohashtag(folder):
+    for x in typemain:
+        checkpath = str()
+        checkpath = eval(x+'path')
+        printdebug("checkpath: " + checkpath)
+        if str(folder).strip() == checkpath:
+            thehashtag = "#" + x
+            printdebug("thehashtag: " + thehashtag)
+            return thehashtag
+    return "#debug"
+
 @stopwatch
-def run(command, choosedowner):
+def run(command):
     global prockilled
     prockilled = False
     global everyprocessid
     everyprocessid = []
     everymethod = False
     global currentcondition
-
+    resumebuttonvisible = False
     if command.strip() == '#debugresetdownloads' and snapshot != {} and globaldebug == True:
         currentcondition = f'Removing downloaded files...'
         removed_files = global_rewind()
@@ -726,7 +723,7 @@ def run(command, choosedowner):
             texttowrite.append(item)
         writefinal = list_to_text(texttowrite)
         currentcondition = f'Removing done.'
-        return writefinal
+        return [writefinal, gr.Button.update(visible=resumebuttonvisible)]
     
     oldfilesdict = trackall()
     currentfolder = modelpath
@@ -746,10 +743,30 @@ def run(command, choosedowner):
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     printdebug('prockilled: ' + str(prockilled))
-    
-    downmethod = ['gdown', 'wget', 'curl', 'aria2']
+    global remaininglinks
+    batchtime = time.time()
+    # downmethod = ['gdown', 'wget', 'curl', 'aria2']
     for listpart in links:
         if prockilled == False:
+            if time.time() - batchtime >= 120:
+                remaininglinks = links[links.index(listpart):]
+                printdebug("remaining links: " + str(remaininglinks))
+                if bool(remaininglinks):
+                    printdebug("currentfolder: " + currentfolder)
+                    tophashtag = currentfoldertohashtag(currentfolder)
+                    printdebug("tophashtag: " + tophashtag)
+                    remaininglinks.insert(0, tophashtag)
+                    printdebug("remaining links new: " + str(remaininglinks))
+                    print()
+                    print('[1;33mRuntime was stopped to prevent hangs.')
+                    print('[0m')
+                    print("These are some files that haven't been downloaded yet.👇")
+                    printremains = list_to_text(remaininglinks)
+                    print(printremains)
+                    resumebuttonvisible = True
+                cancelrun()
+                break
+
             if listpart.startswith("https://mega.nz"):
                 currentlink = listpart
                 print('\n')
@@ -763,11 +780,7 @@ def run(command, choosedowner):
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 if everymethod == False:
-                    hfdown(currentlink, currentfolder, choosedowner)
-                else:
-                    for xmethod in downmethod:
-                        if prockilled == False:
-                            hfdown(currentlink, currentfolder, xmethod, 'debugevery')
+                    hfdown(currentlink, currentfolder)
 
             elif listpart.startswith("https://civitai.com/api/download/models/"):
                 currentlink = listpart
@@ -791,19 +804,7 @@ def run(command, choosedowner):
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                if everymethod == False:
-                    civitdown2(currentlink, currentfolder, choosedowner, False)
-                else:
-                    for xmethod in downmethod:
-                        if prockilled == False:
-                            civitdown2(currentlink, currentfolder, xmethod, True)
-            
-            elif listpart.startswith("#debugeverymethod") and globaldebug == True:
-                print('\n')
-                everymethod = True
-                print('[1;32mDebugEveryMethod activated!')
-                print('[1;32mOne link will be downloaded with every possible download method.')
-                print('[0m')
+                civitdown2(currentlink, currentfolder)
 
             elif listpart.startswith("#debugresetdownloads") and snapshot != {} and globaldebug == True:
                 print('\n')
@@ -852,8 +853,8 @@ def run(command, choosedowner):
     print('[1;32mBatchLinks Downloads finished!')
     print('[0m')
     currentcondition = 'Done!'
-    printdebug(f"this should be the output: " + str(downloadedfiles))
-    return downloadedfiles
+    printdebug(f"this should be the output: \n" + str(downloadedfiles))
+    return [downloadedfiles, gr.Button.update(visible=resumebuttonvisible)]
 
 def extract_links(string):
     links = []
@@ -861,8 +862,6 @@ def extract_links(string):
     for line in lines:
         line = line.split('##')[0].strip()
         if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
-            links.append(line)
-        elif line.startswith("#debugeverymethod"):
             links.append(line)
         elif line.startswith("#debugresetdownloads"):
             links.append(line)
@@ -947,6 +946,14 @@ def cancelrun():
         print()
     return "Operation Cancelled"
 
+def fillbox():
+    global remaininglinks
+    if bool(remaininglinks):
+        text = list_to_text(remaininglinks)
+        remaininglinks = []
+        return [text, gr.Button.update(visible=False)]
+    return ['', gr.Button.update(visible=False)]
+
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
         with gr.Row():
@@ -973,13 +980,13 @@ def on_ui_tabs():
             """)
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
-          try:
-            if cmd_opts.gradio_queue:
-                logbox = gr.Textbox(label="Log", interactive=False)
-            else:
-                logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
-          except AttributeError:
-            pass
+        #   try:
+        #     if cmd_opts.gradio_queue:
+        #         logbox = gr.Textbox(label="Log", interactive=False)
+        #     else:
+        #         logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
+        #   except AttributeError:
+        #     pass
           ##this giant mess is because i know nothing about gradio
           #with gr.Row():
             #with gr.Column(scale=1):
@@ -995,47 +1002,39 @@ def on_ui_tabs():
           with gr.Row():
             with gr.Box():
                 #command = gr.Textbox(label="Links", placeholder="type here", lines=5)
-                try:
-                  if cmd_opts.gradio_queue:
-                      logging = gr.Radio(["Turn On Logging"], show_label=False)
-                      logging.change(keeplog, outputs=logbox, every=1)
-                  else:
-                    print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
-                except AttributeError:
-                  print("Batchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension would still runs fine.")
-                  pass
+                # try:
+                #   if cmd_opts.gradio_queue:
+                # logging = gr.Radio(["Turn On Logging"], show_label=False)
+                # logging.change(keeplog, outputs=logbox, every=2)
+                #   else:
+                #     print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
+                # except AttributeError:
+                #   print("Batchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension would still runs fine.")
+                #   pass
                 out_text = gr.Textbox(label="Output")
 
-                if platform.system() == "Windows":
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
-                else:
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
+                # if platform.system() == "Windows":
+                #     choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
+                # else:
+                #     choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
 
                 with gr.Row():
-                    try:
-                        if cmd_opts.gradio_queue:
-                            with gr.Column(scale=2, min_width=100):
-                                btn_run = gr.Button("Download All!", variant="primary")
-                            #btn_debug = gr.Button(debug, output=debug_txt, every=1)
-                            #btn_debug.click(debug, outputs=debug_txt, every=1)
-                            # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
-                            # btn_upload.upload(uploaded, btn_upload, file_output)
-                            with gr.Column(scale=1, min_width=100):
-                                btn_cancel = gr.Button("Cancel")
-                        else:
-                            raise AttributeError
-                            #btn_run = gr.Button("Download All!", variant="primary")
-                    except AttributeError:
-                        btn_run = gr.Button("Download All!", variant="primary")
 
-                try:
-                    if cmd_opts.gradio_queue:
-                        run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
-                        btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
-                    else:
-                        raise AttributeError
-                except AttributeError:
-                    btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
+                    with gr.Column(scale=2, min_width=100):
+                        btn_run = gr.Button("Download All!", variant="primary")
+                    #btn_debug = gr.Button(debug, output=debug_txt, every=1)
+                    #btn_debug.click(debug, outputs=debug_txt, every=1)
+                    # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
+                    # btn_upload.upload(uploaded, btn_upload, file_output)
+                    with gr.Column(scale=1, min_width=100):
+                        btn_cancel = gr.Button("Cancel")
+
+                    btn_resume = gr.Button("Resume Download", visible=False)
+
+                btn_resume.click(fillbox, None, outputs=[command, btn_resume])
+                run_event = btn_run.click(run, inputs=[command], outputs=[out_text, btn_resume])
+                btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+
 
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
