@@ -5,16 +5,16 @@
     <img src="images/batchlinks_logo.png" alt="Logo" height="150" width="528">
   </a>
 
-<h3 align="center">BatchLinks Downloader</h3>
+<h3 align="center">BatchLinks Downloader (onedotsix branch)</h3>
 
 <p align="center">
-    Batch-downloading models in SD webui colab made simple.
+    Batch-downloading models in SD webui colab made simple.<br />Made for camenduru's v1.6 colab notebook.
     <br />
     <a href="https://github.com/etherealxx/batchlinks-downloader"><strong></strong></a>
     <br />
-    <a href="https://github.com/etherealxx/etherportal-webui-colab/issues">Report Bug</a>
+    <a href="https://github.com/etherealxx/batchlinks-downloader/issues">Report Bug</a>
     ·
-    <a href="https://github.com/etherealxx/etherportal-webui-colab/discussions/new?category=ideas">Request Feature</a>
+    <a href="https://github.com/etherealxx/batchlinks-downloader/discussions/new?category=ideas">Request Feature</a>
   </p>
 
 </div>
@@ -51,12 +51,12 @@
 Copy this line into your colab installation cell. Or into a new cell if you already launched the webui.
 
 ```
-!git clone https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
+!git clone -b onedotsix https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
 ```
 
-or, you can copy the url of this repo and install it via webui and restart the UI.<br/>
-<img src="images/ext_installer.jpg" alt="Logo" height="300" width="362"><br/>
-(If `gradio no interface is running` or `bad gateway` shows up when restarting the UI, that means you need to restart the cell anyway 😅)
+Made just for [camenduru](https://github.com/camenduru)'s main branch of [stable-diffusion-webui-colab](https://github.com/camenduru/stable-diffusion-webui-colab) The [main branch of this extension](https://github.com/etherealxx/batchlinks-webui) is more superior for newer webui version. 
+
+Windows installation is not supported at all.
 
 <!--
 or, if your colab use the newer version of webui (gradio version above 3.16.0) you can use this instead (it adds a little progress bar)
@@ -65,8 +65,6 @@ or, if your colab use the newer version of webui (gradio version above 3.16.0) y
 !git clone -b gradio-v3-16-2 https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
 ```
 -->
-
-While it's not recommended to use this extension on your local installation, you can use this extension on Windows. [More here](https://github.com/etherealxx/batchlinks-webui#local-installation-support)
 
 ## About
 
@@ -141,10 +139,6 @@ Github links doesn't need hashtag. It will always cloned to _/content/stable-dif
 
 See [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)
 
-### Huggingface's download method
-
-So there's four supported method: `gdown`, `wget`, `curl` and `aria2`. Use whatever, really. The difference between them are actually little. Myself love using gdown since the output is cleaner than the others.
-
 ### Civitai's download method
 
 There are two ways to download links from Civit. The `model link` method, and the `direct link` method.
@@ -173,27 +167,23 @@ Check [this page](https://github.com/etherealxx/batchlinks-downloader/blob/main/
 
 -->
 
-### Logging
+<!-- ### Logging
 
 If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), or webui forks that supports `--gradio-queue` args on launch.py, use it and you will be able to enable logging by pressing the `Turn On Logging` radio button. Logging will tell you what are you actually downloading right now on the webui.<br/>
-<img src="images/logging.jpg" alt="Log" height="160" width="223"><br/>
+<img src="images/logging.jpg" alt="Log" height="160" width="223"><br/> -->
 
 ### Notification
 
 If there's `notification.mp3` on your webui installation folder (the one who plays when image generation is complete), this extension will also use that sound file to notify completed batch download.
 
-### Local Installation Support
-
-This extension is tested to work on Windows 11. Maybe works on Debian-based linux (but you better inspect the source code first).
-On Windows, this extension will install [MEGAcmd](https://github.com/meganz/MEGAcmd) for MEGA file download.
-MacOS is not supported.
-
-## Latest release: v2.0.0
+## Latest release: v2.0.0+onedotsix
 Features:
-- `aria2` as download method.
-- Cancel button for cancelling download process (`--gradio-queue` required)
+- (onedotsix) `aria2` as **the only** download method.
+- (onedotsix) Downloading session will automatically stopped (cutted) every 2 minutes to prevent UI desync (Gradio error)
+- (onedotsix) Resume button to continue cutted session by profiding links that aren't downloaded yet
+- Cancel button for cancelling download process
 - Debug snapshot.<br/>
-When `take_snapshot()` is uncommented, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugdebugdebug` on the textbox (and nothing more), it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+When `take_snapshot()` is uncommented, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownload` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
 - New hashtags: `#textualinversion`, `#ti`, `#aestheticembedding`, `#aestheticembed`, `#controlnet`, and `#cnet`
 - `shlex.quote` to properly quote links (Thanks **[@rti7743](https://github.com/rti7743)**!)
 - Supports cloning webui extensions
@@ -209,8 +199,8 @@ When `take_snapshot()` is uncommented, it saves the current state of the webui o
 - [x] Completed download will use the webui's notification.mp3
 - [ ] Logo change
 - [ ] Other download sites (s-ul.eu, github, gitgud, catbox)
-- [ ] Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.9, which doesn't support progress bar.)
-- [x] Supports Windows local installation
+- [ ] ~~Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.9, which doesn't support progress bar.)~~
+- [ ] ~~Supports Windows local installation~~
 - [ ] Support customizable hashtag from the UI
 - [ ] UI overhaul
 - [x] Using threading/subprocess instead of os.system to download files
@@ -218,11 +208,9 @@ When `take_snapshot()` is uncommented, it saves the current state of the webui o
 ## Known Bugs
 
 
-- Progress bar (the yellow bar) doesn't progress as expected (v3-16-2 branch)
 - Sometimes notification sound doesn't play when downloading same file twice in a row
-- Windows: The delay between file is downloaded and the output shows is pretty long, and even sometimes the notification comes at the wrong time.
-- Links that has bracket in it needs to be 'escaped' (For example, `Baka-DiffusionV1(Fp16).safetensors` must be typed `Baka-DiffusionV1\(Fp16\).safetensors`)
 - Sometimes colab cannot be shut down with a single click on the stop button. Hitting the button several times will raise a KeyboardInterrupt and forcely stopping the cell.
+- ~~Links that has bracket in it needs to be 'escaped' (For example, `Baka-DiffusionV1(Fp16).safetensors` must be typed `Baka-DiffusionV1\(Fp16\).safetensors`)~~ Fixed in v2.0.0+onedotsix
 - ~~The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)~~ Seems like fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 - ~~File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.~~ Fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 
@@ -232,7 +220,7 @@ When `take_snapshot()` is uncommented, it saves the current state of the webui o
 
 I just learned python few months ago, by just looking at other peoples project and sometimes asking ChatGPT. Gradio is new for me. I literally just learn it in one day to make this extension, so expect some bugs.
 
-However, if you have a suggestion or code-fixing that would make this better, please fork the repo and create a pull request. Don't forget to explain the solution you provided on the commit comment, so we can learn together!😁<br/>
+However, if you have a suggestion or code-fixing that would make this better, please inform me in the issue page, fork the repo and create a pull request. Don't forget to explain the solution you provided on the commit comment, so we can learn together!😁<br/>
 A star on this project would be nice! Thanks again!
 
 <!--

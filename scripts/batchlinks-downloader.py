@@ -24,7 +24,7 @@ with open(version_dir, 'r', encoding='utf-8') as file:
 currentversion = curverall[0].strip()
 
 try:
-    versionurl = "https://raw.githubusercontent.com/etherealxx/batchlinks-webui/main/version.txt"
+    versionurl = "https://raw.githubusercontent.com/etherealxx/batchlinks-webui/onedotsix/version.txt"
     versionresp = requests.get(versionurl)
     version_lines = versionresp.text.splitlines()
     latestversion = version_lines[0].strip()
