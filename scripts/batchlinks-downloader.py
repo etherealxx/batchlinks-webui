@@ -68,14 +68,15 @@ typemain = [
     "aestheticembed", "cnet", "ext"
 ]
 
-# supportedlinks = [
-#     "https://mega.nz",
-#     "https://huggingface.co",
-#     "https://civitai.com/api/download/models/",
-#     "https://civitai.com/models/"
-#     "https://cdn.discordapp.com/attachments",
-#     "https://github.com",
-# ]
+supportedlinks = [
+    "https://mega.nz",
+    "https://huggingface.co",
+    "https://civitai.com/api/download/models/",
+    "https://civitai.com/models/",
+    "https://cdn.discordapp.com/attachments",
+    "https://github.com",
+    "https://raw.githubusercontent.com"
+]
 
 modelpath = os.path.join(script_path, "models/Stable-diffusion")
 embedpath = os.path.join(script_path, "embeddings")
@@ -105,7 +106,7 @@ prockilled = False
 currentfoldertrack = []
 everyprocessid = []
 
-globaldebug = True #set this to true to activate every debug features
+globaldebug = False #set this to true to activate every debug features
 
 def stopwatch(func):
     """
@@ -134,7 +135,7 @@ def stopwatch(func):
     #Hello debuggers! This will track every files when the extension is launched, and
     #you can remove every downloaded files after with hashtag '#debugresetdownloads', for debugging purposes on colab
     #(Note: You need to fill the textbox with only a single line of #debugresetdownloads and nothing more)
-    #uncomment the `take_snapshot()` to use this feature.
+    #There's also another feature, '#debugeverymethod', which will download a single link with all four possible methods available.
 import shutil
 snapshot = []
 paths_to_scan = []
@@ -149,11 +150,7 @@ def take_snapshot():
         exec(f"paths_to_scan.append({x}path)")
     if os.path.exists(snapshotdir):
         with open(snapshotdir, 'r') as f:
-            # snapshottemp = f.read()
-            # #print(f"snapshottemp: {snapshottemp}")
-            # snapshot = eval(snapshottemp)
             snapshot = [line.strip() for line in f.readlines()]
-            #print(f"snapshot: {snapshot}")
         print("Batchlinks extension: snapshot already exist.")
         return
     else:
@@ -164,14 +161,7 @@ def take_snapshot():
                 for file in pathtemp:
                     pathoffile = os.path.join(path, file)
                     snapshot.append(pathoffile)
-                # for file in os.listdir(path):
-                #     file_path = os.path.join(path, file)
-                #     if os.path.isdir(file_path):
-                #         snapshot[path][file_path + os.sep] = set(os.listdir(file_path))
-                #     else:
-                #         snapshot[path][file_path] = None
         with open(snapshotdir, 'w') as f:
-            # f.write(str(snapshot))
             for item in snapshot:
                 f.write(f"{item}\n")
         print("Batchlinks extension: snapshot taken.")
@@ -199,21 +189,6 @@ def global_rewind():
             else:
                 os.remove(fileordir)
                 removed_files.append(fileordir)
-    # for path in paths_to_scan:
-    #     for file in os.listdir(path):
-    #         file_path = os.path.join(path, file)
-    #         if os.path.isdir(file_path):
-    #             snapshot_subdirs = snapshot[path].get(file_path + os.sep, set())
-    #             current_subdirs = set(os.listdir(file_path))
-    #             removed_subdirs = snapshot_subdirs - current_subdirs
-    #             for subdir in removed_subdirs:
-    #                 subdir_path = os.path.join(file_path, subdir)
-    #                 shutil.rmtree(subdir_path)
-    #                 removed_dirs.append(subdir_path)
-    #         else:
-    #             if file_path not in snapshot[path]:
-    #                 os.remove(file_path)
-    #                 removed_files.append(file_path)
     if removed_files or removed_dirs:
         print("Removed files:")
         removedall.append("Removed files:")
@@ -239,33 +214,6 @@ def printdebug(toprint):
         print(toprint)
 
 def runwithsubprocess(rawcommand, folder=None):
-    # def construct_command(command_string):
-    #     # Split the command string into a list of arguments
-    #     command_parts = command_string.split()
-
-    #     # Loop through the list of arguments and convert any quoted strings into single arguments
-    #     # This allows arguments with spaces to be correctly split into separate arguments
-    #     new_command_parts = []
-    #     quote_started = False
-    #     for part in command_parts:
-    #         if part.startswith('"'):
-    #             quote_started = True
-    #             new_part = part[1:]
-    #         elif part.endswith('"'):
-    #             quote_started = False
-    #             new_part = new_command_parts[-1] + " " + part[:-1]
-    #             new_command_parts[-1] = new_part
-    #         elif quote_started:
-    #             new_part = new_command_parts[-1] + " " + part
-    #             new_command_parts[-1] = new_part
-    #         else:
-    #             new_command_parts.append(part)
-
-    #     # Return the list of arguments as a command and arguments list
-    #     printdebug(f"debug new_command_parts: {new_command_parts}")
-    #     return new_command_parts
-
-    currentprocess = ''
 
     commandtorun = shlex.split(rawcommand) #construct_command(rawcommand)
     printdebug(f"raw command: {rawcommand}")
@@ -528,7 +476,11 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
 
 def civitdown2(url, folder, downloader, isdebugevery):
   model = civitdown2_get_json(url)
-
+  if model == {'error': 'Model not found'}:
+    print('[1;31mModel ' + url + ' is not available anymore')
+    print('[0m')
+    return
+  
   save_directory = civitdown2_get_save_directory(model['type'], folder)
 
   data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
@@ -733,6 +685,7 @@ def run(command, choosedowner):
     usemega = False
     currentcondition = 'Extracting links...'
     links = extract_links(command)
+    printdebug("links: " + str(links))
     for item in links:
         if item.startswith('https://mega.nz'):
             usemega = True
@@ -748,6 +701,11 @@ def run(command, choosedowner):
     printdebug('prockilled: ' + str(prockilled))
     
     downmethod = ['gdown', 'wget', 'curl', 'aria2']
+    hfmethods = [
+        "https://raw.githubusercontent.com",
+        "https://huggingface.co",
+        "https://cdn.discordapp.com/attachments"
+    ]
     for listpart in links:
         if prockilled == False:
             if listpart.startswith("https://mega.nz"):
@@ -757,7 +715,8 @@ def run(command, choosedowner):
                 currentcondition = f'Downloading {currentlink}...'
                 transfare(currentlink, currentfolder)
 
-            elif listpart.startswith("https://huggingface.co") or listpart.startswith("https://cdn.discordapp.com/attachments"):
+            elif listpart.startswith(tuple(hfmethods)):
+            # elif listpart.startswith("https://huggingface.co") or listpart.startswith("https://raw.githubusercontent.com") or listpart.startswith("https://cdn.discordapp.com/attachments"):
                 currentlink = listpart
                 print('\n')
                 print(currentlink)
@@ -777,14 +736,23 @@ def run(command, choosedowner):
                 civitdown(currentlink, currentfolder)
 
             elif listpart.startswith("https://github.com"):
-                splits = listpart.split("/")
-                currentlink = "/".join(splits[:5])
-                foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
-                folderpath = shlex.quote(os.path.join(extpath, foldername))
                 print('\n')
                 print(currentlink)
-                currentcondition = f'Cloning {currentlink}...'
-                runwithsubprocess(f"git clone {currentlink} {folderpath}")
+                if '/raw/' in listpart:
+                    currentcondition = f'Downloading {currentlink}...'
+                    if everymethod == False:
+                        hfdown(currentlink, currentfolder, choosedowner)
+                    else:
+                        for xmethod in downmethod:
+                            if prockilled == False:
+                                hfdown(currentlink, currentfolder, xmethod, 'debugevery')
+                else:
+                    splits = listpart.split("/")
+                    currentlink = "/".join(splits[:5])
+                    foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
+                    folderpath = shlex.quote(os.path.join(extpath, foldername))
+                    currentcondition = f'Cloning {currentlink}...'
+                    runwithsubprocess(f"git clone {currentlink} {folderpath}")
 
             elif listpart.startswith("https://civitai.com/models/"):
                 currentlink = listpart
@@ -852,7 +820,7 @@ def run(command, choosedowner):
     print('[1;32mBatchLinks Downloads finished!')
     print('[0m')
     currentcondition = 'Done!'
-    printdebug(f"this should be the output: " + str(downloadedfiles))
+    printdebug(f"this should be the output:\n" + str(downloadedfiles))
     return downloadedfiles
 
 def extract_links(string):
@@ -860,7 +828,7 @@ def extract_links(string):
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
+        if line.startswith(tuple(supportedlinks)):
             links.append(line)
         elif line.startswith("#debugeverymethod"):
             links.append(line)
@@ -870,18 +838,6 @@ def extract_links(string):
             for prefix in typechecker:
                 if line.startswith("#" + prefix):
                     links.append(line)
-        # stoploop = False
-        # for checklink in supportedlinks:
-        #     if line.startswith(checklink) and not stoploop:
-        #         links.append(line)
-        #         print(f"added {line}")
-        #         stoploop = True
-
-        # for prefix in typechecker:
-        #     if line.startswith("#" + prefix) and not stoploop:
-        #         links.append(line)
-        #         print(f"added {line}")
-        #         stoploop = True
 
     #print(f"links: {links}")
     return links
@@ -899,19 +855,12 @@ def uploaded(textpath):
 
         with open(file_paths, 'r') as file:
             for line in file:
-                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
+                if line.startswith(tuple(supportedlinks)):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
                         if line.startswith("#" + prefix):
                             links.append(line.strip())
-                # for checklink in supportedlinks:
-                #     if line.startswith(checklink):
-                #         links.append(line.strip())
-                #     else:
-                #         for prefix in typechecker:
-                #             if line.startswith("#" + prefix):
-                #                 links.append(line.strip())
 
         text = list_to_text(links)
         return text    
@@ -923,12 +872,24 @@ def keeplog():
     global logging
     if logging == False:
         currentcondition = "Logging activated."
+        currentsuboutput = ''
         logging = True
+        return [currentcondition, gr.Button.update(visible=True), gr.Button.update(visible=False)]
     if currentsuboutput == '':
-        return currentcondition
+        return [currentcondition, gr.Button.update(), gr.Button.update()]
     else:
-        return f"{currentcondition}\n{currentsuboutput}"
+        return [f"{currentcondition}\n{currentsuboutput}", gr.Button.update(), gr.Button.update()]
 
+def offlog():
+    global currentcondition
+    global currentsuboutput
+    global logging
+    if logging == True:
+        currentcondition = "Logging deactivated."
+        currentsuboutput = ''
+        logging = False
+    return [f"{currentcondition}", gr.Button.update(visible=False), gr.Button.update(visible=True)]
+    
 def empty():
   return ''
 
@@ -953,24 +914,24 @@ def on_ui_tabs():
           with gr.Column(scale=2):
             gr.Markdown(
             f"""
-            ### ⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}
-            This tool will read the textbox and download every links from top to bottom one by one<br/>
-            Put your links down below. Supported link: Huggingface, CivitAI, MEGA<br/>
+            <h3 style="font-size: 22px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
+            <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
+            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
-            Valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.<br/>
-            (For colab that uses sd-webui-additional-networks, use `#addnetlora`)<br/>
-            Use double hashtag after links for comment
-            """)
+            Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
+            (For colab that uses sd-webui-additional-networks, use <code>#addnetlora</code>)<br/>
+            Use double hashtag after links for comment</p>
+            """, elem_id="markdown")
           with gr.Column(scale=1):
             gr.Markdown(
             """
-            Click these links for more:<br/>
-            [Readme Page](https://github.com/etherealxx/batchlinks-webui)<br/>
-            [Example](https://github.com/etherealxx/batchlinks-webui#example)<br/>
-            [Syntax](https://github.com/etherealxx/batchlinks-webui#syntax)<br/>
-            [Valid Hashtags](https://github.com/etherealxx/batchlinks-webui#valid-hashtags)<br/>
-            [Here's how you can get the direct links](https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md)
-            """)
+            <p style="font-size: 14px;">Click these links for more:<br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui">Readme Page</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui#example">Example</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a></p>
+            """, elem_id="markdown")
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
           try:
@@ -980,44 +941,37 @@ def on_ui_tabs():
                 logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
           except AttributeError:
             pass
-          ##this giant mess is because i know nothing about gradio
-          #with gr.Row():
-            #with gr.Column(scale=1):
-              #debug_check = gr.Checkbox(value=False, label="debug")
-              #btn_startlog = gr.Button("Start Logging")
-              #btn_startlog.click(debug, outputs=debug_txt, every=1)
-              #debug_check.change(debug, inputs=debug_check, outputs=debug_txt, every=1)
-              #btw_stoplog = gr.Button("Stop Logging")
-              #btw_stoplog.click(empty, outputs=debug_txt, cancels=[btn_startlog])
-            #debug_txt.blur(debug, outputs=debug_txt, every=1)
-            #with gr.Column(scale=4):
-              #dummy1 = gr.Textbox("", interactive=False, visible=False)
           with gr.Row():
             with gr.Box():
-                #command = gr.Textbox(label="Links", placeholder="type here", lines=5)
                 try:
                   if cmd_opts.gradio_queue:
-                      logging = gr.Radio(["Turn On Logging"], show_label=False)
-                      logging.change(keeplog, outputs=logbox, every=1)
+                      with gr.Row():
+                        #   gr.Textbox(value=None, interactive=False, show_label=False)
+                          btn_onlog = gr.Button("Turn On Logging", variant="primary", visible=True)
+                          btn_offlog = gr.Button("Turn Off Logging", visible=False)
+                          loggingon = btn_onlog.click(keeplog, outputs=[logbox, btn_offlog, btn_onlog], every=1)
+                          btn_offlog.click(offlog, outputs=[logbox, btn_offlog, btn_onlog], cancels=[loggingon])
+                        #   gr.Textbox(value=None, interactive=False, show_label=False)
+                    #   logging = gr.Radio(["Turn On Logging"], show_label=False)
+                    #   logging.change(keeplog, outputs=logbox, every=1)
                   else:
                     print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
                 except AttributeError:
-                  print("Batchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension would still runs fine.")
+                  print("[1;31mBatchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension might runs into problems")
+                  print('[0m')
                   pass
                 out_text = gr.Textbox(label="Output")
 
                 if platform.system() == "Windows":
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
+                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method (don't understand? ignore.)")
                 else:
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Huggingface/Discord download method (don't understand? ignore.)")
+                    choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method (don't understand? ignore.)")
 
                 with gr.Row():
                     try:
                         if cmd_opts.gradio_queue:
                             with gr.Column(scale=2, min_width=100):
                                 btn_run = gr.Button("Download All!", variant="primary")
-                            #btn_debug = gr.Button(debug, output=debug_txt, every=1)
-                            #btn_debug.click(debug, outputs=debug_txt, every=1)
                             # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
                             # btn_upload.upload(uploaded, btn_upload, file_output)
                             with gr.Column(scale=1, min_width=100):
@@ -1039,6 +993,7 @@ def on_ui_tabs():
 
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
+            finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
         #batchlinks.load(debug, output=debug_txt, every=1)
     return (batchlinks, "Batchlinks Downloader", "batchlinks"),
 script_callbacks.on_ui_tabs(on_ui_tabs)

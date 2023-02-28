@@ -4,15 +4,22 @@ v2.0.0
 Release notes:
 
 ## v2.0.0
+Features:
 - `aria2` as download method.
 - Cancel button for cancelling download process (`--gradio-queue` required)
 - Debug snapshot.<br/>
-When `take_snapshot()` is uncommented, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugdebugdebug` on the textbox (and nothing more), it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+When `global_debug = True`, the moment this extension launch, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownloads` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+- Debug every download method.<br/>
+When `global_debug = True` and you type `#debugevery method` on the textbox, every link that has 4 different method of download (Huggingface etc.) will be downloaded with every method, regardless of the radio button choice. The result is 4 file being downloaded.
+- Detection if a CivitAI links no longer exist
 - New hashtags: `#textualinversion`, `#ti`, `#aestheticembedding`, `#aestheticembed`, `#controlnet`, and `#cnet`
+- Toggle logging on/off
 - `shlex.quote` to properly quote links (Thanks **[@rti7743](https://github.com/rti7743)**!)
 - Supports cloning webui extensions
 - Supports download from CivitAI model links (Thanks **[@rti7743](https://github.com/rti7743)**!)
+- Supports download from Github (repository and raw files)
 - Supports for aesthetic gradients, controlnet model, and extensions path.
+- UI font scaled down
 - Uses `subprocess.Popen` instead of `os.system`
 
 
