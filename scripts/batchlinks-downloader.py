@@ -6,6 +6,7 @@ from modules import script_callbacks #,scripts
 from modules.paths import script_path
 from modules.shared import cmd_opts #check for gradio queue
 import urllib.request, subprocess, contextlib #these handle mega.nz
+import http.client
 import requests #this handle civit
 from tqdm import tqdm
 #from IPython.display import display, clear_output
@@ -75,7 +76,8 @@ supportedlinks = [
     "https://civitai.com/models/",
     "https://cdn.discordapp.com/attachments",
     "https://github.com",
-    "https://raw.githubusercontent.com"
+    "https://raw.githubusercontent.com",
+    "https://files.catbox.moe"
 ]
 
 modelpath = os.path.join(script_path, "models/Stable-diffusion")
@@ -727,6 +729,26 @@ def run(command, choosedowner):
                     for xmethod in downmethod:
                         if prockilled == False:
                             hfdown(currentlink, currentfolder, xmethod, 'debugevery')
+
+            elif listpart.startswith("https://files.catbox.moe"):
+                currentlink = listpart
+                print('\n')
+                print(currentlink)
+                try:
+                    urllib.request.urlopen(currentlink)
+                except http.client.RemoteDisconnected:
+                    print('[1;31mConnection to ' + currentlink + ' failed.')
+                    print("This colab session's server might doesn't have access to catbox")
+                    print('[0m')
+                    continue
+                except urllib.error.URLError as e:
+                    print('[1;31mConnection to ' + currentlink + ' failed.')
+                    print("This colab session's server might doesn't have access to catbox")
+                    print('[0m')
+                    continue
+                print(currentlink)
+                currentcondition = f'Downloading {currentlink}...'
+                hfdown(currentlink, currentfolder, choosedowner)
 
             elif listpart.startswith("https://civitai.com/api/download/models/"):
                 currentlink = listpart

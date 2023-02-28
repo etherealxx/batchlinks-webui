@@ -112,7 +112,7 @@ When the download is complete, the downloaded file will be listed<br/>
 
 Note: If you use some colab that doesn't support native LoRA on webui (that means, using `sd-webui-additional-networks` extension in order to work), like [camenduru's v1.6](https://github.com/camenduru/stable-diffusion-webui-colab) colab, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
 
-**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), [CivitAI](https://civitai.com/), Discord attachments (https://cdn.discordapp.com/attachments/), and Github (https://github.com or https://raw.githubusercontent.com). Every links other than that will be ignored. Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface, Civitai (model link method), and Discord attachments, there will be three different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For CivitAI (direct link method), it will use `requests`. For Github, currently it only supports `git clone`, useful to clone extension repo into the webui extension folder.
+**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), [CivitAI](https://civitai.com/), Discord attachments (https://cdn.discordapp.com/attachments/), [catbox](https://files.catbox.moe), and Github (https://github.com or https://raw.githubusercontent.com). Every links other than that will be ignored. Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface, Civitai (model link method), and Discord attachments, there will be three different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For CivitAI (direct link method), it will use `requests`. For Github, currently it only supports `git clone`, useful to clone extension repo into the webui extension folder.
 
 More about CivitAI download method [here](https://github.com/etherealxx/batchlinks-webui#civitais-download-method).
 
@@ -207,6 +207,7 @@ When `global_debug = True` and you type `#debugevery method` on the textbox, eve
 - Toggle logging on/off
 - `shlex.quote` to properly quote links (Thanks **[@rti7743](https://github.com/rti7743)**!)
 - Supports cloning webui extensions
+- Supports download from catbox.moe
 - Supports download from CivitAI model links (Thanks **[@rti7743](https://github.com/rti7743)**!)
 - Supports download from Github (repository and raw files)
 - Supports for aesthetic gradients, controlnet model, and extensions path.
@@ -220,7 +221,7 @@ When `global_debug = True` and you type `#debugevery method` on the textbox, eve
 - [ ] Cleaning the code from unnecesarry comments
 - [x] Completed download will use the webui's notification.mp3
 - [ ] Logo change
-- [ ] Other download sites (s-ul.eu, gitgud, catbox)
+- [ ] Other download sites (s-ul.eu, gitgud)
 - [ ] Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.9, which doesn't support progress bar.)
 - [x] Supports Windows local installation
 - [ ] Support customizable hashtag from the UI
