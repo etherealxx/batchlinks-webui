@@ -218,11 +218,12 @@ When `global_debug = True` and you type `#debugevery method` on the textbox, eve
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
 - [x] aria2 for huggingface download method
-- [ ] Cleaning the code from unnecesarry comments
+- [x] Cleaning the code from unnecesarry comments
 - [x] Completed download will use the webui's notification.mp3
 - [ ] Logo change
-- [ ] Other download sites (s-ul.eu, gitgud)
-- [ ] Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.9, which doesn't support progress bar.)
+- [ ] Mobile-friendly UI
+- [ ] Other download sites (s-ul.eu, gitgud, Google Drive)
+- [ ] Gradio progress bar
 - [x] Supports Windows local installation
 - [ ] Support customizable hashtag from the UI
 - [ ] UI overhaul

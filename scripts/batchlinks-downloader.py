@@ -947,7 +947,7 @@ def on_ui_tabs():
             f"""
             <h3 style="font-size: 22px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
             <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
-            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github<br/>
+            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
             Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
             (For colab that uses sd-webui-additional-networks, use <code>#addnetlora</code>)<br/>
