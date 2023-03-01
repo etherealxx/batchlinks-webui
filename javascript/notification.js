@@ -6,7 +6,7 @@ onUiUpdate(function() {
     const textAreaValue = textArea ? textArea.value : '';
 
     if (isTextAreaVisible && textAreaValue.startsWith('All done!') && prevTextAreaValue !== textAreaValue) {
-        gradioApp().querySelector('#audio_notification audio')?.play();
+        gradioApp().querySelector('#finish_audio audio')?.play();
     }
 
     if (!textArea) {
