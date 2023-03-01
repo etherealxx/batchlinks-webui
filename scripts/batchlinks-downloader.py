@@ -249,6 +249,7 @@ def runwithsubprocess(rawcommand, folder=None):
                 ariacomplete = True
                 print('\n')
                 print(nextline, end='')
+                currentsuboutput = nextline
             else:
                 if not ariacomplete:
                     match = re.search(r'\[[^\]]+\]', nextline)
@@ -256,8 +257,10 @@ def runwithsubprocess(rawcommand, folder=None):
                         stripnext = match.group().strip()
                         print("\r", end="")
                         print(f"\r{stripnext}", end='')
+                        currentsuboutput = stripnext
                 else:
                     print(nextline, end='')
+                    currentsuboutput = nextline
         else:
             if "%" in nextline.strip() or rawcommand.startswith("curl"):
                 stripnext = nextline.strip()
@@ -265,7 +268,8 @@ def runwithsubprocess(rawcommand, folder=None):
                 print(f"\r{stripnext}", end='')
             else:
                 print(nextline, end='')
-        currentsuboutput = nextline
+            currentsuboutput = nextline
+            
 
     process.wait()
     currentsuboutput = ''
@@ -580,7 +584,7 @@ def hfdown(todownload, folder, downloader, mode='default'):
                 print('[1;32maria2 installed!')
                 print('[0m')
                 currentcondition = tempcondition
-            runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
+            runwithsubprocess(f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
         printdebug("\nmode: " + mode)
         if mode=='debugevery':
             time.sleep(2)
