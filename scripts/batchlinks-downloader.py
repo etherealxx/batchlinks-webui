@@ -1,12 +1,13 @@
 #github.com/etherealxx
+#onedotsix
 import os
 import time
 import gradio as gr
 from modules import script_callbacks #,scripts
 from modules.paths import script_path
 from modules.shared import cmd_opts #check for gradio queue
-import http.client
 import urllib.request, subprocess, contextlib #these handle mega.nz
+import http.client
 import requests #this handle civit
 from tqdm import tqdm
 #from IPython.display import display, clear_output
@@ -1006,10 +1007,10 @@ def on_ui_tabs():
             gr.Markdown(
             """
             <p style="font-size: 14px;">Click these links for more:<br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui">Readme Page</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui#example">Example</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui/tree/onedotsix">Readme Page</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui/tree/onedotsix#example">Example</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui/tree/onedotsix#syntax">Syntax</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui/tree/onedotsix#valid-hashtags">Valid Hashtags</a><br/>
             <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a></p>
             """)
         with gr.Group():
@@ -1079,6 +1080,7 @@ def on_ui_tabs():
 
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
+            finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
         #batchlinks.load(debug, output=debug_txt, every=1)
     return (batchlinks, "Batchlinks Downloader", "batchlinks"),
 script_callbacks.on_ui_tabs(on_ui_tabs)

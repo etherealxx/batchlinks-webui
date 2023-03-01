@@ -1,8 +1,8 @@
 <br />
-
+<!-- onedotsix -->
 <div align="center">
   <a href="https://github.com/etherealxx/batchlinks-downloader">
-    <img src="images/batchlinks_logo.png" alt="Logo" height="150" width="528">
+    <img src="images/batchlinks_logo.png" alt="Logo" width="528">
   </a>
 
 <h3 align="center">BatchLinks Downloader (onedotsix branch)</h3>
@@ -73,7 +73,7 @@ This extension will streamline your downloads on your [stable-diffusion-webui](h
 ## Example
 
 Look at this example<br/>
-<img src="images/example.jpg" alt="Logo" height="500" width="738"><br/>
+<img src="images/example.jpg" alt="Logo" width="738"><br/>
 
 ```
 #model
@@ -99,15 +99,15 @@ You can also copy that example and paste it to a `.txt` file to use later. You c
 When the items is downloading, you can inspect the running code on the colab cell, or just take a coffee and chill☕. If you activate logging, you can inspect the download progress from the UI, more [here](https://github.com/etherealxx/batchlinks-webui#logging)
 
 When the download is complete, the downloaded file will be listed<br/>
-<img src="images/downloaded.jpg" alt="Logo" height="300" width="745"><br/>
+<img src="images/downloaded.jpg" alt="Logo" width="745"><br/>
 
 ## Syntax
 
 **Hashtag** - Hashtag means change current output directory to this directory. `#model` means every links below this hashtag, will be downloaded to _/content/stable-diffusion-webui/models/Stable-diffusion_, until it hits another hashtag, which will change the output directory again. See below for valid hashtags.
 
-Note 2: If you use some colab that doesn't support native LoRA on webui (that means, using `sd-webui-additional-networks` extension in order to work), like [camenduru](https://github.com/camenduru/stable-diffusion-webui-colab)'s colab, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
+Note: If you use some colab that doesn't support native LoRA on webui (that means, using `sd-webui-additional-networks` extension in order to work), like [camenduru's v1.6](https://github.com/camenduru/stable-diffusion-webui-colab) colab, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
 
-**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), [CivitAI](https://civitai.com/), Discord attachments (https://cdn.discordapp.com/attachments/), and [Github](https://github.com). Every links other than that will be ignored. Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface, Civitai (model link method), and Discord attachments, there will be three different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For CivitAI (direct link method), it will use `requests`. For Github, currently it only supports `git clone`, useful to clone extension repo into the webui extension folder.
+**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), [CivitAI](https://civitai.com/), Discord attachments (https://cdn.discordapp.com/attachments/), [catbox](https://files.catbox.moe), and Github (https://github.com or https://raw.githubusercontent.com). Every links other than that will be ignored. Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface, Civitai (model link method), and Discord attachments, there will be three different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For CivitAI (direct link method), it will use `requests`. For Github, if, the link is a raw file, it will download the file. Else, it will use `git clone`, useful to clone extension repo into the webui extension folder.
 
 More about CivitAI download method [here](https://github.com/etherealxx/batchlinks-webui#civitais-download-method).
 
@@ -133,7 +133,7 @@ More about CivitAI download method [here](https://github.com/etherealxx/batchlin
 
 `#controlnet` or `#cnet` will put the downloaded file to _/content/stable-diffusion-webui/extensions/sd-webui-controlnet/models_
 
-Github links doesn't need hashtag. It will always cloned to _/content/stable-diffusion-webui/extensions/(reponame)_
+Github links (if it does not contain `/raw/` in it) doesn't need hashtag. It will always considered as webui extension, and the repository will be cloned to _/content/stable-diffusion-webui/extensions/(reponame)_
 
 ### How to get the direct links (Important!)
 
@@ -174,7 +174,9 @@ If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMAT
 
 ### Notification
 
-If there's `notification.mp3` on your webui installation folder (the one who plays when image generation is complete), this extension will also use that sound file to notify completed batch download.
+~~If there's `notification.mp3` on your webui installation folder (the one who plays when image generation is complete), this extension will also use that sound file to notify completed batch download.~~
+
+I'm now integrating the notifiction audio to the extension itself!😊
 
 ## Latest release: v2.0.0+onedotsix
 Features:
@@ -183,12 +185,16 @@ Features:
 - (onedotsix) Resume button to continue cutted session by profiding links that aren't downloaded yet
 - Cancel button for cancelling download process
 - Debug snapshot.<br/>
-When `take_snapshot()` is uncommented, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownload` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+When `global_debug = True`, the moment this extension launch, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownloads` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+- Detection if a CivitAI links no longer exist
 - New hashtags: `#textualinversion`, `#ti`, `#aestheticembedding`, `#aestheticembed`, `#controlnet`, and `#cnet`
 - `shlex.quote` to properly quote links (Thanks **[@rti7743](https://github.com/rti7743)**!)
 - Supports cloning webui extensions
+- Supports download from catbox.moe
 - Supports download from CivitAI model links (Thanks **[@rti7743](https://github.com/rti7743)**!)
+- Supports download from Github (repository and raw files)
 - Supports for aesthetic gradients, controlnet model, and extensions path.
+- UI font scaled down
 - Uses `subprocess.Popen` instead of `os.system`
 
 ## Roadmap
@@ -198,7 +204,7 @@ When `take_snapshot()` is uncommented, it saves the current state of the webui o
 - [ ] Cleaning the code from unnecesarry comments
 - [x] Completed download will use the webui's notification.mp3
 - [ ] Logo change
-- [ ] Other download sites (s-ul.eu, github, gitgud, catbox)
+- [ ] Other download sites (s-ul.eu, gitgud)
 - [ ] ~~Progress bar (the only thing preventing me to make a progress bar is some webui colab use gradio 3.9, which doesn't support progress bar.)~~
 - [ ] ~~Supports Windows local installation~~
 - [ ] Support customizable hashtag from the UI
@@ -210,6 +216,7 @@ When `take_snapshot()` is uncommented, it saves the current state of the webui o
 
 - Sometimes notification sound doesn't play when downloading same file twice in a row
 - Sometimes colab cannot be shut down with a single click on the stop button. Hitting the button several times will raise a KeyboardInterrupt and forcely stopping the cell.
+- Timeout problem. Download process will breaks/desync the UI if it last for more than 2 minutes. Currently, this versiom will prevent that from happening by cutting every download session into 2 minutes.
 - ~~Links that has bracket in it needs to be 'escaped' (For example, `Baka-DiffusionV1(Fp16).safetensors` must be typed `Baka-DiffusionV1\(Fp16\).safetensors`)~~ Fixed in v2.0.0+onedotsix
 - ~~The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)~~ Seems like fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 - ~~File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.~~ Fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
