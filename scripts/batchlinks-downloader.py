@@ -41,15 +41,15 @@ else:
     latestversiontext = ""
 #}
 
-try:
-    global gradiostate
-    if cmd_opts.gradio_queue:
-        gradiostate = True
-    else:
-        gradiostate = False
-except AttributeError:
-    gradiostate = False
-    pass
+# try:
+#     global gradiostate
+#     if cmd_opts.gradio_queue:
+#         gradiostate = True
+#     else:
+#         gradiostate = False
+# except AttributeError:
+#     gradiostate = False
+#     pass
 
 typechecker = [
     "embedding", "embeddings", "embed", "embeds", "textualinversion", "ti",
@@ -237,29 +237,34 @@ def runwithsubprocess(rawcommand, folder=None):
 
     ariacomplete = False
     global currentsuboutput
+    import re
     while True:
         # Read the output from the process
         nextline = process.stdout.readline()
         if nextline == '' and process.poll() is not None:
             break
         # Check if the line contains progress information
-        if "%" in nextline.strip() or rawcommand.startswith("curl"):
-            stripnext = nextline.strip()
-            print("\r", end="")
-            print(f"\r{stripnext}", end='')
-        elif rawcommand.startswith("aria2"):
-            if "Download complete" in nextline.strip():
+        if rawcommand.startswith("aria2"):
+            if 'Download Results' in nextline:
                 ariacomplete = True
+                print('\n')
                 print(nextline, end='')
             else:
-                if ariacomplete == False:
-                    stripnext = nextline.strip()
-                    print("\r", end="")
-                    print(f"\r{stripnext}", end='')
+                if not ariacomplete:
+                    match = re.search(r'\[[^\]]+\]', nextline)
+                    if match:
+                        stripnext = match.group().strip()
+                        print("\r", end="")
+                        print(f"\r{stripnext}", end='')
                 else:
                     print(nextline, end='')
         else:
-            print(nextline, end='')
+            if "%" in nextline.strip() or rawcommand.startswith("curl"):
+                stripnext = nextline.strip()
+                print("\r", end="")
+                print(f"\r{stripnext}", end='')
+            else:
+                print(nextline, end='')
         currentsuboutput = nextline
 
     process.wait()
@@ -943,7 +948,7 @@ def on_ui_tabs():
             Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
             (For colab that uses sd-webui-additional-networks, use <code>#addnetlora</code>)<br/>
             Use double hashtag after links for comment</p>
-            """, elem_id="markdown")
+            """)
           with gr.Column(scale=1):
             gr.Markdown(
             """
@@ -953,7 +958,7 @@ def on_ui_tabs():
             <a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
             <a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
             <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a></p>
-            """, elem_id="markdown")
+            """)
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
           try:
