@@ -5,6 +5,7 @@ import gradio as gr
 from modules import script_callbacks #,scripts
 from modules.paths import script_path
 from modules.shared import cmd_opts #check for gradio queue
+import http.client
 import urllib.request, subprocess, contextlib #these handle mega.nz
 import requests #this handle civit
 from tqdm import tqdm
@@ -68,14 +69,16 @@ typemain = [
     "aestheticembed", "cnet", "ext"
 ]
 
-# supportedlinks = [
-#     "https://mega.nz",
-#     "https://huggingface.co",
-#     "https://civitai.com/api/download/models/",
-#     "https://civitai.com/models/"
-#     "https://cdn.discordapp.com/attachments",
-#     "https://github.com",
-# ]
+supportedlinks = [
+    "https://mega.nz",
+    "https://huggingface.co",
+    "https://civitai.com/api/download/models/",
+    "https://civitai.com/models/",
+    "https://cdn.discordapp.com/attachments",
+    "https://github.com",
+    "https://raw.githubusercontent.com",
+    "https://files.catbox.moe"
+]
 
 modelpath = os.path.join(script_path, "models/Stable-diffusion")
 embedpath = os.path.join(script_path, "embeddings")
@@ -106,7 +109,7 @@ currentfoldertrack = []
 everyprocessid = []
 remaininglinks = []
 
-globaldebug = True #set this to true to activate every debug features
+globaldebug = False #set this to true to activate every debug features
 
 def stopwatch(func):
     """
@@ -135,7 +138,7 @@ def stopwatch(func):
     #Hello debuggers! This will track every files when the extension is launched, and
     #you can remove every downloaded files after with hashtag '#debugresetdownloads', for debugging purposes on colab
     #(Note: You need to fill the textbox with only a single line of #debugresetdownloads and nothing more)
-    #uncomment the `take_snapshot()` to use this feature.
+    #set `global_debug` to True to use these feature.
 import shutil
 snapshot = []
 paths_to_scan = []
@@ -288,29 +291,26 @@ def runwithsubprocess(rawcommand, folder=None):
 
     ariacomplete = False
     global currentsuboutput
+    import re
     while True:
         # Read the output from the process
         nextline = process.stdout.readline()
         if nextline == '' and process.poll() is not None:
             break
         # Check if the line contains progress information
-        if "%" in nextline.strip() or rawcommand.startswith("curl"):
-            stripnext = nextline.strip()
-            print("\r", end="")
-            print(f"\r{stripnext}", end='')
-        elif rawcommand.startswith("aria2"):
-            if "Download complete" in nextline.strip():
-                ariacomplete = True
-                print(nextline, end='')
-            else:
-                if ariacomplete == False:
-                    stripnext = nextline.strip()
+        elif 'Download Results' in nextline:
+            ariacomplete = True
+            print('\n')
+            print(nextline, end='')
+        else:
+            if not ariacomplete:
+                match = re.search(r'\[[^\]]+\]', nextline)
+                if match:
+                    stripnext = match.group().strip()
                     print("\r", end="")
                     print(f"\r{stripnext}", end='')
-                else:
-                    print(nextline, end='')
-        else:
-            print(nextline, end='')
+            else:
+                print(nextline, end='')
         currentsuboutput = nextline
 
     process.wait()
@@ -529,7 +529,11 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
 
 def civitdown2(url, folder):
   model = civitdown2_get_json(url)
-
+  if model == {'error': 'Model not found'}:
+    print('[1;31mModel ' + url + ' is not available anymore')
+    print('[0m')
+    return
+  
   save_directory = civitdown2_get_save_directory(model['type'], folder)
 
   data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
@@ -606,7 +610,7 @@ def hfdown(todownload, folder, mode='default'):
         print('[1;32maria2 installed!')
         print('[0m')
         currentcondition = tempcondition
-    runwithsubprocess(f"aria2c --console-log-level=info -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
+    runwithsubprocess(f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
     # printdebug("\nmode: " + mode)
     # if mode=='debugevery':
     #     time.sleep(2)
@@ -746,6 +750,11 @@ def run(command):
     global remaininglinks
     batchtime = time.time()
     # downmethod = ['gdown', 'wget', 'curl', 'aria2']
+    hfmethods = [
+        "https://raw.githubusercontent.com",
+        "https://huggingface.co",
+        "https://cdn.discordapp.com/attachments"
+    ]
     for listpart in links:
         if prockilled == False:
             if time.time() - batchtime >= 120:
@@ -773,14 +782,33 @@ def run(command):
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 transfare(currentlink, currentfolder)
-
-            elif listpart.startswith("https://huggingface.co") or listpart.startswith("https://cdn.discordapp.com/attachments"):
+                
+            elif listpart.startswith(tuple(hfmethods)):
+            # elif listpart.startswith("https://huggingface.co") or listpart.startswith("https://cdn.discordapp.com/attachments"):
                 currentlink = listpart
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                if everymethod == False:
-                    hfdown(currentlink, currentfolder)
+                hfdown(currentlink, currentfolder)
+            elif listpart.startswith("https://files.catbox.moe"):
+                currentlink = listpart
+                print('\n')
+                print(currentlink)
+                try:
+                    urllib.request.urlopen(currentlink)
+                except http.client.RemoteDisconnected:
+                    print('[1;31mConnection to ' + currentlink + ' failed.')
+                    print("This colab session's server might doesn't have access to catbox")
+                    print('[0m')
+                    continue
+                except urllib.error.URLError as e:
+                    print('[1;31mConnection to ' + currentlink + ' failed.')
+                    print("This colab session's server might doesn't have access to catbox")
+                    print('[0m')
+                    continue
+                print(currentlink)
+                currentcondition = f'Downloading {currentlink}...'
+                hfdown(currentlink, currentfolder)
 
             elif listpart.startswith("https://civitai.com/api/download/models/"):
                 currentlink = listpart
@@ -790,14 +818,18 @@ def run(command):
                 civitdown(currentlink, currentfolder)
 
             elif listpart.startswith("https://github.com"):
-                splits = listpart.split("/")
-                currentlink = "/".join(splits[:5])
-                foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
-                folderpath = shlex.quote(os.path.join(extpath, foldername))
                 print('\n')
                 print(currentlink)
-                currentcondition = f'Cloning {currentlink}...'
-                runwithsubprocess(f"git clone {currentlink} {folderpath}")
+                if '/raw/' in listpart:
+                    currentcondition = f'Downloading {currentlink}...'
+                    hfdown(currentlink, currentfolder)
+                else:
+                    splits = listpart.split("/")
+                    currentlink = "/".join(splits[:5])
+                    foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
+                    folderpath = shlex.quote(os.path.join(extpath, foldername))
+                    currentcondition = f'Cloning {currentlink}...'
+                    runwithsubprocess(f"git clone {currentlink} {folderpath}")
 
             elif listpart.startswith("https://civitai.com/models/"):
                 currentlink = listpart
@@ -861,7 +893,8 @@ def extract_links(string):
     lines = string.split('\n')
     for line in lines:
         line = line.split('##')[0].strip()
-        if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
+       # if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
+        if line.startswith(tuple(supportedlinks)):
             links.append(line)
         elif line.startswith("#debugresetdownloads"):
             links.append(line)
@@ -898,7 +931,8 @@ def uploaded(textpath):
 
         with open(file_paths, 'r') as file:
             for line in file:
-                if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
+                if line.startswith(tuple(supportedlinks)):
+                # if line.startswith("https://mega.nz") or line.startswith("https://huggingface.co") or line.startswith("https://civitai.com/api/download/models/") or line.startswith("https://cdn.discordapp.com/attachments") or line.startswith("https://github.com") or line.startswith("https://civitai.com/models/"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
@@ -960,23 +994,23 @@ def on_ui_tabs():
           with gr.Column(scale=2):
             gr.Markdown(
             f"""
-            ### ⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}
-            This tool will read the textbox and download every links from top to bottom one by one<br/>
-            Put your links down below. Supported link: Huggingface, CivitAI, MEGA<br/>
+            <h3 style="font-size: 22px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
+            <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
+            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
-            Valid hashtags: `#embed`, `#model`,  `#hypernet`, `#lora`, `#vae`, `#addnetlora`, etc.<br/>
-            (For colab that uses sd-webui-additional-networks, use `#addnetlora`)<br/>
-            Use double hashtag after links for comment
+            Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
+            (For colab that uses sd-webui-additional-networks, use <code>#addnetlora</code>)<br/>
+            Use double hashtag after links for comment</p>
             """)
           with gr.Column(scale=1):
             gr.Markdown(
             """
-            Click these links for more:<br/>
-            [Readme Page](https://github.com/etherealxx/batchlinks-webui)<br/>
-            [Example](https://github.com/etherealxx/batchlinks-webui#example)<br/>
-            [Syntax](https://github.com/etherealxx/batchlinks-webui#syntax)<br/>
-            [Valid Hashtags](https://github.com/etherealxx/batchlinks-webui#valid-hashtags)<br/>
-            [Here's how you can get the direct links](https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md)
+            <p style="font-size: 14px;">Click these links for more:<br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui">Readme Page</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui#example">Example</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a></p>
             """)
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
@@ -1030,6 +1064,13 @@ def on_ui_tabs():
                         btn_cancel = gr.Button("Cancel")
 
                     btn_resume = gr.Button("Resume Download", visible=False)
+
+                with gr.Row():
+                    gr.Markdown(
+                    f"""
+                    <p style="font-size: 14px; text-align: center; line-height: 90%;;"><br/>After clicking the Download All button, it's recommended to inspect the
+                    colab console, as every information about the download progress is there.</p>
+                    """)
 
                 btn_resume.click(fillbox, None, outputs=[command, btn_resume])
                 run_event = btn_run.click(run, inputs=[command], outputs=[out_text, btn_resume])
