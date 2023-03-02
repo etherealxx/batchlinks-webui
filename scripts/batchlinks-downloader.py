@@ -41,15 +41,15 @@ else:
     latestversiontext = ""
 #}
 
-# try:
-#     global gradiostate
-#     if cmd_opts.gradio_queue:
-#         gradiostate = True
-#     else:
-#         gradiostate = False
-# except AttributeError:
-#     gradiostate = False
-#     pass
+try:
+    global gradiostate
+    if cmd_opts.gradio_queue:
+        gradiostate = True
+    else:
+        gradiostate = False
+except AttributeError:
+    gradiostate = False #at this point just use onedotsix
+    pass
 
 typechecker = [
     "embedding", "embeddings", "embed", "embeds", "textualinversion", "ti",
@@ -107,6 +107,7 @@ logging = False
 prockilled = False
 currentfoldertrack = []
 everyprocessid = []
+remaininglinks = []
 
 globaldebug = False #set this to true to activate every debug features
 
@@ -653,7 +654,8 @@ def writeall(olddict):
                     exec(f"finalwrite.append('⬇️' + {newtype}path + '⬇️')")
                     for item in trackcompare:
                         finalwrite.append(item)
-
+    if bool(remaininglinks):
+        finalwrite.append("(There are still some files that have not been downloaded. Click the 'Resume Download' button to load the links that haven't been downloaded.)")
     finaloutput = list_to_text(finalwrite)
     finalwrite = []
     return finaloutput
@@ -672,6 +674,17 @@ def trackall():
         exec(f"filesdict['{x}'] = os.listdir({x}path)")
     return filesdict
 
+def currentfoldertohashtag(folder):
+    for x in typemain:
+        checkpath = str()
+        checkpath = eval(x+'path')
+        printdebug("checkpath: " + checkpath)
+        if str(folder).strip() == checkpath:
+            thehashtag = "#" + x
+            printdebug("thehashtag: " + thehashtag)
+            return thehashtag
+    return "#debug"
+
 @stopwatch
 def run(command, choosedowner):
     global prockilled
@@ -680,7 +693,7 @@ def run(command, choosedowner):
     everyprocessid = []
     everymethod = False
     global currentcondition
-
+    resumebuttonvisible = False
     if command.strip() == '#debugresetdownloads' and snapshot != {} and globaldebug == True:
         currentcondition = f'Removing downloaded files...'
         removed_files = global_rewind()
@@ -689,7 +702,10 @@ def run(command, choosedowner):
             texttowrite.append(item)
         writefinal = list_to_text(texttowrite)
         currentcondition = f'Removing done.'
-        return writefinal
+        if gradiostate == True:
+            return writefinal
+        else:
+            return [writefinal, gr.Button.update(visible=resumebuttonvisible)]
     
     oldfilesdict = trackall()
     currentfolder = modelpath
@@ -710,7 +726,8 @@ def run(command, choosedowner):
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     printdebug('prockilled: ' + str(prockilled))
-    
+    global remaininglinks
+    batchtime = time.time()
     downmethod = ['gdown', 'wget', 'curl', 'aria2']
     hfmethods = [
         "https://raw.githubusercontent.com",
@@ -719,6 +736,26 @@ def run(command, choosedowner):
     ]
     for listpart in links:
         if prockilled == False:
+            if gradiostate == False:
+                if time.time() - batchtime >= 80:
+                    remaininglinks = links[links.index(listpart):]
+                    printdebug("remaining links: " + str(remaininglinks))
+                    if bool(remaininglinks):
+                        printdebug("currentfolder: " + currentfolder)
+                        tophashtag = currentfoldertohashtag(currentfolder)
+                        printdebug("tophashtag: " + tophashtag)
+                        remaininglinks.insert(0, tophashtag)
+                        printdebug("remaining links new: " + str(remaininglinks))
+                        print()
+                        print('[1;33mRuntime was stopped to prevent hangs.')
+                        print('[0m')
+                        print("These are some files that haven't been downloaded yet.👇")
+                        printremains = list_to_text(remaininglinks)
+                        print(printremains)
+                        resumebuttonvisible = True
+                    cancelrun()
+                    break
+
             if listpart.startswith("https://mega.nz"):
                 currentlink = listpart
                 print('\n')
@@ -797,7 +834,7 @@ def run(command, choosedowner):
                         if prockilled == False:
                             civitdown2(currentlink, currentfolder, xmethod, True)
             
-            elif listpart.startswith("#debugeverymethod") and globaldebug == True:
+            elif listpart.startswith("#debugeverymethod") and globaldebug == True and gradiostate == True:
                 print('\n')
                 everymethod = True
                 print('[1;32mDebugEveryMethod activated!')
@@ -852,7 +889,10 @@ def run(command, choosedowner):
     print('[0m')
     currentcondition = 'Done!'
     printdebug(f"this should be the output:\n" + str(downloadedfiles))
-    return downloadedfiles
+    if gradiostate == True:
+        return downloadedfiles
+    else:
+        return [downloadedfiles, gr.Button.update(visible=resumebuttonvisible)]
 
 def extract_links(string):
     links = []
@@ -939,6 +979,14 @@ def cancelrun():
         print()
     return "Operation Cancelled"
 
+def fillbox():
+    global remaininglinks
+    if bool(remaininglinks):
+        text = list_to_text(remaininglinks)
+        remaininglinks = []
+        return [text, gr.Button.update(visible=False)]
+    return ['', gr.Button.update(visible=False)]
+
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
         with gr.Row():
@@ -965,62 +1013,63 @@ def on_ui_tabs():
             """)
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
-          try:
-            if cmd_opts.gradio_queue:
-                logbox = gr.Textbox(label="Log", interactive=False)
-            else:
-                logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
-          except AttributeError:
-            pass
+          if gradiostate == True:
+            logbox = gr.Textbox(label="Log", interactive=False)
+          else:
+            logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
+
           with gr.Row():
             with gr.Box():
-                try:
-                  if cmd_opts.gradio_queue:
-                      with gr.Row():
-                        #   gr.Textbox(value=None, interactive=False, show_label=False)
-                          btn_onlog = gr.Button("Turn On Logging", variant="primary", visible=True)
-                          btn_offlog = gr.Button("Turn Off Logging", visible=False)
-                          loggingon = btn_onlog.click(keeplog, outputs=[logbox, btn_offlog, btn_onlog], every=1)
-                          btn_offlog.click(offlog, outputs=[logbox, btn_offlog, btn_onlog], cancels=[loggingon])
+                if gradiostate == True:
+                    with gr.Row():
+                    #   gr.Textbox(value=None, interactive=False, show_label=False)
+                        btn_onlog = gr.Button("Turn On Logging", variant="primary", visible=True)
+                        btn_offlog = gr.Button("Turn Off Logging", visible=False)
+                        loggingon = btn_onlog.click(keeplog, outputs=[logbox, btn_offlog, btn_onlog], every=1)
+                        btn_offlog.click(offlog, outputs=[logbox, btn_offlog, btn_onlog], cancels=[loggingon])
                         #   gr.Textbox(value=None, interactive=False, show_label=False)
                     #   logging = gr.Radio(["Turn On Logging"], show_label=False)
                     #   logging.change(keeplog, outputs=logbox, every=1)
-                  else:
+                else:
                     print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
-                except AttributeError:
-                  print("[1;31mBatchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension might runs into problems")
-                  print('[0m')
-                  pass
                 out_text = gr.Textbox(label="Output")
 
                 if platform.system() == "Windows":
                     choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method (don't understand? ignore.)")
                 else:
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method (don't understand? ignore.)")
+                    if gradiostate == True:
+                        choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method (don't understand? ignore.)")
+                    else:
+                        choose_downloader = gr.Radio(["aria2"], value="aria2", label="Download method")
 
                 with gr.Row():
-                    try:
-                        if cmd_opts.gradio_queue:
-                            with gr.Column(scale=2, min_width=100):
-                                btn_run = gr.Button("Download All!", variant="primary")
-                            # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
-                            # btn_upload.upload(uploaded, btn_upload, file_output)
-                            with gr.Column(scale=1, min_width=100):
-                                btn_cancel = gr.Button("Cancel")
-                        else:
-                            raise AttributeError
-                            #btn_run = gr.Button("Download All!", variant="primary")
-                    except AttributeError:
-                        btn_run = gr.Button("Download All!", variant="primary")
-
-                try:
-                    if cmd_opts.gradio_queue:
-                        run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
-                        btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+                    if gradiostate == True:
+                        with gr.Column(scale=2, min_width=100):
+                            btn_run = gr.Button("Download All!", variant="primary")
+                        # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
+                        # btn_upload.upload(uploaded, btn_upload, file_output)
+                        with gr.Column(scale=1, min_width=100):
+                            btn_cancel = gr.Button("Cancel")
                     else:
-                        raise AttributeError
-                except AttributeError:
-                    btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
+                        btn_run = gr.Button("Download All!", variant="primary")
+                        btn_resume = gr.Button("Resume Download", visible=False)
+
+                if gradiostate == False:
+                    with gr.Row():
+                        gr.Markdown(
+                        f"""
+                        <p style="font-size: 14px; text-align: center; line-height: 90%;;"><br/>After clicking the Download All button, it's recommended to inspect the
+                        colab console, as every information about the download progress is there.</p>
+                        """)
+
+                if gradiostate == True:
+                    run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
+                    btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+                else:
+                    btn_run.click(run, inputs=[command, choose_downloader], outputs=[out_text, btn_resume])
+
+                if gradiostate == False:
+                    btn_resume.click(fillbox, None, outputs=[command, btn_resume])
 
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
