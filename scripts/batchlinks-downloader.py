@@ -717,9 +717,9 @@ def splitrename(linkcurrent):
             renamecurrent = file_rename[1]
     return linkcurrent, renamecurrent
 
-@stopwatch
+#@stopwatch #the decorator mess with the progress bar
 def run(command, choosedowner, progress=gr.Progress()):
-    progress(0.0, desc='')
+    progress(0.01, desc='')
     global prockilled
     prockilled = False
     global everyprocessid
@@ -746,17 +746,18 @@ def run(command, choosedowner, progress=gr.Progress()):
     currentcondition = 'Extracting links...'
     links = extract_links(command)
     printdebug("links: " + str(links))
-    steps = 0
-    totalsteps = 1
+    steps = float(0)
+    totalsteps = float(1)
     for item in links:
         if not item.startswith('#'):
             totalsteps += 1
         if item.startswith('https://mega.nz'):
             usemega = True
-            break
+            #break
     printdebug("totalsteps: " + str(totalsteps))
     if usemega == True:
         currentcondition = 'Installing Mega...'
+        progress(0.01, desc='Installing Mega...')
         if platform.system() == "Windows":
             installmegawin()
         else:
@@ -776,6 +777,8 @@ def run(command, choosedowner, progress=gr.Progress()):
         if prockilled == False:
             currenttorename = ''
             printdebug("steps: " + str(steps))
+            printdebug("total steps: " + str(totalsteps))
+            printdebug("percentage: " + str(round(steps/totalsteps, 1)))
             if gradiostate == False:
                 if time.time() - batchtime >= 80:
                     remaininglinks = links[links.index(listpart):]
@@ -788,7 +791,7 @@ def run(command, choosedowner, progress=gr.Progress()):
                         printdebug("remaining links new: " + str(remaininglinks))
                         print()
                         print('[1;33mRuntime was stopped to prevent hangs.')
-                        print("[1;33mCheck the UI and press 'Resume Download to load the remaining links'")
+                        print("[1;33mCheck the UI and press 'Resume Download' to load the remaining links")
                         print("[1;33mThen click 'Download All!' again")
                         print('[0m')
                         print("These are some links that haven't been downloaded yet.👇")
@@ -803,7 +806,7 @@ def run(command, choosedowner, progress=gr.Progress()):
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                progress(round(steps/totalsteps, 3), desc='Downloading from ' + os.path.basename(currentlink).split('#')[0] + '...')
                 transfare(currentlink, currentfolder, currenttorename)
                 steps += 1
 
@@ -813,7 +816,7 @@ def run(command, choosedowner, progress=gr.Progress()):
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
                     hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                 else:
@@ -840,7 +843,7 @@ def run(command, choosedowner, progress=gr.Progress()):
                     continue
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                 hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                 steps += 1
 
@@ -849,7 +852,7 @@ def run(command, choosedowner, progress=gr.Progress()):
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
                 civitdown(currentlink, currentfolder, currenttorename)
                 steps += 1
 
@@ -859,7 +862,7 @@ def run(command, choosedowner, progress=gr.Progress()):
                 print(currentlink)
                 if '/raw/' in listpart:
                     currentcondition = f'Downloading {currentlink}...'
-                    progress(round(steps/totalsteps, 1), desc=currentcondition)
+                    progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                     if everymethod == False:
                         hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                     else:
@@ -872,7 +875,7 @@ def run(command, choosedowner, progress=gr.Progress()):
                     foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
                     folderpath = shlex.quote(os.path.join(extpath, foldername))
                     currentcondition = f'Cloning {currentlink}...'
-                    progress(round(steps/totalsteps, 1), desc=currentcondition)
+                    progress(round(steps/totalsteps, 3), desc='Cloning from ' + currentlink.split('/', 3)[-1] + '...')
                     runwithsubprocess(f"git clone {currentlink} {folderpath}")
                 steps += 1
 
@@ -881,7 +884,7 @@ def run(command, choosedowner, progress=gr.Progress()):
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
                     civitdown2(currentlink, currentfolder, choosedowner, False)
                 else:
@@ -893,7 +896,7 @@ def run(command, choosedowner, progress=gr.Progress()):
             elif listpart.startswith("!"):
                 commandtorun = listpart[1:]
                 currentcondition = f'Running command: {commandtorun}'
-                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                progress(round(steps/totalsteps, 3), desc=currentcondition)
                 runwithsubprocess(commandtorun, None, True)
                 steps += 1
             
@@ -1060,7 +1063,8 @@ def on_ui_tabs():
           with gr.Column(scale=2):
             gr.Markdown(
             f"""
-            <h3 style="font-size: 22px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
+            <h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
+            <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-v200">(what's new?)</a></h5>
             <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
             Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
@@ -1076,7 +1080,8 @@ def on_ui_tabs():
             <a href="https://github.com/etherealxx/batchlinks-webui#example">Example</a><br/>
             <a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
             <a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a></p>
+            <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui/issues">Report Bug</a></p>
             """)
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
@@ -1102,10 +1107,10 @@ def on_ui_tabs():
                 out_text = gr.Textbox(label="Output")
 
                 if platform.system() == "Windows":
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method (don't understand? ignore.)")
+                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method")
                 else:
                     if gradiostate == True:
-                        choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method (don't understand? ignore.)")
+                        choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
                     else:
                         choose_downloader = gr.Radio(["aria2"], value="aria2", label="Download method")
 
