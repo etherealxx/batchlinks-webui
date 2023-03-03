@@ -261,7 +261,7 @@ A star on this project would be nice! Thanks again!
 ## Contact
 
 My Email - gwathon3@gmail.com <br/>
-My Youtube - [MJ Devlog](youtube.com/@mjdevlog)
+My Youtube - [MJ Devlog](https://www.youtube.com/@mjdevlog)
 
 <!-- ACKNOWLEDGMENTS -->
 
