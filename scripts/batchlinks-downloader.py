@@ -109,7 +109,7 @@ currentfoldertrack = []
 everyprocessid = []
 remaininglinks = []
 
-globaldebug = False #set this to true to activate every debug features
+globaldebug = True #set this to true to activate every debug features
 
 def stopwatch(func):
     """
@@ -216,7 +216,7 @@ def printdebug(toprint):
     if globaldebug == True:
         print(toprint)
 
-def runwithsubprocess(rawcommand, folder=None):
+def runwithsubprocess(rawcommand, folder=None, justrun=False):
 
     commandtorun = shlex.split(rawcommand) #construct_command(rawcommand)
     printdebug(f"raw command: {rawcommand}")
@@ -263,12 +263,15 @@ def runwithsubprocess(rawcommand, folder=None):
                     print(nextline, end='')
                     currentsuboutput = nextline
         else:
-            if "%" in nextline.strip() or rawcommand.startswith("curl"):
-                stripnext = nextline.strip()
-                print("\r", end="")
-                print(f"\r{stripnext}", end='')
-            else:
+            if justrun:
                 print(nextline, end='')
+            else:
+                if "%" in nextline.strip() or rawcommand.startswith("curl"):
+                    stripnext = nextline.strip()
+                    print("\r", end="")
+                    print(f"\r{stripnext}", end='')
+                else:
+                    print(nextline, end='')
             currentsuboutput = nextline
             
 
@@ -302,11 +305,12 @@ def unbuffered(proc, stream='stdout'):
             out = ''.join(out)
             yield out
 
-def transfare(todownload, folder):
+def transfare(todownload, folder, torename=''):
     #import codecs
     #decoder = codecs.getincrementaldecoder("UTF-8")()
     todownload_s = shlex.quote(todownload)
     folder_s = shlex.quote(folder)
+    savestate_folder(folder_s)
     if platform.system() == "Windows":
         localappdata = os.environ['LOCALAPPDATA']
         megagetloc = os.path.join(shlex.quote(localappdata), "MEGAcmd", "mega-get.bat")
@@ -340,6 +344,18 @@ def transfare(todownload, folder):
                 currentcondition = 'Operation Cancelled'
                 return
         currentsuboutput = ''
+        if torename:
+            listfilenew = os.listdir(folder)
+            newerfoldertrack = []
+            for file in listfilenew:
+                pathoffile = os.path.join(folder, file)
+                newerfoldertrack.append(pathoffile)
+            checkrename = [x for x in newerfoldertrack if x not in currentfoldertrack]
+            if checkrename:
+                # renamedfile = os.path.basename(checkrename[0])
+                # pathtorename = os.path.join(folder, renamedfile)
+                os.rename(checkrename[0], os.path.join(folder, torename))
+    
 
 def installmega():
     HOME = os.path.expanduser("~")
@@ -382,7 +398,7 @@ def installmegawin():
         #clear_output()
 #these code above handle mega.nz
 
-def civitdown(url, folder):
+def civitdown(url, folder, torename=''):
     filename = url.split('?')[0].rsplit('/', 1)[-1] + ".bdgh"
     pathtodown = os.path.join(folder, filename)
     max_retries = 5
@@ -436,8 +452,10 @@ def civitdown(url, folder):
             currentsuboutput = ''
             return "Operation Cancelled"
         
-        
-        actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
+        if torename:
+            actualfilename = torename
+        else:
+            actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
         #%cd {folder}
         actualpath = os.path.join(folder, actualfilename)
         os.rename(pathtodown, actualpath)
@@ -538,7 +556,7 @@ def civitdown2(url, folder, downloader, isdebugevery):
     print(f"{data_save_path} successfully downloaded.")
 #}
 
-def hfdown(todownload, folder, downloader, mode='default'):
+def hfdown(todownload, folder, downloader, mode='default', torename=''):
     if mode=='civit' or mode=='civitdebugevery':
         filename = pathlib.Path(folder).name
         filename_s = shlex.quote(filename)
@@ -608,7 +626,11 @@ def hfdown(todownload, folder, downloader, mode='default'):
             except FileNotFoundError:
                 printdebug("rename failed somehow")
                 pass
-
+        if torename:
+            if mode=='civit':
+                os.rename(folder, os.path.join(folder_s, shlex.quote(torename)))
+            else:
+                os.rename(os.path.join(folder, filename), os.path.join(folder, shlex.quote(torename)))
     # if prockilled == True:
     #     #rewind_folder(folder_s)
     #     pass
@@ -685,8 +707,19 @@ def currentfoldertohashtag(folder):
             return thehashtag
     return "#debug"
 
+def splitrename(linkcurrent):
+    renamecurrent = ''
+    if ">" in linkcurrent:
+        file_rename = linkcurrent.split(">")
+        file_rename = [file_rename.strip() for file_rename in file_rename]
+        linkcurrent = file_rename[0]
+        if file_rename[1]:
+            renamecurrent = file_rename[1]
+    return linkcurrent, renamecurrent
+
 @stopwatch
-def run(command, choosedowner):
+def run(command, choosedowner, progress=gr.Progress()):
+    progress(0.0, desc='')
     global prockilled
     prockilled = False
     global everyprocessid
@@ -713,10 +746,15 @@ def run(command, choosedowner):
     currentcondition = 'Extracting links...'
     links = extract_links(command)
     printdebug("links: " + str(links))
+    steps = 0
+    totalsteps = 1
     for item in links:
+        if not item.startswith('#'):
+            totalsteps += 1
         if item.startswith('https://mega.nz'):
             usemega = True
             break
+    printdebug("totalsteps: " + str(totalsteps))
     if usemega == True:
         currentcondition = 'Installing Mega...'
         if platform.system() == "Windows":
@@ -736,6 +774,8 @@ def run(command, choosedowner):
     ]
     for listpart in links:
         if prockilled == False:
+            currenttorename = ''
+            printdebug("steps: " + str(steps))
             if gradiostate == False:
                 if time.time() - batchtime >= 80:
                     remaininglinks = links[links.index(listpart):]
@@ -748,8 +788,10 @@ def run(command, choosedowner):
                         printdebug("remaining links new: " + str(remaininglinks))
                         print()
                         print('[1;33mRuntime was stopped to prevent hangs.')
+                        print("[1;33mCheck the UI and press 'Resume Download to load the remaining links'")
+                        print("[1;33mThen click 'Download All!' again")
                         print('[0m')
-                        print("These are some files that haven't been downloaded yet.👇")
+                        print("These are some links that haven't been downloaded yet.👇")
                         printremains = list_to_text(remaininglinks)
                         print(printremains)
                         resumebuttonvisible = True
@@ -757,27 +799,31 @@ def run(command, choosedowner):
                     break
 
             if listpart.startswith("https://mega.nz"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                transfare(currentlink, currentfolder)
+                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                transfare(currentlink, currentfolder, currenttorename)
+                steps += 1
 
             elif listpart.startswith(tuple(hfmethods)):
             # elif listpart.startswith("https://huggingface.co") or listpart.startswith("https://raw.githubusercontent.com") or listpart.startswith("https://cdn.discordapp.com/attachments"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
+                progress(round(steps/totalsteps, 1), desc=currentcondition)
                 if everymethod == False:
-                    hfdown(currentlink, currentfolder, choosedowner)
+                    hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                 else:
                     for xmethod in downmethod:
                         if prockilled == False:
                             hfdown(currentlink, currentfolder, xmethod, 'debugevery')
+                steps += 1
 
             elif listpart.startswith("https://files.catbox.moe"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 try:
@@ -794,22 +840,28 @@ def run(command, choosedowner):
                     continue
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                hfdown(currentlink, currentfolder, choosedowner)
+                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                steps += 1
 
             elif listpart.startswith("https://civitai.com/api/download/models/"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                civitdown(currentlink, currentfolder)
+                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                civitdown(currentlink, currentfolder, currenttorename)
+                steps += 1
 
             elif listpart.startswith("https://github.com"):
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 if '/raw/' in listpart:
                     currentcondition = f'Downloading {currentlink}...'
+                    progress(round(steps/totalsteps, 1), desc=currentcondition)
                     if everymethod == False:
-                        hfdown(currentlink, currentfolder, choosedowner)
+                        hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                     else:
                         for xmethod in downmethod:
                             if prockilled == False:
@@ -820,19 +872,30 @@ def run(command, choosedowner):
                     foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
                     folderpath = shlex.quote(os.path.join(extpath, foldername))
                     currentcondition = f'Cloning {currentlink}...'
+                    progress(round(steps/totalsteps, 1), desc=currentcondition)
                     runwithsubprocess(f"git clone {currentlink} {folderpath}")
+                steps += 1
 
             elif listpart.startswith("https://civitai.com/models/"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
+                progress(round(steps/totalsteps, 1), desc=currentcondition)
                 if everymethod == False:
                     civitdown2(currentlink, currentfolder, choosedowner, False)
                 else:
                     for xmethod in downmethod:
                         if prockilled == False:
                             civitdown2(currentlink, currentfolder, xmethod, True)
+                steps += 1
+
+            elif listpart.startswith("!"):
+                commandtorun = listpart[1:]
+                currentcondition = f'Running command: {commandtorun}'
+                progress(round(steps/totalsteps, 1), desc=currentcondition)
+                runwithsubprocess(commandtorun, None, True)
+                steps += 1
             
             elif listpart.startswith("#debugeverymethod") and globaldebug == True and gradiostate == True:
                 print('\n')
@@ -905,6 +968,8 @@ def extract_links(string):
             links.append(line)
         elif line.startswith("#debugresetdownloads"):
             links.append(line)
+        elif line.startswith("!"):
+            links.append(line.strip())
         else:
             for prefix in typechecker:
                 if line.startswith("#" + prefix):
@@ -927,6 +992,8 @@ def uploaded(textpath):
         with open(file_paths, 'r') as file:
             for line in file:
                 if line.startswith(tuple(supportedlinks)):
+                    links.append(line.strip())
+                elif line.startswith("!"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
