@@ -19,30 +19,47 @@
 
 </div>
 
-<!-- TABLE OF CONTENTS -->
-
-<!--
 <details>
   <summary>Table of Contents</summary>
   <ol>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#example">Example</a></li>
     <li>
-      <a href="#about-the-project">About The Project</a>
+      <a href="#syntax">Syntax</a>
       <ul>
-        <li><a href="#built-with">Built With</a></li>
+        <li><a href="#valid-hashtags">Valid Hastags</a></li>
+        <li><a href="https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md">How to get the direct links (Important!)</a></li>
+        <li><a href="#huggingfaces-download-method">Huggingface's download method</a></li>
+        <li><a href="#civitais-download-method">CivitAI's download method</a></li>
+        <li><a href="#rename-downloaded-files">Rename-Downloaded-Files</a></li>
+        <li><a href="#running-shell-command">Running-Shell-Commands</a></li>
       </ul>
     </li>
     <li>
-      <a href="#getting-started">Getting Started</a>
+      <a href="#gradio-queue">Gradio Queue</a>
       <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
+        <li><a href="#logging">Logging</a></li>
+        <li><a href="#cancel">Cancel</a></li>
+        <li><a href="#progress-bar">Progress Bar</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
+    <li>
+      <a href="#other-features">Other Features</a>
+      <ul>
+        <li><a href="#notification">Notification</a></li>
+        <li><a href="#local-installation-support">Local Installation Support</a></li>
+        <li><a href="#latest-release-v210">Latest Release: v2.1.0</a></li>
+      </ul>
+    </li>
     <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#known-bugs">Known Bugs</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgements</a></li>
   </ol>
 </details>
--->
+
 
 <!-- ABOUT THE PROJECT -->
 
@@ -66,7 +83,7 @@ or, if your colab use the newer version of webui (gradio version above 3.16.0) y
 ```
 -->
 
-Using `--gradio-queue` on the launch.py argument is highly recommended, as it enables this ectension to show download progress bar on the UI and a cancel button. The option itself has no negative effect on the webui.<br/>
+Using `--gradio-queue` on the launch.py argument is highly recommended, as it enables this extension to show download progress bar on the UI and a cancel button. The option itself has no negative effect on the webui. [Read more here.](https://github.com/etherealxx/batchlinks-webui#gradio-queue)<br/>
 <img src="images/queue.jpg" alt="Logo" width="300"><br/>
 
 While it's not recommended to use this extension on your local installation, you can use this extension on Windows. [More here](https://github.com/etherealxx/batchlinks-webui#local-installation-support)
@@ -146,7 +163,7 @@ See [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtoge
 
 ### Huggingface's download method
 
-So there's four supported method: `gdown`, `wget`, `curl` and `aria2`. Use whatever, really. The difference between them are actually little. Myself love using `gdown` since the output is cleaner than the others. aria2 has the fastest download speed, but it doesn't have a good progress bar.
+So there's four supported method: `gdown`, `wget`, `curl` and `aria2`. Use whatever, really. The difference between them are actually little. Myself love using `gdown` since the output is cleaner than the others. Some says `aria2` has the fastest download speed.
 
 ### Civitai's download method
 
@@ -170,17 +187,49 @@ https://civitai.com/api/download/models/5616
 
 Check [this page](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md) to learn more on how to get the links for each methods.
 
+### Rename Downloaded Files
+Using `>` symbol, you can rename files. Take this for example<br/>
+<img src="images/rename.jpg" alt="Log" width="407"><br/>
+Mostly catbox file has random name, by using `>` symbol after the link, you can type the desired name on the right. (Don't forget the extension)
+
+### Running Shell Commands
+You can run shell commands by using `!` in front of the command you want, just like in google colab cells. Then press the `Download All!` button. (Sure, it doesn't download anything, but, well😅)<br/>
+<img src="images/shell1.jpg" alt="Log" width="200">
+<img src="images/shell2.jpg" alt="Log" width="200"><br/>
+You can run many lines at once too!
+
 <!--
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 -->
 
+## Gradio Queue
+
+If you use --gradio-queue argument on `launch.py`, some feature will be activated.
 ### Logging
 
-If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), or webui forks that supports `--gradio-queue` args on launch.py, use it and you will be able to enable logging by pressing the `Turn On Logging` radio button. Logging will tell you what are you actually downloading right now on the webui.<br/>
+<!-- If you use latest version of [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), or webui forks that supports `--gradio-queue` args on launch.py, use it and you will be able to -->
+Enable logging by pressing the `Turn On Logging` radio button, and wait till `Logging activated` shows up and the box is blinking with orange border. Logging will tell you what are you actually downloading right now on the webui. After your download session is completed, it's recommended to turn back off the feature.<br/>
 <img src="images/logging.jpg" alt="Log" width="407"><br/>
-Turning on `--gradio-queue` also allows you to cancel ongoing download progress, if somehow the internet speed is slow and you need to restart.
+
+### Cancel 
+Pressing `cancel` button while download in progress will stops the current session. Useful when at one time the download speeds is too slow. If you're currently downloading a single item, that item will be cancelled, but the other downloaded one will remain intact.<br/>
+<img src="images/cancel.jpg" alt="Log" width="500"><br/>
+
+### Progress Bar
+There will be an additional progress bar that tells you the current activities.<br/>
+<img src="images/progress.jpg" alt="Log" width="500"><br/>
+
+### Changes if `--gradio-queue` is off
+Feature listed above will dissapear, and your only option for download is just `aria2` (speed is priority).<br/>Note that when you pressed the `Download All!` button, **nothing will shows up on the UI**. You need to check the colab console.<br/>
+<img src="images/checkconsole1.jpg" alt="check" width="407"><img src="images/checkconsole2.jpg" alt="off" width="407"><br/>
+Another thing to note is your download session will always be cutted every 70 seconds (to prevent hangs/desync).<br/>
+<img src="images/gradiooff1.jpg" alt="off" width="407"><br/>
+Don't worry, you can continue your session by pressing the `Resume Download` button. It will refresh the links with the one you haven't downloaded yet, then pressing `Download All!` will download the remaining links.<br/>
+<img src="images/gradiooff2.jpg" alt="off" width="407"><br/>
+
+## Other Features
 
 ### Notification
 
@@ -194,14 +243,24 @@ This extension is tested to work on Windows 11. Maybe works on Debian-based linu
 On Windows, this extension will install [MEGAcmd](https://github.com/meganz/MEGAcmd) for MEGA file download.
 MacOS is not supported.
 
-## Latest release: v2.0.0
+## Latest release: v2.1.0
+Features:
+- Supports renaming downloaded file with `>` (for example: `https://files.catbox.moe/uarze8.safetensors > neurosama.safetensors`)
+- Supports extension usage without `--gradio-queue` (ported from [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix))
+- Supports running shell command from the UI with `!` (for example: type `!pip freeze`, then hit the `Download all!` button and see the colab console)
+- Progress bar for `--gradio-queue`
+
+Changes:
+- `aria2` as *the only* download method when using without `--gradio-queue`
+- Download session will be cut every 80 seconds on when using without `--gradio-queue` (just like [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix))
+- _Debug stopwatch (decorator)_ won't run automatically when `globaldebug = True`, must be uncommented manually (it disrupt the progress bar)
+- Dropped support for webui based on Gradio 3.9 (update your installation, or use [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix) instead)
+- UI tweak (Smaller font size)
+
+### Release v2.0.0
 Features:
 - `aria2` as download method.
 - Cancel button for cancelling download process (`--gradio-queue` required)
-- Debug snapshot.<br/>
-When `global_debug = True`, the moment this extension launch, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownloads` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
-- Debug every download method.<br/>
-When `global_debug = True` and you type `#debugevery method` on the textbox, every link that has 4 different method of download (Huggingface etc.) will be downloaded with every method, regardless of the radio button choice. The result is 4 file being downloaded.
 - Detection if a CivitAI links no longer exist
 - New hashtags: `#textualinversion`, `#ti`, `#aestheticembedding`, `#aestheticembed`, `#controlnet`, and `#cnet`
 - Toggle logging on/off
@@ -213,33 +272,43 @@ When `global_debug = True` and you type `#debugevery method` on the textbox, eve
 - Supports for aesthetic gradients, controlnet model, and extensions path.
 - UI font scaled down
 - Uses `subprocess.Popen` instead of `os.system`
+<br/>_
+- _Debug snapshot_<br/>
+When `globaldebug = True`, the moment this extension launch, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownloads` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+- _Debug every download method_<br/>
+When `globaldebug = True` and you type `#debugevery method` on the textbox, every link that has 4 different method of download (Huggingface etc.) will be downloaded with every method, regardless of the radio button choice. The result is 4 file being downloaded.
+- _Debug stopwatch_<br/>
+When `globaldebug = True`, it will give an output for how long a single download session lasts
 
 ## Roadmap
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
+- [ ] Logo change
+- [ ] Different UI for mobile
+- [ ] Moving most of the content of this Readme.md to Wiki instead
+- [ ] Other download sites (s-ul.eu, gitgud, Google Drive)
+- [ ] Gradio progress bar
+- [ ] Support customizable hashtag from the UI
+- [ ] UI overhaul
+<br/>_
 - [x] aria2 for huggingface download method
 - [x] Cleaning the code from unnecesarry comments
 - [x] Completed download will use the webui's notification.mp3
-- [ ] Logo change
-- [ ] Mobile-friendly UI
-- [ ] Other download sites (s-ul.eu, gitgud, Google Drive)
-- [ ] Gradio progress bar
 - [x] Supports Windows local installation
-- [ ] Support customizable hashtag from the UI
-- [ ] UI overhaul
 - [x] Using threading/subprocess instead of os.system to download files
 
 ## Known Bugs
 
-- Progress bar (the yellow bar) doesn't progress as expected (v3-16-2 branch)
+- Progress bar (the yellow bar) doesn't progress as expected
 - Sometimes notification sound doesn't play when downloading same file twice in a row
-- Windows: The delay between file is downloaded and the output shows is pretty long, and even sometimes the notification comes at the wrong time.
-- Links that has bracket in it needs to be 'escaped' (For example, `Baka-DiffusionV1(Fp16).safetensors` must be typed `Baka-DiffusionV1\(Fp16\).safetensors`)
 - Sometimes colab cannot be shut down with a single click on the stop button. Hitting the button several times will raise a KeyboardInterrupt and forcely stopping the cell.
+- There's still a chance that the UI of non `--gradio-queue` session and/or onedotsix freezes after a download session
+- Windows: The delay between file is downloaded and the output shows is pretty long, and even sometimes the notification comes at the wrong time.
+<br/>_
+- Sometimes the notification bell shows up when starting download, instead of when the download process is completed.
+- ~~Links that has bracket in it needs to be 'escaped' (For example, `Baka-DiffusionV1(Fp16).safetensors` must be typed `Baka-DiffusionV1\(Fp16\).safetensors`)~~ Fixed in [v2.0.0](dbb2adb3d07e41654244076b8ef4e851c3bb1f0c)
 - ~~The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)~~ Seems like fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 - ~~File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.~~ Fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
-
-<!-- CONTRIBUTING -->
 
 ## Contributing
 
@@ -261,9 +330,7 @@ A star on this project would be nice! Thanks again!
 ## Contact
 
 My Email - gwathon3@gmail.com <br/>
-My Youtube - [MJ Devlog](youtube.com/@mjdevlog)
-
-<!-- ACKNOWLEDGMENTS -->
+My Youtube - [MJ Devlog](https://www.youtube.com/@mjdevlog)
 
 ## Acknowledgments
 

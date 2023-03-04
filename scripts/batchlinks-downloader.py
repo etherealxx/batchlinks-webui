@@ -109,7 +109,7 @@ currentfoldertrack = []
 everyprocessid = []
 remaininglinks = []
 
-globaldebug = True #set this to true to activate every debug features
+globaldebug = False #set this to true to activate every debug features
 
 def stopwatch(func):
     """
@@ -217,7 +217,7 @@ def printdebug(toprint):
         print(toprint)
 
 def runwithsubprocess(rawcommand, folder=None, justrun=False):
-
+    
     commandtorun = shlex.split(rawcommand) #construct_command(rawcommand)
     printdebug(f"raw command: {rawcommand}")
     printdebug(f"merged command: {commandtorun}")
@@ -230,7 +230,10 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False):
         printdebug("debug folderforsavestate: " + str(folder))
         savestate_folder(folder)
         printdebug("debug currentfoldertrack: " + str(currentfoldertrack))
-    process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+    if justrun:
+        process = subprocess.Popen(rawcommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, shell=True)
+    else:
+        process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     global processid
     processid = process.pid
     everyprocessid.append(processid)
@@ -599,7 +602,8 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
                 currentcondition = "Installing aria2..."
                 print('[1;32mInstalling aria2 ...')
                 print('[0m')
-                runwithsubprocess(f"apt-get -y install -qq aria2")
+                runwithsubprocess(f"apt -y update -qq")
+                runwithsubprocess(f"apt -y install -qq aria2")
                 print('[1;32maria2 installed!')
                 print('[0m')
                 currentcondition = tempcondition
@@ -651,6 +655,7 @@ def rewind_folder(folder):
         newerfoldertrack.append(pathoffile)
     toremove = [x for x in newerfoldertrack if x not in currentfoldertrack]
     printdebug("debug toremove: " + str(toremove))
+    print()
     for fileordir in toremove:
         if os.path.exists(fileordir):
             if os.path.isdir(fileordir):
@@ -660,7 +665,7 @@ def rewind_folder(folder):
                 os.remove(fileordir)
             print("Removed incomplete download: " + fileordir)
 
-def writeall(olddict):
+def writeall(olddict, shellonly):
     newdict = trackall()
     global finalwrite
     finalwrite = []
@@ -680,7 +685,10 @@ def writeall(olddict):
         finalwrite.append("(There are still some files that have not been downloaded. Click the 'Resume Download' button to load the links that haven't been downloaded.)")
     finaloutput = list_to_text(finalwrite)
     finalwrite = []
-    return finaloutput
+    if shellonly:
+        return "Commands executed successfully."
+    else:
+        return finaloutput
 
 def writepart(box, path):
     global finalwrite
@@ -742,9 +750,15 @@ def run(command, choosedowner, progress=gr.Progress()):
     
     oldfilesdict = trackall()
     currentfolder = modelpath
+    os.makedirs(currentfolder, exist_ok=True)
     usemega = False
     currentcondition = 'Extracting links...'
     links = extract_links(command)
+    isshell = True
+    for listpart in links:
+        if not listpart.startswith('!'):
+            isshell = False
+            break
     printdebug("links: " + str(links))
     steps = float(0)
     totalsteps = float(1)
@@ -780,7 +794,7 @@ def run(command, choosedowner, progress=gr.Progress()):
             printdebug("total steps: " + str(totalsteps))
             printdebug("percentage: " + str(round(steps/totalsteps, 1)))
             if gradiostate == False:
-                if time.time() - batchtime >= 80:
+                if time.time() - batchtime >= 70:
                     remaininglinks = links[links.index(listpart):]
                     printdebug("remaining links: " + str(remaininglinks))
                     if bool(remaininglinks):
@@ -944,7 +958,7 @@ def run(command, choosedowner, progress=gr.Progress()):
             return "Operation cancelled"
 
     currentcondition = 'Writing output...'
-    downloadedfiles = writeall(oldfilesdict)
+    downloadedfiles = writeall(oldfilesdict, isshell)
     for tokill in everyprocessid:
         try:
             os.kill(tokill, signal.SIGTERM)
@@ -1054,8 +1068,8 @@ def fillbox():
     if bool(remaininglinks):
         text = list_to_text(remaininglinks)
         remaininglinks = []
-        return [text, gr.Button.update(visible=False)]
-    return ['', gr.Button.update(visible=False)]
+        return [text, 'Links updated!\nClick Download All! to download the rest of the links', gr.Button.update(visible=False)]
+    return ['', '', gr.Button.update(visible=False)]
 
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
@@ -1064,12 +1078,12 @@ def on_ui_tabs():
             gr.Markdown(
             f"""
             <h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
-            <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-v200">(what's new?)</a></h5>
+            <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-v210">(what's new?)</a></h5>
             <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
             Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
             Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
-            (For colab that uses sd-webui-additional-networks, use <code>#addnetlora</code>)<br/>
+            (For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>
             Use double hashtag after links for comment</p>
             """)
           with gr.Column(scale=1):
@@ -1102,9 +1116,10 @@ def on_ui_tabs():
                         #   gr.Textbox(value=None, interactive=False, show_label=False)
                     #   logging = gr.Radio(["Turn On Logging"], show_label=False)
                     #   logging.change(keeplog, outputs=logbox, every=1)
+                    out_text = gr.Textbox(label="Output")
                 else:
                     print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
-                out_text = gr.Textbox(label="Output")
+                    out_text = gr.Textbox("(If this text disappear, that means a download session is in progress.)", label="Output")
 
                 if platform.system() == "Windows":
                     choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method")
@@ -1141,7 +1156,7 @@ def on_ui_tabs():
                     btn_run.click(run, inputs=[command, choose_downloader], outputs=[out_text, btn_resume])
 
                 if gradiostate == False:
-                    btn_resume.click(fillbox, None, outputs=[command, btn_resume])
+                    btn_resume.click(fillbox, None, outputs=[command, out_text, btn_resume])
 
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
