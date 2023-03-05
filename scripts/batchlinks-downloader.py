@@ -41,15 +41,15 @@ else:
     latestversiontext = ""
 #}
 
-# try:
-#     global gradiostate
-#     if cmd_opts.gradio_queue:
-#         gradiostate = True
-#     else:
-#         gradiostate = False
-# except AttributeError:
-#     gradiostate = False
-#     pass
+try:
+    global gradiostate
+    if cmd_opts.gradio_queue:
+        gradiostate = True
+    else:
+        gradiostate = False
+except AttributeError:
+    gradiostate = False #at this point just use onedotsix
+    pass
 
 typechecker = [
     "embedding", "embeddings", "embed", "embeds", "textualinversion", "ti",
@@ -107,6 +107,7 @@ logging = False
 prockilled = False
 currentfoldertrack = []
 everyprocessid = []
+remaininglinks = []
 
 globaldebug = False #set this to true to activate every debug features
 
@@ -215,8 +216,8 @@ def printdebug(toprint):
     if globaldebug == True:
         print(toprint)
 
-def runwithsubprocess(rawcommand, folder=None):
-
+def runwithsubprocess(rawcommand, folder=None, justrun=False):
+    
     commandtorun = shlex.split(rawcommand) #construct_command(rawcommand)
     printdebug(f"raw command: {rawcommand}")
     printdebug(f"merged command: {commandtorun}")
@@ -229,7 +230,10 @@ def runwithsubprocess(rawcommand, folder=None):
         printdebug("debug folderforsavestate: " + str(folder))
         savestate_folder(folder)
         printdebug("debug currentfoldertrack: " + str(currentfoldertrack))
-    process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+    if justrun:
+        process = subprocess.Popen(rawcommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, shell=True)
+    else:
+        process = subprocess.Popen(commandtorun, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
     global processid
     processid = process.pid
     everyprocessid.append(processid)
@@ -262,12 +266,15 @@ def runwithsubprocess(rawcommand, folder=None):
                     print(nextline, end='')
                     currentsuboutput = nextline
         else:
-            if "%" in nextline.strip() or rawcommand.startswith("curl"):
-                stripnext = nextline.strip()
-                print("\r", end="")
-                print(f"\r{stripnext}", end='')
-            else:
+            if justrun:
                 print(nextline, end='')
+            else:
+                if "%" in nextline.strip() or rawcommand.startswith("curl"):
+                    stripnext = nextline.strip()
+                    print("\r", end="")
+                    print(f"\r{stripnext}", end='')
+                else:
+                    print(nextline, end='')
             currentsuboutput = nextline
             
 
@@ -301,11 +308,12 @@ def unbuffered(proc, stream='stdout'):
             out = ''.join(out)
             yield out
 
-def transfare(todownload, folder):
+def transfare(todownload, folder, torename=''):
     #import codecs
     #decoder = codecs.getincrementaldecoder("UTF-8")()
     todownload_s = shlex.quote(todownload)
     folder_s = shlex.quote(folder)
+    savestate_folder(folder_s)
     if platform.system() == "Windows":
         localappdata = os.environ['LOCALAPPDATA']
         megagetloc = os.path.join(shlex.quote(localappdata), "MEGAcmd", "mega-get.bat")
@@ -339,6 +347,18 @@ def transfare(todownload, folder):
                 currentcondition = 'Operation Cancelled'
                 return
         currentsuboutput = ''
+        if torename:
+            listfilenew = os.listdir(folder)
+            newerfoldertrack = []
+            for file in listfilenew:
+                pathoffile = os.path.join(folder, file)
+                newerfoldertrack.append(pathoffile)
+            checkrename = [x for x in newerfoldertrack if x not in currentfoldertrack]
+            if checkrename:
+                # renamedfile = os.path.basename(checkrename[0])
+                # pathtorename = os.path.join(folder, renamedfile)
+                os.rename(checkrename[0], os.path.join(folder, torename))
+    
 
 def installmega():
     HOME = os.path.expanduser("~")
@@ -381,7 +401,7 @@ def installmegawin():
         #clear_output()
 #these code above handle mega.nz
 
-def civitdown(url, folder):
+def civitdown(url, folder, torename=''):
     filename = url.split('?')[0].rsplit('/', 1)[-1] + ".bdgh"
     pathtodown = os.path.join(folder, filename)
     max_retries = 5
@@ -435,8 +455,10 @@ def civitdown(url, folder):
             currentsuboutput = ''
             return "Operation Cancelled"
         
-        
-        actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
+        if torename:
+            actualfilename = torename
+        else:
+            actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
         #%cd {folder}
         actualpath = os.path.join(folder, actualfilename)
         os.rename(pathtodown, actualpath)
@@ -537,7 +559,7 @@ def civitdown2(url, folder, downloader, isdebugevery):
     print(f"{data_save_path} successfully downloaded.")
 #}
 
-def hfdown(todownload, folder, downloader, mode='default'):
+def hfdown(todownload, folder, downloader, mode='default', torename=''):
     if mode=='civit' or mode=='civitdebugevery':
         filename = pathlib.Path(folder).name
         filename_s = shlex.quote(filename)
@@ -580,7 +602,8 @@ def hfdown(todownload, folder, downloader, mode='default'):
                 currentcondition = "Installing aria2..."
                 print('[1;32mInstalling aria2 ...')
                 print('[0m')
-                runwithsubprocess(f"apt-get -y install -qq aria2")
+                runwithsubprocess(f"apt -y update -qq")
+                runwithsubprocess(f"apt -y install -qq aria2")
                 print('[1;32maria2 installed!')
                 print('[0m')
                 currentcondition = tempcondition
@@ -607,7 +630,11 @@ def hfdown(todownload, folder, downloader, mode='default'):
             except FileNotFoundError:
                 printdebug("rename failed somehow")
                 pass
-
+        if torename:
+            if mode=='civit':
+                os.rename(folder, os.path.join(folder_s, shlex.quote(torename)))
+            else:
+                os.rename(os.path.join(folder, filename), os.path.join(folder, shlex.quote(torename)))
     # if prockilled == True:
     #     #rewind_folder(folder_s)
     #     pass
@@ -628,6 +655,7 @@ def rewind_folder(folder):
         newerfoldertrack.append(pathoffile)
     toremove = [x for x in newerfoldertrack if x not in currentfoldertrack]
     printdebug("debug toremove: " + str(toremove))
+    print()
     for fileordir in toremove:
         if os.path.exists(fileordir):
             if os.path.isdir(fileordir):
@@ -637,7 +665,7 @@ def rewind_folder(folder):
                 os.remove(fileordir)
             print("Removed incomplete download: " + fileordir)
 
-def writeall(olddict):
+def writeall(olddict, shellonly):
     newdict = trackall()
     global finalwrite
     finalwrite = []
@@ -653,10 +681,14 @@ def writeall(olddict):
                     exec(f"finalwrite.append('⬇️' + {newtype}path + '⬇️')")
                     for item in trackcompare:
                         finalwrite.append(item)
-
+    if bool(remaininglinks):
+        finalwrite.append("(There are still some files that have not been downloaded. Click the 'Resume Download' button to load the links that haven't been downloaded.)")
     finaloutput = list_to_text(finalwrite)
     finalwrite = []
-    return finaloutput
+    if shellonly:
+        return "Commands executed successfully."
+    else:
+        return finaloutput
 
 def writepart(box, path):
     global finalwrite
@@ -672,15 +704,37 @@ def trackall():
         exec(f"filesdict['{x}'] = os.listdir({x}path)")
     return filesdict
 
-@stopwatch
-def run(command, choosedowner):
+def currentfoldertohashtag(folder):
+    for x in typemain:
+        checkpath = str()
+        checkpath = eval(x+'path')
+        printdebug("checkpath: " + checkpath)
+        if str(folder).strip() == checkpath:
+            thehashtag = "#" + x
+            printdebug("thehashtag: " + thehashtag)
+            return thehashtag
+    return "#debug"
+
+def splitrename(linkcurrent):
+    renamecurrent = ''
+    if ">" in linkcurrent:
+        file_rename = linkcurrent.split(">")
+        file_rename = [file_rename.strip() for file_rename in file_rename]
+        linkcurrent = file_rename[0]
+        if file_rename[1]:
+            renamecurrent = file_rename[1]
+    return linkcurrent, renamecurrent
+
+#@stopwatch #the decorator mess with the progress bar
+def run(command, choosedowner, progress=gr.Progress()):
+    progress(0.01, desc='')
     global prockilled
     prockilled = False
     global everyprocessid
     everyprocessid = []
     everymethod = False
     global currentcondition
-
+    resumebuttonvisible = False
     if command.strip() == '#debugresetdownloads' and snapshot != {} and globaldebug == True:
         currentcondition = f'Removing downloaded files...'
         removed_files = global_rewind()
@@ -689,20 +743,35 @@ def run(command, choosedowner):
             texttowrite.append(item)
         writefinal = list_to_text(texttowrite)
         currentcondition = f'Removing done.'
-        return writefinal
+        if gradiostate == True:
+            return writefinal
+        else:
+            return [writefinal, gr.Button.update(visible=resumebuttonvisible)]
     
     oldfilesdict = trackall()
     currentfolder = modelpath
+    os.makedirs(currentfolder, exist_ok=True)
     usemega = False
     currentcondition = 'Extracting links...'
     links = extract_links(command)
+    isshell = True
+    for listpart in links:
+        if not listpart.startswith('!'):
+            isshell = False
+            break
     printdebug("links: " + str(links))
+    steps = float(0)
+    totalsteps = float(1)
     for item in links:
+        if not item.startswith('#'):
+            totalsteps += 1
         if item.startswith('https://mega.nz'):
             usemega = True
-            break
+            #break
+    printdebug("totalsteps: " + str(totalsteps))
     if usemega == True:
         currentcondition = 'Installing Mega...'
+        progress(0.01, desc='Installing Mega...')
         if platform.system() == "Windows":
             installmegawin()
         else:
@@ -710,7 +779,8 @@ def run(command, choosedowner):
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     printdebug('prockilled: ' + str(prockilled))
-    
+    global remaininglinks
+    batchtime = time.time()
     downmethod = ['gdown', 'wget', 'curl', 'aria2']
     hfmethods = [
         "https://raw.githubusercontent.com",
@@ -719,28 +789,58 @@ def run(command, choosedowner):
     ]
     for listpart in links:
         if prockilled == False:
+            currenttorename = ''
+            printdebug("steps: " + str(steps))
+            printdebug("total steps: " + str(totalsteps))
+            printdebug("percentage: " + str(round(steps/totalsteps, 1)))
+            if gradiostate == False:
+                if time.time() - batchtime >= 70:
+                    remaininglinks = links[links.index(listpart):]
+                    printdebug("remaining links: " + str(remaininglinks))
+                    if bool(remaininglinks):
+                        printdebug("currentfolder: " + currentfolder)
+                        tophashtag = currentfoldertohashtag(currentfolder)
+                        printdebug("tophashtag: " + tophashtag)
+                        remaininglinks.insert(0, tophashtag)
+                        printdebug("remaining links new: " + str(remaininglinks))
+                        print()
+                        print('[1;33mRuntime was stopped to prevent hangs.')
+                        print("[1;33mCheck the UI and press 'Resume Download' to load the remaining links")
+                        print("[1;33mThen click 'Download All!' again")
+                        print('[0m')
+                        print("These are some links that haven't been downloaded yet.👇")
+                        printremains = list_to_text(remaininglinks)
+                        print(printremains)
+                        resumebuttonvisible = True
+                    cancelrun()
+                    break
+
             if listpart.startswith("https://mega.nz"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                transfare(currentlink, currentfolder)
+                progress(round(steps/totalsteps, 3), desc='Downloading from ' + os.path.basename(currentlink).split('#')[0] + '...')
+                transfare(currentlink, currentfolder, currenttorename)
+                steps += 1
 
             elif listpart.startswith(tuple(hfmethods)):
             # elif listpart.startswith("https://huggingface.co") or listpart.startswith("https://raw.githubusercontent.com") or listpart.startswith("https://cdn.discordapp.com/attachments"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
-                    hfdown(currentlink, currentfolder, choosedowner)
+                    hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                 else:
                     for xmethod in downmethod:
                         if prockilled == False:
                             hfdown(currentlink, currentfolder, xmethod, 'debugevery')
+                steps += 1
 
             elif listpart.startswith("https://files.catbox.moe"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 try:
@@ -757,22 +857,28 @@ def run(command, choosedowner):
                     continue
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                hfdown(currentlink, currentfolder, choosedowner)
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
+                hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                steps += 1
 
             elif listpart.startswith("https://civitai.com/api/download/models/"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                civitdown(currentlink, currentfolder)
+                progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
+                civitdown(currentlink, currentfolder, currenttorename)
+                steps += 1
 
             elif listpart.startswith("https://github.com"):
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 if '/raw/' in listpart:
                     currentcondition = f'Downloading {currentlink}...'
+                    progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                     if everymethod == False:
-                        hfdown(currentlink, currentfolder, choosedowner)
+                        hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                     else:
                         for xmethod in downmethod:
                             if prockilled == False:
@@ -783,21 +889,32 @@ def run(command, choosedowner):
                     foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
                     folderpath = shlex.quote(os.path.join(extpath, foldername))
                     currentcondition = f'Cloning {currentlink}...'
+                    progress(round(steps/totalsteps, 3), desc='Cloning from ' + currentlink.split('/', 3)[-1] + '...')
                     runwithsubprocess(f"git clone {currentlink} {folderpath}")
+                steps += 1
 
             elif listpart.startswith("https://civitai.com/models/"):
-                currentlink = listpart
+                currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
                     civitdown2(currentlink, currentfolder, choosedowner, False)
                 else:
                     for xmethod in downmethod:
                         if prockilled == False:
                             civitdown2(currentlink, currentfolder, xmethod, True)
+                steps += 1
+
+            elif listpart.startswith("!"):
+                commandtorun = listpart[1:]
+                currentcondition = f'Running command: {commandtorun}'
+                progress(round(steps/totalsteps, 3), desc=currentcondition)
+                runwithsubprocess(commandtorun, None, True)
+                steps += 1
             
-            elif listpart.startswith("#debugeverymethod") and globaldebug == True:
+            elif listpart.startswith("#debugeverymethod") and globaldebug == True and gradiostate == True:
                 print('\n')
                 everymethod = True
                 print('[1;32mDebugEveryMethod activated!')
@@ -841,7 +958,7 @@ def run(command, choosedowner):
             return "Operation cancelled"
 
     currentcondition = 'Writing output...'
-    downloadedfiles = writeall(oldfilesdict)
+    downloadedfiles = writeall(oldfilesdict, isshell)
     for tokill in everyprocessid:
         try:
             os.kill(tokill, signal.SIGTERM)
@@ -852,7 +969,10 @@ def run(command, choosedowner):
     print('[0m')
     currentcondition = 'Done!'
     printdebug(f"this should be the output:\n" + str(downloadedfiles))
-    return downloadedfiles
+    if gradiostate == True:
+        return downloadedfiles
+    else:
+        return [downloadedfiles, gr.Button.update(visible=resumebuttonvisible)]
 
 def extract_links(string):
     links = []
@@ -865,6 +985,8 @@ def extract_links(string):
             links.append(line)
         elif line.startswith("#debugresetdownloads"):
             links.append(line)
+        elif line.startswith("!"):
+            links.append(line.strip())
         else:
             for prefix in typechecker:
                 if line.startswith("#" + prefix):
@@ -887,6 +1009,8 @@ def uploaded(textpath):
         with open(file_paths, 'r') as file:
             for line in file:
                 if line.startswith(tuple(supportedlinks)):
+                    links.append(line.strip())
+                elif line.startswith("!"):
                     links.append(line.strip())
                 else:
                     for prefix in typechecker:
@@ -939,18 +1063,27 @@ def cancelrun():
         print()
     return "Operation Cancelled"
 
+def fillbox():
+    global remaininglinks
+    if bool(remaininglinks):
+        text = list_to_text(remaininglinks)
+        remaininglinks = []
+        return [text, 'Links updated!\nClick Download All! to download the rest of the links', gr.Button.update(visible=False)]
+    return ['', '', gr.Button.update(visible=False)]
+
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
         with gr.Row():
           with gr.Column(scale=2):
             gr.Markdown(
             f"""
-            <h3 style="font-size: 22px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
+            <h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
+            <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-v210">(what's new?)</a></h5>
             <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
             Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
             Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
-            (For colab that uses sd-webui-additional-networks, use <code>#addnetlora</code>)<br/>
+            (For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>
             Use double hashtag after links for comment</p>
             """)
           with gr.Column(scale=1):
@@ -961,66 +1094,69 @@ def on_ui_tabs():
             <a href="https://github.com/etherealxx/batchlinks-webui#example">Example</a><br/>
             <a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
             <a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a></p>
+            <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a><br/>
+            <a href="https://github.com/etherealxx/batchlinks-webui/issues">Report Bug</a></p>
             """)
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
-          try:
-            if cmd_opts.gradio_queue:
-                logbox = gr.Textbox(label="Log", interactive=False)
-            else:
-                logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
-          except AttributeError:
-            pass
+          if gradiostate == True:
+            logbox = gr.Textbox(label="Log", interactive=False)
+          else:
+            logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
+
           with gr.Row():
             with gr.Box():
-                try:
-                  if cmd_opts.gradio_queue:
-                      with gr.Row():
-                        #   gr.Textbox(value=None, interactive=False, show_label=False)
-                          btn_onlog = gr.Button("Turn On Logging", variant="primary", visible=True)
-                          btn_offlog = gr.Button("Turn Off Logging", visible=False)
-                          loggingon = btn_onlog.click(keeplog, outputs=[logbox, btn_offlog, btn_onlog], every=1)
-                          btn_offlog.click(offlog, outputs=[logbox, btn_offlog, btn_onlog], cancels=[loggingon])
+                if gradiostate == True:
+                    with gr.Row():
+                    #   gr.Textbox(value=None, interactive=False, show_label=False)
+                        btn_onlog = gr.Button("Turn On Logging", variant="primary", visible=True)
+                        btn_offlog = gr.Button("Turn Off Logging", visible=False)
+                        loggingon = btn_onlog.click(keeplog, outputs=[logbox, btn_offlog, btn_onlog], every=1)
+                        btn_offlog.click(offlog, outputs=[logbox, btn_offlog, btn_onlog], cancels=[loggingon])
                         #   gr.Textbox(value=None, interactive=False, show_label=False)
                     #   logging = gr.Radio(["Turn On Logging"], show_label=False)
                     #   logging.change(keeplog, outputs=logbox, every=1)
-                  else:
+                    out_text = gr.Textbox(label="Output")
+                else:
                     print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
-                except AttributeError:
-                  print("[1;31mBatchlinks webui extension: Your webui fork is outdated, it doesn't support --gradio-queue yet. This extension might runs into problems")
-                  print('[0m')
-                  pass
-                out_text = gr.Textbox(label="Output")
+                    out_text = gr.Textbox("(If this text disappear, that means a download session is in progress.)", label="Output")
 
                 if platform.system() == "Windows":
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method (don't understand? ignore.)")
+                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method")
                 else:
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method (don't understand? ignore.)")
+                    if gradiostate == True:
+                        choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
+                    else:
+                        choose_downloader = gr.Radio(["aria2"], value="aria2", label="Download method")
 
                 with gr.Row():
-                    try:
-                        if cmd_opts.gradio_queue:
-                            with gr.Column(scale=2, min_width=100):
-                                btn_run = gr.Button("Download All!", variant="primary")
-                            # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
-                            # btn_upload.upload(uploaded, btn_upload, file_output)
-                            with gr.Column(scale=1, min_width=100):
-                                btn_cancel = gr.Button("Cancel")
-                        else:
-                            raise AttributeError
-                            #btn_run = gr.Button("Download All!", variant="primary")
-                    except AttributeError:
-                        btn_run = gr.Button("Download All!", variant="primary")
-
-                try:
-                    if cmd_opts.gradio_queue:
-                        run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
-                        btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+                    if gradiostate == True:
+                        with gr.Column(scale=2, min_width=100):
+                            btn_run = gr.Button("Download All!", variant="primary")
+                        # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
+                        # btn_upload.upload(uploaded, btn_upload, file_output)
+                        with gr.Column(scale=1, min_width=100):
+                            btn_cancel = gr.Button("Cancel")
                     else:
-                        raise AttributeError
-                except AttributeError:
-                    btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
+                        btn_run = gr.Button("Download All!", variant="primary")
+                        btn_resume = gr.Button("Resume Download", visible=False)
+
+                if gradiostate == False:
+                    with gr.Row():
+                        gr.Markdown(
+                        f"""
+                        <p style="font-size: 14px; text-align: center; line-height: 90%;;"><br/>After clicking the Download All button, it's recommended to inspect the
+                        colab console, as every information about the download progress is there.</p>
+                        """)
+
+                if gradiostate == True:
+                    run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
+                    btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+                else:
+                    btn_run.click(run, inputs=[command, choose_downloader], outputs=[out_text, btn_resume])
+
+                if gradiostate == False:
+                    btn_resume.click(fillbox, None, outputs=[command, out_text, btn_resume])
 
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)

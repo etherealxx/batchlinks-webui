@@ -1,7 +1,21 @@
-v2.0.0
+v2.1.0
 (^current version^)
 
 Release notes:
+
+## v2.1.0
+Features:
+- Supports renaming downloaded file with `>` (for example: `https://files.catbox.moe/uarze8.safetensors > neurosama.safetensors`)
+- Supports extension usage without `--gradio-queue` (ported from [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix))
+- Supports running shell command from the UI with `!` (for example: type `!pip freeze`, then hit the `Download all!` button and see the colab console)
+- Progress bar for `--gradio-queue`
+
+Changes:
+- `aria2` as *the only* download method when using without `--gradio-queue`
+- Download session will be cut every 80 seconds on when using without `--gradio-queue` (just like [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix))
+- _Debug stopwatch (decorator)_ won't run automatically when `globaldebug = True`, must be uncommented manually (it disrupt the progress bar)
+- Dropped support for webui based on Gradio 3.9 (update your installation, or use [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix) instead)
+- UI tweak (Smaller font size)
 
 ## v2.0.0
 Features:
