@@ -244,6 +244,17 @@ On Windows, this extension will install [MEGAcmd](https://github.com/meganz/MEGA
 MacOS is not supported.
 
 ## Latest release: v2.1.0
+#### Release v2.1.1
+- Partial Windows support is back
+
+Changes:
+- wget disabled on windows currently, until it fixed
+
+Fixes:
+- gdown & curl bug fixed
+- utf-8 as default encoding for queue checker (fix bug in Windows)
+
+### Release v2.1.0
 Features:
 - Supports renaming downloaded file with `>` (for example: `https://files.catbox.moe/uarze8.safetensors > neurosama.safetensors`)
 - Supports extension usage without `--gradio-queue` (ported from [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix))
@@ -283,13 +294,14 @@ When `globaldebug = True`, it will give an output for how long a single download
 ## Roadmap
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
-- [ ] Logo change
 - [ ] Different UI for mobile
+- [ ] Gradio progress bar
+- [ ] Logo change
 - [ ] Moving most of the content of this Readme.md to Wiki instead
 - [ ] Other download sites (s-ul.eu, gitgud, Google Drive)
-- [ ] Gradio progress bar
 - [ ] Support customizable hashtag from the UI
 - [ ] UI overhaul
+- [ ] (Windows) wget & aria2 support
 <br/>_
 - [x] aria2 for huggingface download method
 - [x] Cleaning the code from unnecesarry comments
@@ -300,12 +312,12 @@ When `globaldebug = True`, it will give an output for how long a single download
 ## Known Bugs
 
 - Progress bar (the yellow bar) doesn't progress as expected
-- Sometimes notification sound doesn't play when downloading same file twice in a row
 - Sometimes colab cannot be shut down with a single click on the stop button. Hitting the button several times will raise a KeyboardInterrupt and forcely stopping the cell.
+- Sometimes notification sound doesn't play when downloading same file twice in a row
+- Sometimes notification sound shows up when starting download, instead of when the download process is completed.
 - There's still a chance that the UI of non `--gradio-queue` session and/or onedotsix freezes after a download session
 - Windows: The delay between file is downloaded and the output shows is pretty long, and even sometimes the notification comes at the wrong time.
 <br/>_
-- Sometimes the notification bell shows up when starting download, instead of when the download process is completed.
 - ~~Links that has bracket in it needs to be 'escaped' (For example, `Baka-DiffusionV1(Fp16).safetensors` must be typed `Baka-DiffusionV1\(Fp16\).safetensors`)~~ Fixed in [v2.0.0](dbb2adb3d07e41654244076b8ef4e851c3bb1f0c)
 - ~~The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)~~ Seems like fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
 - ~~File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.~~ Fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)

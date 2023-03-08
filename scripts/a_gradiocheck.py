@@ -5,7 +5,7 @@ script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 batchlinks_dir = os.path.join(script_dir, "batchlinks-downloader.py")
 
 # remove the progress bar if queue off
-with open(batchlinks_dir, 'r') as f:
+with open(batchlinks_dir, 'r', encoding='utf-8') as f:
     contents = f.read()
 
 if cmd_opts.gradio_queue:
@@ -14,7 +14,7 @@ if cmd_opts.gradio_queue:
     new_contents = re.sub(r'^(\s*)#progress\(', r'\1progress(', contents, flags=re.MULTILINE)
     contents = re.sub(r'choosedowner\):', 'choosedowner, progress=gr.Progress()):', new_contents, flags=re.MULTILINE)
 
-    with open(batchlinks_dir, 'w') as f:
+    with open(batchlinks_dir, 'w', encoding='utf-8') as f:
         f.write(contents)
 
 else:
@@ -23,5 +23,5 @@ else:
     new_contents = re.sub(r'^(\s*)progress\(', r'\1#progress(', contents, flags=re.MULTILINE)
     contents = re.sub(r'choosedowner,\s*progress=gr\.Progress\(\)\):$', 'choosedowner):', new_contents, flags=re.MULTILINE)
 
-    with open(batchlinks_dir, 'w') as f:
+    with open(batchlinks_dir, 'w', encoding='utf-8') as f:
         f.write(contents)

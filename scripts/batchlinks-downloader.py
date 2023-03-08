@@ -563,13 +563,15 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
     if mode=='civit' or mode=='civitdebugevery':
         filename = pathlib.Path(folder).name
         filename_s = shlex.quote(filename)
-        filepath = shlex.quote(folder)
+        filepath = folder
+        filepath_s = shlex.quote(folder)
         todownload_s = todownload
         folder_s = pathlib.Path(folder).parent.resolve()
     else:
         filename = todownload.rsplit('/', 1)[-1]
         filename_s = shlex.quote(filename)
-        filepath = shlex.quote(os.path.join(folder, filename))
+        filepath = os.path.join(folder, filename)
+        filepath_s = shlex.quote(filepath)
         todownload_s = shlex.quote(todownload)
         folder_s = shlex.quote(folder)
     #savestate_folder(folder_s)
@@ -582,15 +584,15 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
             import wget
             wget.download(todownload, filepath)
         elif downloader=='curl':
-            runwithsubprocess(f"curl -Lo {filepath} {todownload_s}")
+            os.system("curl -Lo " + filepath + " " + todownload_s)
     else:
         if downloader=='gdown':
-            printdebug(f"debug gdown {todownload_s} -O {filepath}")
-            runwithsubprocess(f"gdown {todownload_s} -O {filepath}", folder_s)
+            printdebug(f"debug gdown {todownload_s} -O {filepath_s}")
+            runwithsubprocess(f"gdown {todownload_s} -O {filepath_s}", folder_s)
         elif downloader=='wget':
-            runwithsubprocess(f"wget -O {filepath} {todownload_s} --progress=bar:force", folder_s)
+            runwithsubprocess(f"wget -O {filepath_s} {todownload_s} ", folder_s)
         elif downloader=='curl':
-            runwithsubprocess(f"curl -Lo {filepath} {todownload_s}", folder_s)
+            runwithsubprocess(f"curl -Lo {filepath_s} {todownload_s}", folder_s)
             # curdir = os.getcwd()
             # os.rename(os.path.join(curdir, filename), filepath)
         elif downloader=='aria2':
@@ -621,7 +623,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
             time.sleep(2)
             printdebug("debug filename: " + str(filename))
             printdebug("debug filename_s: " + str(filename_s))
-            printdebug("debug filepath: " + str(filepath))
+            printdebug("debug filepath: " + str(filepath_s))
             printdebug("debug todownload_s: " + str(todownload_s))
             printdebug("debug folder_s: " + str(folder_s))
             try:
@@ -964,6 +966,10 @@ def run(command, choosedowner, progress=gr.Progress()):
             os.kill(tokill, signal.SIGTERM)
         except ProcessLookupError:
             pass
+        except PermissionError:
+            pass
+        except OSError:
+            pass
     print()
     print('[1;32mBatchLinks Downloads finished!')
     print('[0m')
@@ -1053,8 +1059,14 @@ def cancelrun():
     global prockilled
     printdebug("debug processid: " + str(processid))
     if not processid == '':
-      
-      os.kill(processid, signal.SIGTERM)
+        try:
+            os.kill(processid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            pass
+        except OSError:
+            pass
         #os.killpg(os.getpgid(processid.pid), signal.SIGTERM)
     prockilled = True
     if prockilled == True and globaldebug == True:
@@ -1122,7 +1134,7 @@ def on_ui_tabs():
                     out_text = gr.Textbox("(If this text disappear, that means a download session is in progress.)", label="Output")
 
                 if platform.system() == "Windows":
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method")
+                    choose_downloader = gr.Radio(["gdown", "curl"], value="gdown", label="Download method")
                 else:
                     if gradiostate == True:
                         choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
