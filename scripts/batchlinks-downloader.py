@@ -2,9 +2,9 @@
 import os
 import time
 import gradio as gr
-from modules import script_callbacks #,scripts
-from modules.paths import script_path
-from modules.shared import cmd_opts #check for gradio queue
+# from modules import script_callbacks #,scripts
+# from modules.paths import script_path
+# from modules.shared import cmd_opts #check for gradio queue
 import urllib.request, subprocess, contextlib #these handle mega.nz
 import http.client
 import requests #this handle civit
@@ -15,6 +15,18 @@ import inspect
 import platform
 import shlex
 import signal
+
+script_path = '/content/stable-diffusion-webui'
+
+# queuechecker subtitute {
+gradio_queue = True
+import sys
+import types
+module = types.ModuleType('cmd_opts')
+module.gradio_queue = gradio_queue
+sys.modules['cmd_opts'] = module
+import cmd_opts
+# }
 
 script_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 extension_dir = os.path.abspath(os.path.join(script_dir, "../"))
@@ -1109,10 +1121,10 @@ def fillbox():
         return [text, 'Links updated!\nClick Download All! to download the rest of the links', gr.Button.update(visible=False)]
     return ['', '', gr.Button.update(visible=False)]
 
-def on_ui_tabs():     
-    with gr.Blocks() as batchlinks:
-        with gr.Row():
-          with gr.Column(scale=2):
+# def on_ui_tabs():     
+with gr.Blocks() as batchlinks:
+    with gr.Row():
+        with gr.Column(scale=2):
             gr.Markdown(
             f"""
             <h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
@@ -1124,7 +1136,7 @@ def on_ui_tabs():
             (For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>
             Use double hashtag after links for comment</p>
             """)
-          with gr.Column(scale=1):
+        with gr.Column(scale=1):
             gr.Markdown(
             """
             <p style="font-size: 14px;">Click these links for more:<br/>
@@ -1135,14 +1147,14 @@ def on_ui_tabs():
             <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a><br/>
             <a href="https://github.com/etherealxx/batchlinks-webui/issues">Report Bug</a></p>
             """)
-        with gr.Group():
-          command = gr.Textbox(label="Links", placeholder="type here", lines=5)
-          if gradiostate == True:
+    with gr.Group():
+        command = gr.Textbox(label="Links", placeholder="type here", lines=5)
+        if gradiostate == True:
             logbox = gr.Textbox(label="Log", interactive=False)
-          else:
+        else:
             logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
 
-          with gr.Row():
+        with gr.Row():
             with gr.Box():
                 if gradiostate == True:
                     with gr.Row():
@@ -1196,9 +1208,10 @@ def on_ui_tabs():
                 if gradiostate == False:
                     btn_resume.click(fillbox, None, outputs=[command, out_text, btn_resume])
 
-            file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
-            file_output.change(uploaded, file_output, command)
-            finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
+        file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
+        file_output.change(uploaded, file_output, command)
+        finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
         #batchlinks.load(debug, output=debug_txt, every=1)
-    return (batchlinks, "Batchlinks Downloader", "batchlinks"),
-script_callbacks.on_ui_tabs(on_ui_tabs)
+    # return (batchlinks, "Batchlinks Downloader", "batchlinks"),
+# script_callbacks.on_ui_tabs(on_ui_tabs)
+batchlinks.queue(64).launch(share=True)

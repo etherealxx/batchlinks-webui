@@ -63,6 +63,14 @@
 
 <!-- ABOUT THE PROJECT -->
 
+# SDless branch
+Run this on a new colab cell:
+```
+!pip install gradio==3.16.2
+!git clone -b sdless https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
+!python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
+```
+
 ## Installation
 
 Copy this line into your colab installation cell. Or into a new cell if you already launched the webui.
