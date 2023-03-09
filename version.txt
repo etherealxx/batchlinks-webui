@@ -1,9 +1,12 @@
-v2.1.1
+v2.1.2
 (^current version^)
 
 Release notes:
 
-#### Release v2.1.1
+#### v2.1.2
+- CivitAI direct link now use curl to get the filename, and use the chosen download method to download. Requests is no longer needed.
+
+#### v2.1.1
 - Partial Windows support is back
 
 Changes:

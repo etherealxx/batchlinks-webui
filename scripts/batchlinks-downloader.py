@@ -401,74 +401,84 @@ def installmegawin():
         #clear_output()
 #these code above handle mega.nz
 
-def civitdown(url, folder, torename=''):
-    filename = url.split('?')[0].rsplit('/', 1)[-1] + ".bdgh"
-    pathtodown = os.path.join(folder, filename)
-    max_retries = 5
-    retry_delay = 10
-    # url_s = quote(url)
+def getcivitname(link):
+    searcher = "findstr" if platform.system() == "Windows" else "grep"
+    try:
+        contentdis = [line for line in subprocess.getoutput(f"curl -sI {link} | {searcher} -i content-disposition").splitlines() if line.startswith('location')][0]
+    except IndexError:
+        return ''
+    cuttedcontent = contentdis.find('response-content-disposition=attachment%3B%20filename%3D%22') + 59
+    filename = str(contentdis[cuttedcontent:]).replace('%22&x-id=GetObject', '')
+    return filename
 
-    while prockilled == False:
+# def civitdown(url, folder, torename=''):
+#     filename = url.split('?')[0].rsplit('/', 1)[-1] + ".bdgh"
+#     pathtodown = os.path.join(folder, filename)
+#     max_retries = 5
+#     retry_delay = 10
+#     # url_s = quote(url)
 
-        downloaded_size = 0
-        headers = {}
+#     while prockilled == False:
 
-        progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {filename}. (will be renamed correctly after downloading)", initial=downloaded_size, leave=False)
-        global currentsuboutput
-        global currentcondition        
-        with open(pathtodown, "ab") as f:
-            while prockilled == False:
-                try:
-                    response = requests.get(url, headers=headers, stream=True)
-                    total_size = int(response.headers.get("Content-Length", 0))
-                    # if total_size == 0:
-                    #     total_size = downloaded_size
-                    # progress.total = total_size 
+#         downloaded_size = 0
+#         headers = {}
+
+#         progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {filename}. (will be renamed correctly after downloading)", initial=downloaded_size, leave=False)
+#         global currentsuboutput
+#         global currentcondition        
+#         with open(pathtodown, "ab") as f:
+#             while prockilled == False:
+#                 try:
+#                     response = requests.get(url, headers=headers, stream=True)
+#                     total_size = int(response.headers.get("Content-Length", 0))
+#                     # if total_size == 0:
+#                     #     total_size = downloaded_size
+#                     # progress.total = total_size 
 
                     
-                    for chunk in response.iter_content(chunk_size=1024):
-                        if chunk and prockilled == False:
-                                f.write(chunk)
-                                progress.update(len(chunk))
-                                currentsuboutput = str(progress)
-                        else:
-                            break
+#                     for chunk in response.iter_content(chunk_size=1024):
+#                         if chunk and prockilled == False:
+#                                 f.write(chunk)
+#                                 progress.update(len(chunk))
+#                                 currentsuboutput = str(progress)
+#                         else:
+#                             break
 
-                    downloaded_size = os.path.getsize(pathtodown)
-                    currentsuboutput = ''
-                    break
-                except ConnectionError as e:
-                    max_retries -= 1
+#                     downloaded_size = os.path.getsize(pathtodown)
+#                     currentsuboutput = ''
+#                     break
+#                 except ConnectionError as e:
+#                     max_retries -= 1
 
-                    if max_retries == 0:
-                        raise e
+#                     if max_retries == 0:
+#                         raise e
 
-                    time.sleep(retry_delay)
+#                     time.sleep(retry_delay)
 
-        progress.close()
-        if prockilled == True:
-            if os.path.exists(pathtodown):
-                os.remove(pathtodown)
-            print('[1;31mOperation Cancelled')
-            print('[0m')
-            currentcondition = 'Operation Cancelled'
-            currentsuboutput = ''
-            return "Operation Cancelled"
+#         progress.close()
+#         if prockilled == True:
+#             if os.path.exists(pathtodown):
+#                 os.remove(pathtodown)
+#             print('[1;31mOperation Cancelled')
+#             print('[0m')
+#             currentcondition = 'Operation Cancelled'
+#             currentsuboutput = ''
+#             return "Operation Cancelled"
         
-        if torename:
-            actualfilename = torename
-        else:
-            actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
-        #%cd {folder}
-        actualpath = os.path.join(folder, actualfilename)
-        os.rename(pathtodown, actualpath)
-        downloaded_size = os.path.getsize(actualpath)
-        # Check if the download was successful
-        if downloaded_size >= total_size:
-            print(f"{actualfilename} successfully downloaded.")
-            break
-        else:
-            print(f"Error: File download failed. Retrying...")
+#         if torename:
+#             actualfilename = torename
+#         else:
+#             actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
+#         #%cd {folder}
+#         actualpath = os.path.join(folder, actualfilename)
+#         os.rename(pathtodown, actualpath)
+#         downloaded_size = os.path.getsize(actualpath)
+#         # Check if the download was successful
+#         if downloaded_size >= total_size:
+#             print(f"{actualfilename} successfully downloaded.")
+#             break
+#         else:
+#             print(f"Error: File download failed. Retrying...")
 
 #thank you @rti7743 for this part {
 def civitdown2_get_json(url):
@@ -860,16 +870,32 @@ def run(command, choosedowner, progress=gr.Progress()):
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
-                hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                if everymethod == False:
+                    hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                else:
+                    for xmethod in downmethod:
+                        if prockilled == False:
+                            hfdown(currentlink, currentfolder, xmethod, 'debugevery')
                 steps += 1
 
             elif listpart.startswith("https://civitai.com/api/download/models/"):
                 currentlink, currenttorename = splitrename(listpart)
+                if currenttorename == '':
+                    currenttorename = getcivitname(listpart)
+                    if currenttorename == '':
+                        print("That CivitAI link no longer exist, or the server is currently down.")
+                        continue
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
-                civitdown(currentlink, currentfolder, currenttorename)
+                if everymethod == False:
+                    hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                else:
+                    for xmethod in downmethod:
+                        if prockilled == False:
+                            hfdown(currentlink, currentfolder, xmethod, 'debugevery')
+                # civitdown(currentlink, currentfolder, currenttorename)
                 steps += 1
 
             elif listpart.startswith("https://github.com"):
