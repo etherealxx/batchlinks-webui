@@ -1,12 +1,22 @@
-v2.1.2
+v2.2.0
 (^current version^)
 
 Release notes:
 
-#### v2.1.2
+## v2.2.0
+- Auto-download config file if available when downloading from CivitAI(SD 2.0+)
+- Auto-renaming for downloading ckpt/safetensors file from CivitAI using direct link method
+- CivitAI direct link now use curl to get the filename, and use the chosen download method to download. Huge download speed boost. `requests` is no longer needed.
+- Supports download from Google Drive
+- Supports for SDless mode (read more [here](https://github.com/etherealxx/batchlinks-webui#sdless-mode))
+
+Fixes:
+- Warning message when CivitAI download isn't possible (server down)
+
+## v2.1.2
 - CivitAI direct link now use curl to get the filename, and use the chosen download method to download. Requests is no longer needed.
 
-#### v2.1.1
+## v2.1.1
 - Partial Windows support is back
 
 Changes:

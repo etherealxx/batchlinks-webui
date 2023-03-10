@@ -49,7 +49,8 @@
       <ul>
         <li><a href="#notification">Notification</a></li>
         <li><a href="#local-installation-support">Local Installation Support</a></li>
-        <li><a href="#latest-release-v210">Latest Release: v2.1.0</a></li>
+        <li><a href="#sdless-mode">SDless Mode</a></li>
+        <li><a href="#latest-release-v220">Latest Release: v2.2.0</a></li>
       </ul>
     </li>
     <li><a href="#roadmap">Roadmap</a></li>
@@ -62,22 +63,6 @@
 
 
 <!-- ABOUT THE PROJECT -->
-
-# SDless branch
-Cope-paste this on a new colab cell then run it:
-```
-from IPython.display import clear_output
-!pip3 show virtualenv >/dev/null || pip install virtualenv
-![ -d gradiovenv ] || virtualenv gradiovenv
-!git clone -b sdless https://github.com/etherealxx/batchlinks-webui \
-/content/stable-diffusion-webui/extensions/batchlinks-webui
-!source gradiovenv/bin/activate; \
-pip3 show gradio >/dev/null || pip install gradio==3.16.2; \
-pip3 show tqdm >/dev/null || pip install tqdm
-clear_output(wait=True)
-!source gradiovenv/bin/activate; \
-python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
-```
 
 ## Installation
 
@@ -101,6 +86,8 @@ or, if your colab use the newer version of webui (gradio version above 3.16.0) y
 
 Using `--gradio-queue` on the launch.py argument is highly recommended, as it enables this extension to show download progress bar on the UI and a cancel button. The option itself has no negative effect on the webui. [Read more here.](https://github.com/etherealxx/batchlinks-webui#gradio-queue)<br/>
 <img src="images/queue.jpg" alt="Logo" width="300"><br/>
+
+You can also run this extension in [SDless mode](https://github.com/etherealxx/batchlinks-webui#sdless-mode) btw.
 
 While it's not recommended to use this extension on your local installation, you can use this extension on Windows. [More here](https://github.com/etherealxx/batchlinks-webui#local-installation-support)
 
@@ -249,20 +236,49 @@ Don't worry, you can continue your session by pressing the `Resume Download` but
 
 ### Notification
 
-~~If there's `notification.mp3` on your webui installation folder (the one who plays when image generation is complete), this extension will also use that sound file to notify completed batch download.~~
+This extension will play sound effect when the download process is completed. It's somewhat buggy at the moment though.
 
-I'm now integrating the notifiction audio to the extension itself!😊
+### SDless mode
+This mode will run the extension without the need of stable-diffusion-webui. Good for my own purpose of debugging it😁.<br/>
+<img src="images/sdless.png" alt="off" width="450"><br/>
+
+Copy-paste this on a new colab cell then run it:
+```
+from IPython.display import clear_output
+!pip3 show virtualenv >/dev/null || pip install virtualenv
+![ -d gradiovenv ] || virtualenv gradiovenv
+!git clone https://github.com/etherealxx/batchlinks-webui \
+/content/stable-diffusion-webui/extensions/batchlinks-webui
+!source gradiovenv/bin/activate; \
+pip3 show gradio >/dev/null || pip install gradio==3.16.2
+clear_output(wait=True)
+!source gradiovenv/bin/activate; \
+python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
+```
+or here's the quicker version without venv:
+```
+!pip install gradio==3.16.2
+!git clone https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
+!python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
+```
 
 ### Local Installation Support
 
-This extension is tested to work on Windows 11. Maybe works on Debian-based linux (but you better inspect the source code first).
+This extension was tested to work on Windows 11 at one point, but haven't really ben updated yet since. My main focus is for colab use. Maybe also works on Debian-based linux (but you better inspect the source code first).
 On Windows, this extension will install [MEGAcmd](https://github.com/meganz/MEGAcmd) for MEGA file download.
 MacOS is not supported.
 
-## Latest release: v2.1.0
+## Latest release: v2.2.0
 
-#### Release v2.1.2
-- CivitAI direct link now use curl to get the filename, and use the chosen download method to download. `requests` is no longer needed.
+### Release v2.2.0
+- Auto-download config file if available when downloading from CivitAI(SD 2.0+)
+- Auto-renaming for downloading ckpt/safetensors and pruned model from CivitAI using direct link method
+- CivitAI direct link now use curl to get the filename, and use the chosen download method to download. Huge download speed boost. `requests` is no longer needed.
+- Supports download from Google Drive
+- Supports for SDless mode (read more [here](https://github.com/etherealxx/batchlinks-webui#sdless-mode))
+
+Fixes:
+- Warning message when CivitAI download isn't possible (server down)
 
 #### Release v2.1.1
 - Partial Windows support is back
@@ -288,28 +304,35 @@ Changes:
 - Dropped support for webui based on Gradio 3.9 (update your installation, or use [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix) instead)
 - UI tweak (Smaller font size)
 
-### Release v2.0.0
-Features:
-- `aria2` as download method.
-- Cancel button for cancelling download process (`--gradio-queue` required)
-- Detection if a CivitAI links no longer exist
-- New hashtags: `#textualinversion`, `#ti`, `#aestheticembedding`, `#aestheticembed`, `#controlnet`, and `#cnet`
-- Toggle logging on/off
-- `shlex.quote` to properly quote links (Thanks **[@rti7743](https://github.com/rti7743)**!)
-- Supports cloning webui extensions
-- Supports download from catbox.moe
-- Supports download from CivitAI model links (Thanks **[@rti7743](https://github.com/rti7743)**!)
-- Supports download from Github (repository and raw files)
-- Supports for aesthetic gradients, controlnet model, and extensions path.
-- UI font scaled down
-- Uses `subprocess.Popen` instead of `os.system`
-<br/>_
-- _Debug snapshot_<br/>
-When `globaldebug = True`, the moment this extension launch, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownloads` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
-- _Debug every download method_<br/>
-When `globaldebug = True` and you type `#debugevery method` on the textbox, every link that has 4 different method of download (Huggingface etc.) will be downloaded with every method, regardless of the radio button choice. The result is 4 file being downloaded.
-- _Debug stopwatch_<br/>
-When `globaldebug = True`, it will give an output for how long a single download session lasts
+<details>
+  <summary>Older Release</summary>
+  <ol>
+    <h3>Release v2.0.0</h3>
+    Features:
+    <ul>
+      <li>`aria2` as download method.</li>
+      <li>Cancel button for cancelling download process (`--gradio-queue` required)
+      <li>Detection if a CivitAI links no longer exist
+      <li>New hashtags: `#textualinversion`, `#ti`, `#aestheticembedding`, `#aestheticembed`, `#controlnet`, and `#cnet`
+      <li>Toggle logging on/off
+      <li>`shlex.quote` to properly quote links (Thanks **[@rti7743](https://github.com/rti7743)**!)
+      <li>Supports cloning webui extensions
+      <li>Supports download from catbox.moe
+      <li>Supports download from CivitAI model links (Thanks **[@rti7743](https://github.com/rti7743)**!)
+      <li>Supports download from Github (repository and raw files)
+      <li>Supports for aesthetic gradients, controlnet model, and extensions path.
+      <li>UI font scaled down
+      <li>Uses `subprocess.Popen` instead of `os.system`
+      <br/>_
+      <li>_Debug snapshot_<br/>
+      When `globaldebug = True`, the moment this extension launch, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownloads` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+      <li>_Debug every download method_<br/>
+      When `globaldebug = True` and you type `#debugevery method` on the textbox, every link that has 4 different method of download (Huggingface etc.) will be downloaded with every method, regardless of the radio button choice. The result is 4 file being downloaded.
+      <li>_Debug stopwatch_<br/>
+      When `globaldebug = True`, it will give an output for how long a single download session lasts
+    </ul>
+  </ol>
+</details>
 
 ## Roadmap
 

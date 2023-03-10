@@ -5,7 +5,8 @@ import gradio as gr
 import urllib.request, subprocess, contextlib #these handle mega.nz
 import http.client
 import requests #this handle civit
-from tqdm import tqdm
+import re
+# from tqdm import tqdm
 #from IPython.display import display, clear_output
 import pathlib
 import inspect
@@ -51,6 +52,8 @@ if latestversion != '??':
         latestversiontext = f"[Latest version: {latestversion}]"
 else:
     latestversiontext = ""
+
+currentverforlink = latestversion.replace('.', '')
 #}
 
 try:
@@ -89,7 +92,8 @@ supportedlinks = [
     "https://cdn.discordapp.com/attachments",
     "https://github.com",
     "https://raw.githubusercontent.com",
-    "https://files.catbox.moe"
+    "https://files.catbox.moe",
+    "https://drive.google.com"
 ]
 
 modelpath = os.path.join(script_path, "models/Stable-diffusion")
@@ -253,7 +257,6 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False):
 
     ariacomplete = False
     global currentsuboutput
-    import re
     while True:
         # Read the output from the process
         nextline = process.stdout.readline()
@@ -536,7 +539,10 @@ def civitdown2_get_json(url):
   txt = requests.get(api_url).text
 
   import json
-  return json.loads(txt)
+  try:
+    return json.loads(txt)
+  except json.decoder.JSONDecodeError:
+    return 'error'
 
 def civitdown2_get_save_directory(model_type, default_folder):
   if model_type == "Checkpoint":
@@ -563,6 +569,12 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
 
 def civitdown2(url, folder, downloader, isdebugevery):
   model = civitdown2_get_json(url)
+  if model == 'error':
+    print('[1;31mFailed retrieving the model data.')
+    print('[1;31mCivitAI website might going down currently.')
+    print('[0m')
+    return
+  
   if model == {'error': 'Model not found'}:
     print('[1;31mModel ' + url + ' is not available anymore')
     print('[0m')
@@ -619,6 +631,32 @@ def civitdown2(url, folder, downloader, isdebugevery):
     imagepng_save_path = os.path.join(save_directory, image_filename_png)
     
 #}
+def gdrivedown(todownload, folder, torename=''):
+    todownload_s = shlex.quote(todownload)
+    folder_s = shlex.quote(folder)
+    global currentcondition
+    tempcondition = currentcondition
+    currentcondition = "Upgrading gdown..."
+    print('[1;32mUpgrading gdown ...')
+    print('[0m')
+    runwithsubprocess(f"pip install --upgrade --no-cache-dir gdown")
+    print('[1;32mgdown upgraded!')
+    print('[0m')
+    currentcondition = tempcondition
+    prevcurdir = os.getcwd()
+    os.chdir(folder)
+    savestate_folder(folder_s)
+    runwithsubprocess(f"gdown --fuzzy {todownload_s}", folder_s)
+    os.chdir(prevcurdir)
+    if torename:
+        listfilenew = os.listdir(folder)
+        newerfoldertrack = []
+        for file in listfilenew:
+            pathoffile = os.path.join(folder, file)
+            newerfoldertrack.append(pathoffile)
+        checkrename = [x for x in newerfoldertrack if x not in currentfoldertrack]
+        if checkrename:
+            os.rename(checkrename[0], os.path.join(folder, torename))
 
 def hfdown(todownload, folder, downloader, mode='default', torename=''):
     if mode=='civit' or mode=='civitdebugevery':
@@ -902,6 +940,21 @@ def run(command, choosedowner, progress=gr.Progress()):
                             hfdown(currentlink, currentfolder, xmethod, 'debugevery')
                 steps += 1
 
+            elif listpart.startswith("https://drive.google.com"):
+                currentlink, currenttorename = splitrename(listpart)
+                print('\n')
+                print(currentlink)
+                currentcondition = f'Downloading {currentlink}...'
+                match = re.search(r'\?id=([^\&]+)\&export|/d/([^\s/]+)/', currentlink)
+                if match:
+                    if match.group(1):
+                        extracted_string = match.group(1)
+                    else:
+                        extracted_string = match.group(2)
+                progress(round(steps/totalsteps, 3), desc='Downloading from ' + extracted_string + '...')
+                gdrivedown(currentlink, currentfolder, currenttorename)
+                steps += 1
+
             elif listpart.startswith("https://files.catbox.moe"):
                 currentlink, currenttorename = splitrename(listpart)
                 print('\n')
@@ -1172,7 +1225,7 @@ def on_ui_tabs():
             gr.Markdown(
             f"""
             <h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
-            <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-v210">(what's new?)</a></h5>
+            <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-{currentverforlink}">(what's new?)</a></h5>
             <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
             Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
