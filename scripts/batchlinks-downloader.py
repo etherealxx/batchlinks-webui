@@ -421,7 +421,39 @@ def getcivitname(link):
         return ''
     cuttedcontent = contentdis.find('response-content-disposition=attachment%3B%20filename%3D%22') + 59
     filename = str(contentdis[cuttedcontent:]).replace('%22&x-id=GetObject', '')
+    
+    filename = civitmodeltypename(filename, link)
     return filename
+
+def civitmodeltypename(name, filelink):
+    nameonly, extension = os.path.splitext(name)
+    if 'type=Pruned' in filelink:
+        nameonly =+ "_pruned"
+    
+    if 'format=Safetensor' in filelink:
+        extension = '.safetensors'
+    elif 'format=PickleTensor' in filelink:
+        extension = '.ckpt'
+    
+    nameoffile = nameonly + extension
+    return nameoffile
+
+def checkcivitconfig(link): #check if the current civit link has a config file (v2.0+)
+    def getrequest(link2):
+        response = requests.get(link2)
+        return response.status_code
+
+    params = ['?type=Config','&format=Other']
+
+    for param in params:
+        response = getrequest(link + param)
+        if response == 200:
+            #print('The link exists')
+            return link + param
+            #break
+    else:
+        #print('The link does not exist')
+        return ''
 
 # def civitdown(url, folder, torename=''):
 #     filename = url.split('?')[0].rsplit('/', 1)[-1] + ".bdgh"
@@ -558,10 +590,20 @@ def civitdown2(url, folder, downloader, isdebugevery):
       currentmode = 'civitdebugevery'
 
   printdebug(f"debug download_url({data_url}, {data_save_path}, {downloader})")
-  if prockilled == False:
+  while prockilled == False:
     hfdown(data_url, data_save_path, downloader, currentmode)
-  if prockilled == False:
+
+    data_url = checkcivitconfig(data_url.split('?')[0])
+    if not data_url=='':
+        namefile= os.path.splitext(os.path.basename(data_save_path))[0]
+        namefile = namefile + '.yaml'
+        data_save_path = os.path.join(os.path.dirname(data_save_path), namefile)
+        hfdown(data_url, data_save_path, downloader, currentmode)
+
     hfdown(image_url, imagejpg_save_path, downloader, currentmode)
+    civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
+    print(f"{data_save_path} successfully downloaded.")
+    break
 
   if isdebugevery:
     additionalname = '-' + downloader
@@ -575,10 +617,7 @@ def civitdown2(url, folder, downloader, isdebugevery):
     
     imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
     imagepng_save_path = os.path.join(save_directory, image_filename_png)
-
-  if prockilled == False:
-    civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
-    print(f"{data_save_path} successfully downloaded.")
+    
 #}
 
 def hfdown(todownload, folder, downloader, mode='default', torename=''):
@@ -903,6 +942,11 @@ def run(command, choosedowner, progress=gr.Progress()):
                 progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
                     hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                    currentlink = checkcivitconfig(currentlink)
+                    if not currentlink=='':
+                        namefile= os.path.splitext(currenttorename.split('?')[0])[0]
+                        currenttorename = namefile + '.yaml'
+                        hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                 else:
                     for xmethod in downmethod:
                         if prockilled == False:

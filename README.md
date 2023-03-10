@@ -64,11 +64,19 @@
 <!-- ABOUT THE PROJECT -->
 
 # SDless branch
-Run this on a new colab cell:
+Cope-paste this on a new colab cell then run it:
 ```
-!pip install gradio==3.16.2
-!git clone -b sdless https://github.com/etherealxx/batchlinks-webui /content/stable-diffusion-webui/extensions/batchlinks-webui
-!python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
+from IPython.display import clear_output
+!pip3 show virtualenv >/dev/null || pip install virtualenv
+![ -d gradiovenv ] || virtualenv gradiovenv
+!git clone -b sdless https://github.com/etherealxx/batchlinks-webui \
+/content/stable-diffusion-webui/extensions/batchlinks-webui
+!source gradiovenv/bin/activate; \
+pip3 show gradio >/dev/null || pip install gradio==3.16.2; \
+pip3 show tqdm >/dev/null || pip install tqdm
+clear_output(wait=True)
+!source gradiovenv/bin/activate; \
+python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
 ```
 
 ## Installation
