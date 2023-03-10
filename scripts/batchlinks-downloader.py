@@ -93,7 +93,10 @@ supportedlinks = [
     "https://github.com",
     "https://raw.githubusercontent.com",
     "https://files.catbox.moe",
-    "https://drive.google.com"
+    "https://drive.google.com",
+    "https://pixeldrain.com",
+    "https://www.mediafire.com/file",
+    "https://anonfiles.com"
 ]
 
 modelpath = os.path.join(script_path, "models/Stable-diffusion")
@@ -124,6 +127,8 @@ prockilled = False
 currentfoldertrack = []
 everyprocessid = []
 remaininglinks = []
+gdownupgraded = False
+mediafireinstalled = False
 
 globaldebug = False #set this to true to activate every debug features
 
@@ -457,6 +462,8 @@ def checkcivitconfig(link): #check if the current civit link has a config file (
     else:
         #print('The link does not exist')
         return ''
+    
+
 
 # def civitdown(url, folder, torename=''):
 #     filename = url.split('?')[0].rsplit('/', 1)[-1] + ".bdgh"
@@ -631,22 +638,18 @@ def civitdown2(url, folder, downloader, isdebugevery):
     imagepng_save_path = os.path.join(save_directory, image_filename_png)
     
 #}
-def gdrivedown(todownload, folder, torename=''):
+def mediadrivedown(todownload, folder, mode, torename=''):
     todownload_s = shlex.quote(todownload)
     folder_s = shlex.quote(folder)
-    global currentcondition
-    tempcondition = currentcondition
-    currentcondition = "Upgrading gdown..."
-    print('[1;32mUpgrading gdown ...')
-    print('[0m')
-    runwithsubprocess(f"pip install --upgrade --no-cache-dir gdown")
-    print('[1;32mgdown upgraded!')
-    print('[0m')
-    currentcondition = tempcondition
     prevcurdir = os.getcwd()
     os.chdir(folder)
     savestate_folder(folder_s)
-    runwithsubprocess(f"gdown --fuzzy {todownload_s}", folder_s)
+
+    if mode=='gdrive':
+        runwithsubprocess(f"gdown --fuzzy {todownload_s}", folder_s)
+    elif mode=='mediafire':
+        runwithsubprocess(f"mediafire-dl {todownload_s}", folder_s)
+
     os.chdir(prevcurdir)
     if torename:
         listfilenew = os.listdir(folder)
@@ -667,7 +670,10 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
         todownload_s = todownload
         folder_s = pathlib.Path(folder).parent.resolve()
     else:
-        filename = todownload.rsplit('/', 1)[-1]
+        if mode=='pixeldrain':
+            filename = todownload.rsplit('/', 1)[-1]
+        else:
+            filename = torename
         filename_s = shlex.quote(filename)
         filepath = os.path.join(folder, filename)
         filepath_s = shlex.quote(filepath)
@@ -827,7 +833,7 @@ def splitrename(linkcurrent):
     return linkcurrent, renamecurrent
 
 #@stopwatch #the decorator mess with the progress bar
-def run(command, choosedowner, progress=gr.Progress()):
+def run(command, choosedowner, progress=gr.Progress()): #@note run
     progress(0.01, desc='')
     global prockilled
     prockilled = False
@@ -852,7 +858,6 @@ def run(command, choosedowner, progress=gr.Progress()):
     oldfilesdict = trackall()
     currentfolder = modelpath
     os.makedirs(currentfolder, exist_ok=True)
-    usemega = False
     currentcondition = 'Extracting links...'
     links = extract_links(command)
     isshell = True
@@ -863,11 +868,22 @@ def run(command, choosedowner, progress=gr.Progress()):
     printdebug("links: " + str(links))
     steps = float(0)
     totalsteps = float(1)
+
+    usemega = False
+    usegdrive = False
+    usemediafire = False
+    global gdownupgraded
+    global mediafireinstalled
     for item in links:
         if not item.startswith('#'):
             totalsteps += 1
         if item.startswith('https://mega.nz'):
             usemega = True
+        if item.startswith('https://drive.google.com'):
+            usegdrive = True
+        if item.startswith('https://www.mediafire.com/file'):
+            usemediafire = True
+
             #break
     printdebug("totalsteps: " + str(totalsteps))
     if usemega == True:
@@ -877,6 +893,27 @@ def run(command, choosedowner, progress=gr.Progress()):
             installmegawin()
         else:
             installmega()
+    if usegdrive == True and gdownupgraded == False:
+        tempcondition = currentcondition
+        currentcondition = "Upgrading gdown..."
+        print('[1;32mUpgrading gdown ...')
+        print('[0m')
+        runwithsubprocess(f"pip install --upgrade --no-cache-dir gdown")
+        print('[1;32mgdown upgraded!')
+        print('[0m')
+        currentcondition = tempcondition
+        gdownupgraded = True
+    if usemediafire == True and mediafireinstalled == False:
+        tempcondition = currentcondition
+        currentcondition = "Installing mediafire-dl..."
+        print('[1;32mInstalling mediafire-dl...')
+        print('[0m')
+        runwithsubprocess(f"pip3 install git+https://github.com/Juvenal-Yescas/mediafire-dl")
+        print('[1;32mmediafire-dl installed!')
+        print('[0m')
+        currentcondition = tempcondition
+        mediafireinstalled = True
+
     print('[1;32mBatchLinks Downloads starting...')
     print('[0m')
     printdebug('prockilled: ' + str(prockilled))
@@ -952,7 +989,72 @@ def run(command, choosedowner, progress=gr.Progress()):
                     else:
                         extracted_string = match.group(2)
                 progress(round(steps/totalsteps, 3), desc='Downloading from ' + extracted_string + '...')
-                gdrivedown(currentlink, currentfolder, currenttorename)
+                mediadrivedown(currentlink, currentfolder, 'gdrive', currenttorename)
+                steps += 1
+                
+            elif listpart.startswith("https://pixeldrain.com"): #@note pixeldrain
+                currentlink, currenttorename = splitrename(listpart)
+                if not currentlink.startswith("https://pixeldrain.com/api/file/"):
+                    fileid = currentlink.split("/")[-1]
+                    currentlink = f"https://pixeldrain.com/api/file/{fileid}"
+                currentcondition = f'Retrieving Pixeldrain link...'
+                searcher = "findstr" if platform.system() == "Windows" else "grep"
+                try:
+                    filename = subprocess.getoutput(f"curl -sI {currentlink} | {searcher} -i Content-Disposition").split('filename="', 1)[1].rsplit('"', 1)[0]
+                except IndexError:
+                    print("Something wrong while retrieving the Pixeldrain link")
+                    continue
+                if currenttorename == '':
+                    currenttorename = filename
+                print('\n')
+                print(currentlink)
+                currentcondition = f'Downloading {currenttorename}...'
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
+                # if everymethod == False:
+                hfdown(currentlink, currentfolder, choosedowner, 'pixeldrain', currenttorename)
+                # else:
+                #     for xmethod in downmethod:
+                #         if prockilled == False:
+                #             hfdown(currentlink, currentfolder, xmethod, 'debugevery')
+                steps += 1
+
+            elif listpart.startswith("https://www.mediafire.com/file"): #@note mediafire
+                currentlink, currenttorename = splitrename(listpart)
+                print('\n')
+                print(currentlink)
+                currentcondition = f'Downloading {currenttorename}...'
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currentlink.split("/")[-2] + '...')
+                # if everymethod == False:
+                mediadrivedown(currentlink, currentfolder, 'mediafire', currenttorename)
+                # else:
+                #     for xmethod in downmethod:
+                #         if prockilled == False:
+                #             hfdown(currentlink, currentfolder, xmethod, 'debugevery')
+                steps += 1
+
+            elif listpart.startswith("https://anonfiles.com"): #@note anonfiles
+                currentlink, currenttorename = splitrename(listpart)
+                print('\n')
+                print(currentlink)
+
+                currentcondition = f'Retrieving anonfiles link...'
+                print(filename)
+                # Send HTTP request to the website and read the response
+                response = urllib.request.urlopen(currentlink)
+                html_content = response.read().decode('utf-8')
+
+                # Find all links that contain "anonfiles" in them using regular expressions
+                download_links = re.findall(r'href=["\'](https?:\/\/.*?anonfiles.*?)["\']', html_content)
+                currentlink = max(download_links, key=len)
+
+                currentcondition = f'Downloading {currentlink.split("/")[-1]}...'
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currentlink.split("/")[-1] + '...')
+                if everymethod == False:
+                    hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                else:
+                    for xmethod in downmethod:
+                        if prockilled == False:
+                            hfdown(currentlink, currentfolder, xmethod, 'debugevery')
                 steps += 1
 
             elif listpart.startswith("https://files.catbox.moe"):
@@ -1227,7 +1329,7 @@ def on_ui_tabs():
             <h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
             <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-{currentverforlink}">(what's new?)</a></h5>
             <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
-            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox<br/>
+            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox, Google Drive, Pixeldrain, Mediafire, Anonfiles<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
             Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
             (For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>

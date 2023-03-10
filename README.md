@@ -102,7 +102,7 @@ Look at this example<br/>
 
 ```
 #model
-https://huggingface.co/WarriorMama777/OrangeMixs/resolve/main/Models/AbyssOrangeMix3/AOM3.safetensors
+https://huggingface.co/WarriorMama777/OrangeMixs/resolve/main/Models/AbyssOrangeMix3/AOM3(orangemixs).safetensors
 #vae
 https://huggingface.co/hakurei/waifu-diffusion-v1-4/resolve/main/vae/kl-f8-anime2.ckpt
 #embed
@@ -132,7 +132,19 @@ When the download is complete, the downloaded file will be listed<br/>
 
 Note: If you use some colab that doesn't support native LoRA on webui (that means, using `sd-webui-additional-networks` extension in order to work), like [camenduru's v1.6](https://github.com/camenduru/stable-diffusion-webui-colab) colab, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
 
-**Links** - Links are the main things you wants to be downloaded. Current supported links are from [Huggingface](https://huggingface.co/), [MEGA](https://mega.nz/), [CivitAI](https://civitai.com/), Discord attachments (https://cdn.discordapp.com/attachments/), [catbox](https://files.catbox.moe), and Github (https://github.com or https://raw.githubusercontent.com). Every links other than that will be ignored. Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface, Civitai (model link method), and Discord attachments, there will be three different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For Github, if, the link is a raw file, it will download the file. Else, it will use `git clone`, useful to clone extension repo into the webui extension folder.
+**Links** - Links are the main things you wants to be downloaded. Current supported links are from:
+- Huggingface (https://huggingface.co/)
+- MEGA (https://mega.nz/) {using `mega-cmd`}
+- CivitAI (https://civitai.com/)
+- Discord attachments (https://cdn.discordapp.com/attachments/)
+- catbox (https://files.catbox.moe)
+- Github (https://github.com or https://raw.githubusercontent.com)
+- Google Drive (https://drive.google.com) {using `gdown`}
+- Pixeldrain (https://pixeldrain.com/u/)
+- Mediafire (https://www.mediafire.com/file) {using `mediafire-dl`}
+- anonfiles (https://anonfiles.com)
+
+Every links other than that will be ignored. Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface, Civitai (model link method), Discord attachments, catbox, pixeldrain, and anonfiles, there will be four different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For Github, if, the link is a raw file, it will download the file. Else, it will use `git clone`, useful to clone extension repo into the webui extension folder.
 
 More about CivitAI download method [here](https://github.com/etherealxx/batchlinks-webui#civitais-download-method).
 
@@ -274,7 +286,10 @@ MacOS is not supported.
 - Auto-download config file if available when downloading from CivitAI(SD 2.0+)
 - Auto-renaming for downloading ckpt/safetensors and pruned model from CivitAI using direct link method
 - CivitAI direct link now use curl to get the filename, and use the chosen download method to download. Huge download speed boost. `requests` is no longer needed.
+- Supports download from anonfiles
 - Supports download from Google Drive
+- Supports download from Mediafire
+- Supports download from Pixeldrain
 - Supports for SDless mode (read more [here](https://github.com/etherealxx/batchlinks-webui#sdless-mode))
 
 Fixes:
@@ -338,11 +353,14 @@ Changes:
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
 - [ ] Different UI for mobile
+- [ ] Download every sd-webui related file from a huggingface repo
+- [ ] Download every model from a civitai user page
 - [ ] Gradio progress bar
 - [ ] Logo change
 - [ ] Moving most of the content of this Readme.md to Wiki instead
-- [ ] Other download sites (s-ul.eu, gitgud, Google Drive)
+- [ ] Other download sites (s-ul.eu, gitgud)
 - [ ] Support customizable hashtag from the UI
+- [ ] Support download MEGA and Google Drive folder
 - [ ] UI overhaul
 - [ ] (Windows) wget & aria2 support
 <br/>_
@@ -393,3 +411,5 @@ My Youtube - [MJ Devlog](https://www.youtube.com/@mjdevlog)
 - [SD Civitai Browser](https://github.com/Vetchems/sd-civitai-browser) - Civit download script (Obsolete)
 - [Mega-to-Google-Drive](https://github.com/menukaonline/Mega-to-Google-Drive) - MEGA download script
 - [MEGAcmd](https://github.com/meganz/MEGAcmd)
+- [mediafire-dl](https://github.com/Juvenal-Yescas/mediafire-dl)
+- [Pixeldrain downloader](https://github.com/FayasNoushad/Pixeldrain)
