@@ -13,13 +13,20 @@ import inspect
 import platform
 import shlex
 import signal
+import sys
 sdless = False
 try:
     from modules import script_callbacks #,scripts
     from modules.paths import script_path
     from modules.shared import cmd_opts #check for gradio queue
-except ImportError:
-    script_path = '/content/stable-diffusion-webui'
+except ImportError: #sdless
+    if platform.system() == "Windows":
+        userprofile = os.environ['USERPROFILE']
+        downloadpath = os.path.join(userprofile, "Downloads")
+        script_path = os.path.join(downloadpath, "stable-diffusion-webui")
+
+    else:
+        script_path = '/content/stable-diffusion-webui'
     gradio_queue = True
     import sys
     import types
@@ -129,8 +136,13 @@ everyprocessid = []
 remaininglinks = []
 gdownupgraded = False
 mediafireinstalled = False
+ariamode = False
 
 globaldebug = False #set this to true to activate every debug features
+if len(sys.argv) > 1:
+    if sys.argv[1] == '--debug':
+        globaldebug = True
+
 
 def stopwatch(func):
     """
@@ -237,7 +249,7 @@ def printdebug(toprint):
     if globaldebug == True:
         print(toprint)
 
-def runwithsubprocess(rawcommand, folder=None, justrun=False):
+def runwithsubprocess(rawcommand, folder=None, justrun=False): #@note runwithsubprocess
     
     commandtorun = shlex.split(rawcommand) #construct_command(rawcommand)
     printdebug(f"raw command: {rawcommand}")
@@ -268,7 +280,7 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False):
         if nextline == '' and process.poll() is not None:
             break
         # Check if the line contains progress information
-        if rawcommand.startswith("aria2"):
+        if ariamode == True:
             if 'Download Results' in nextline:
                 ariacomplete = True
                 print('\n')
@@ -662,6 +674,8 @@ def mediadrivedown(todownload, folder, mode, torename=''):
             os.rename(checkrename[0], os.path.join(folder, torename))
 
 def hfdown(todownload, folder, downloader, mode='default', torename=''):
+    global currentcondition
+    global ariamode
     if mode=='civit' or mode=='civitdebugevery':
         filename = pathlib.Path(folder).name
         filename_s = shlex.quote(filename)
@@ -671,31 +685,83 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
         folder_s = pathlib.Path(folder).parent.resolve()
     else:
         if mode=='pixeldrain':
-            filename = todownload.rsplit('/', 1)[-1]
-        else:
             filename = torename
+        else:
+            filename = todownload.rsplit('/', 1)[-1]
         filename_s = shlex.quote(filename)
         filepath = os.path.join(folder, filename)
         filepath_s = shlex.quote(filepath)
         todownload_s = shlex.quote(todownload)
         folder_s = shlex.quote(folder)
     #savestate_folder(folder_s)
-    if platform.system() == "Windows":
+    if platform.system() == "Windows": #@note windows downloader
+        localappdata = os.environ['LOCALAPPDATA']
+        batchlinksinstallpath = os.path.join(localappdata, "batchlinks")
+        wgetpath = os.path.join(batchlinksinstallpath, "wget-gnutls-x64.exe")
+        sevenzpath = os.path.join(batchlinksinstallpath, "7zr.exe")
+        ariazippath = os.path.join(batchlinksinstallpath, "aria2-1.36.0-win-64bit-build2.7z")
+        ariapath = os.path.join(batchlinksinstallpath, "aria2-1.36.0-win-64bit-build2", "aria2c.exe")
+        os.makedirs(batchlinksinstallpath, exist_ok=True)
         if downloader=='gdown':
-            import gdown
-            gdown.download(todownload, filepath, quiet=False)
+            tempcondition = currentcondition
+            global gdownupgraded
+            currentcondition = "Upgrading gdown..."
+            print('[1;32mUpgrading gdown ...')
+            print('[0m')
+            runwithsubprocess(f"pip install --upgrade --no-cache-dir gdown")
+            print('[1;32mgdown upgraded!')
+            print('[0m')
+            currentcondition = tempcondition
+            gdownupgraded = True
+            try:
+                runwithsubprocess(f"gdown {todownload_s} -O {filepath_s}", folder)
+            except FileNotFoundError:
+                import gdown
+                gdown.download(todownload, filepath, quiet=False)
         elif downloader=='wget':
             #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
-            import wget
-            wget.download(todownload, filepath)
+            # import wget
+            # wget.download(todownload, filepath)
+            checkwget = subprocess.getoutput(wgetpath)
+            if "is not recognized" in checkwget:
+                tempcondition = currentcondition
+                currentcondition = "Installing wget Windows..."
+                print('[1;32mInstalling wget Windows...')
+                print('[0m')
+                wgetwinlink = "https://github.com/webfolderio/wget-windows/releases/download/v1.21.3.june.19.2022/wget-gnutls-x64.exe"
+                print(wgetwinlink)
+                runwithsubprocess("curl -Lo " + shlex.quote(wgetpath) + " " + wgetwinlink, batchlinksinstallpath)
+                print('[1;32mwget Windows installed!')
+                print('[0m')
+                currentcondition = tempcondition
+            runwithsubprocess(f"{shlex.quote(wgetpath)} -O {filepath_s} {todownload_s} --progress=bar:force", folder)
         elif downloader=='curl':
-            os.system("curl -Lo " + filepath + " " + todownload_s)
+            runwithsubprocess(f"curl -Lo {filepath_s} {todownload_s}", folder)
+        elif downloader=='aria2':
+            checkaria = subprocess.getoutput(ariapath)
+            if "is not recognized" in checkaria or "cannot find the path" in checkaria:
+                tempcondition = currentcondition
+                currentcondition = "Installing aria2 Windows..."
+                print('[1;32mInstalling aria2 Windows...')
+                print('[0m')
+                sevenzlink = "https://www.7-zip.org/a/7zr.exe"
+                ariaziplink = "https://github.com/q3aql/aria2-static-builds/releases/download/v1.36.0/aria2-1.36.0-win-64bit-build2.7z"
+                print(ariaziplink)
+                runwithsubprocess("curl -Lo " + shlex.quote(ariazippath) + " " + ariaziplink, batchlinksinstallpath)
+                print(sevenzlink)
+                runwithsubprocess("curl -Lo " + shlex.quote(sevenzpath) + " " + sevenzlink, batchlinksinstallpath)
+                runwithsubprocess(f"{shlex.quote(sevenzpath)} x {shlex.quote(ariazippath)} -o{shlex.quote(batchlinksinstallpath)}", batchlinksinstallpath)
+                print('[1;32maria2 Windows installed!')
+                print('[0m')
+                currentcondition = tempcondition
+            ariamode = True
+            runwithsubprocess(f"{shlex.quote(ariapath)} --summary-interval=1 --console-log-level=error --check-certificate=false -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder)
     else:
         if downloader=='gdown':
             printdebug(f"debug gdown {todownload_s} -O {filepath_s}")
             runwithsubprocess(f"gdown {todownload_s} -O {filepath_s}", folder_s)
         elif downloader=='wget':
-            runwithsubprocess(f"wget -O {filepath_s} {todownload_s} ", folder_s)
+            runwithsubprocess(f"wget -O {filepath_s} {todownload_s} --progress=bar:force", folder_s)
         elif downloader=='curl':
             runwithsubprocess(f"curl -Lo {filepath_s} {todownload_s}", folder_s)
             # curdir = os.getcwd()
@@ -704,7 +770,6 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
             ariachecker = "dpkg-query -W -f='${Status}' aria2"
             checkaria = subprocess.getoutput(ariachecker)
             if "no packages found matching aria2" in checkaria:
-                global currentcondition
                 tempcondition = currentcondition
                 currentcondition = "Installing aria2..."
                 print('[1;32mInstalling aria2 ...')
@@ -714,6 +779,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
                 print('[1;32maria2 installed!')
                 print('[0m')
                 currentcondition = tempcondition
+            ariamode = True
             runwithsubprocess(f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
         printdebug("\nmode: " + mode)
         if mode=='debugevery':
@@ -872,6 +938,7 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
     usemega = False
     usegdrive = False
     usemediafire = False
+    global ariamode
     global gdownupgraded
     global mediafireinstalled
     for item in links:
@@ -931,6 +998,7 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
             printdebug("steps: " + str(steps))
             printdebug("total steps: " + str(totalsteps))
             printdebug("percentage: " + str(round(steps/totalsteps, 1)))
+            ariamode = False
             if gradiostate == False:
                 if time.time() - batchtime >= 70:
                     remaininglinks = links[links.index(listpart):]
@@ -1370,13 +1438,13 @@ def on_ui_tabs():
                     print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
                     out_text = gr.Textbox("(If this text disappear, that means a download session is in progress.)", label="Output")
 
-                if platform.system() == "Windows":
-                    choose_downloader = gr.Radio(["gdown", "curl"], value="gdown", label="Download method")
+                # if platform.system() == "Windows":
+                #     choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method")
+                # else:
+                if gradiostate == True:
+                    choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
                 else:
-                    if gradiostate == True:
-                        choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
-                    else:
-                        choose_downloader = gr.Radio(["aria2"], value="aria2", label="Download method")
+                    choose_downloader = gr.Radio(["aria2"], value="aria2", label="Download method")
 
                 with gr.Row():
                     if gradiostate == True:
@@ -1410,6 +1478,10 @@ def on_ui_tabs():
             file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
             file_output.change(uploaded, file_output, command)
             finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
+        gr.Markdown(
+        f"""
+        <center><p style="font-size: 14px;">Current default save directory: {modelpath}</p></center>
+        """)
         #batchlinks.load(debug, output=debug_txt, every=1)
     if sdless:
         batchlinks.queue(64).launch(share=True)

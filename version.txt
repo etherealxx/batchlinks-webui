@@ -1,9 +1,9 @@
-v2.2.0
+v3.0.0
 (^current version^)
 
 Release notes:
 
-## v2.2.0
+## v3.0.0
 - Auto-download config file if available when downloading from CivitAI(SD 2.0+)
 - Auto-renaming for downloading ckpt/safetensors and pruned model from CivitAI using direct link method
 - CivitAI direct link now use curl to get the filename, and use the chosen download method to download. Huge download speed boost. `requests` is no longer needed.
