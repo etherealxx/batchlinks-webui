@@ -136,7 +136,7 @@ everyprocessid = []
 remaininglinks = []
 gdownupgraded = False
 mediafireinstalled = False
-ariamode = False
+# ariamode = False
 
 globaldebug = False #set this to true to activate every debug features
 if len(sys.argv) > 1:
@@ -220,8 +220,11 @@ def global_rewind():
     for fileordir in toremoves:
         if os.path.exists(fileordir):
             if os.path.isdir(fileordir):
-                shutil.rmtree(fileordir)
-                removed_dirs.append(fileordir)
+                try:
+                    shutil.rmtree(fileordir)
+                    removed_dirs.append(fileordir)
+                except PermissionError as e:
+                    print(e)
             else:
                 os.remove(fileordir)
                 removed_files.append(fileordir)
@@ -249,7 +252,7 @@ def printdebug(toprint):
     if globaldebug == True:
         print(toprint)
 
-def runwithsubprocess(rawcommand, folder=None, justrun=False): #@note runwithsubprocess
+def runwithsubprocess(rawcommand, folder=None, justrun=False, additionalcontext=''): #@note runwithsubprocess
     
     commandtorun = shlex.split(rawcommand) #construct_command(rawcommand)
     printdebug(f"raw command: {rawcommand}")
@@ -280,7 +283,7 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False): #@note runwithsub
         if nextline == '' and process.poll() is not None:
             break
         # Check if the line contains progress information
-        if ariamode == True:
+        if additionalcontext == 'aria2':
             if 'Download Results' in nextline:
                 ariacomplete = True
                 print('\n')
@@ -307,6 +310,8 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False): #@note runwithsub
                     print(f"\r{stripnext}", end='')
                 else:
                     print(nextline, end='')
+                    if additionalcontext == 'mega':
+                        process.kill()
             currentsuboutput = nextline
             
 
@@ -345,12 +350,13 @@ def transfare(todownload, folder, torename=''):
     #decoder = codecs.getincrementaldecoder("UTF-8")()
     todownload_s = shlex.quote(todownload)
     folder_s = shlex.quote(folder)
-    savestate_folder(folder_s)
     if platform.system() == "Windows":
+        savestate_folder(folder)
         localappdata = os.environ['LOCALAPPDATA']
-        megagetloc = os.path.join(shlex.quote(localappdata), "MEGAcmd", "mega-get.bat")
-        runwithsubprocess(f"{megagetloc} {todownload_s} {folder_s}", folder_s)
+        megagetloc = os.path.join(localappdata, "MEGAcmd", "mega-get.bat")
+        runwithsubprocess(f"{shlex.quote(megagetloc)} {todownload_s} {folder_s}", folder, False, 'mega')
     else:
+        savestate_folder(folder_s)
         cmd = ["mega-get", todownload_s, folder_s]
         proc = subprocess.Popen(
             cmd,
@@ -379,17 +385,17 @@ def transfare(todownload, folder, torename=''):
                 currentcondition = 'Operation Cancelled'
                 return
         currentsuboutput = ''
-        if torename:
-            listfilenew = os.listdir(folder)
-            newerfoldertrack = []
-            for file in listfilenew:
-                pathoffile = os.path.join(folder, file)
-                newerfoldertrack.append(pathoffile)
-            checkrename = [x for x in newerfoldertrack if x not in currentfoldertrack]
-            if checkrename:
-                # renamedfile = os.path.basename(checkrename[0])
-                # pathtorename = os.path.join(folder, renamedfile)
-                os.rename(checkrename[0], os.path.join(folder, torename))
+    if torename:
+        listfilenew = os.listdir(folder)
+        newerfoldertrack = []
+        for file in listfilenew:
+            pathoffile = os.path.join(folder, file)
+            newerfoldertrack.append(pathoffile)
+        checkrename = [x for x in newerfoldertrack if x not in currentfoldertrack]
+        if checkrename:
+            # renamedfile = os.path.basename(checkrename[0])
+            # pathtorename = os.path.join(folder, renamedfile)
+            os.rename(checkrename[0], os.path.join(folder, torename))
     
 
 def installmega():
@@ -419,21 +425,21 @@ def installmega():
 def installmegawin():
     userprofile = os.environ['USERPROFILE']
     localappdata = os.environ['LOCALAPPDATA']
-    megagetloc = os.path.join(shlex.quote(localappdata), "MEGAcmd", "mega-get.bat")
-    megacmdloc = os.path.join(shlex.quote(userprofile), "Downloads", "MEGAcmdSetup64.exe")
+    megagetloc = os.path.join(localappdata, "MEGAcmd", "mega-get.bat")
+    megacmdloc = os.path.join(userprofile, "Downloads", "MEGAcmdSetup64.exe")
     if not os.path.exists(megagetloc):
         print('[1;32mInstalling MEGA ...')
         print('[0m')
-        runwithsubprocess(f"curl -o {megacmdloc} https://mega.nz/MEGAcmdSetup64.exe")
+        runwithsubprocess(f"curl -o {shlex.quote(megacmdloc)} https://mega.nz/MEGAcmdSetup64.exe")
         time.sleep(1)
-        runwithsubprocess(f"{megacmdloc} /S")
+        runwithsubprocess(f"{shlex.quote(megacmdloc)} /S")
         time.sleep(4)
         print('[1;32mMEGA is installed.')
         print('[0m')
         #clear_output()
 #these code above handle mega.nz
 
-def getcivitname(link):
+def getcivitname(link): #@note getcivitname
     searcher = "findstr" if platform.system() == "Windows" else "grep"
     try:
         contentdis = [line for line in subprocess.getoutput(f"curl -sI {link} | {searcher} -i content-disposition").splitlines() if line.startswith('location')][0]
@@ -650,9 +656,12 @@ def civitdown2(url, folder, downloader, isdebugevery):
     imagepng_save_path = os.path.join(save_directory, image_filename_png)
     
 #}
-def mediadrivedown(todownload, folder, mode, torename=''):
+def mediadrivedown(todownload, folder, mode, torename=''): #@note mediadrivedown
     todownload_s = shlex.quote(todownload)
-    folder_s = shlex.quote(folder)
+    if platform.system() == "Windows":
+        folder_s = folder
+    else:
+        folder_s = shlex.quote(folder)
     prevcurdir = os.getcwd()
     os.chdir(folder)
     savestate_folder(folder_s)
@@ -673,9 +682,9 @@ def mediadrivedown(todownload, folder, mode, torename=''):
         if checkrename:
             os.rename(checkrename[0], os.path.join(folder, torename))
 
-def hfdown(todownload, folder, downloader, mode='default', torename=''):
+def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note hfdown
     global currentcondition
-    global ariamode
+    # global ariamode
     if mode=='civit' or mode=='civitdebugevery':
         filename = pathlib.Path(folder).name
         filename_s = shlex.quote(filename)
@@ -754,8 +763,8 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
                 print('[1;32maria2 Windows installed!')
                 print('[0m')
                 currentcondition = tempcondition
-            ariamode = True
-            runwithsubprocess(f"{shlex.quote(ariapath)} --summary-interval=1 --console-log-level=error --check-certificate=false -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder)
+            # ariamode = True
+            runwithsubprocess(f"{shlex.quote(ariapath)} --summary-interval=1 --console-log-level=error --check-certificate=false -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder, False, 'aria2')
     else:
         if downloader=='gdown':
             printdebug(f"debug gdown {todownload_s} -O {filepath_s}")
@@ -779,8 +788,8 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
                 print('[1;32maria2 installed!')
                 print('[0m')
                 currentcondition = tempcondition
-            ariamode = True
-            runwithsubprocess(f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s)
+            # ariamode = True
+            runwithsubprocess(f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s, False, 'aria2')
         printdebug("\nmode: " + mode)
         if mode=='debugevery':
             time.sleep(2)
@@ -803,11 +812,11 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''):
             except FileNotFoundError:
                 printdebug("rename failed somehow")
                 pass
-        if torename:
-            if mode=='civit':
-                os.rename(folder, os.path.join(folder_s, shlex.quote(torename)))
-            else:
-                os.rename(os.path.join(folder, filename), os.path.join(folder, shlex.quote(torename)))
+    if torename:
+        if mode=='civit':
+            os.rename(folder, os.path.join(folder_s, shlex.quote(torename)))
+        else:
+            os.rename(os.path.join(folder, filename), os.path.join(folder, shlex.quote(torename)))
     # if prockilled == True:
     #     #rewind_folder(folder_s)
     #     pass
@@ -827,7 +836,7 @@ def rewind_folder(folder):
         pathoffile = os.path.join(folder, file)
         newerfoldertrack.append(pathoffile)
     toremove = [x for x in newerfoldertrack if x not in currentfoldertrack]
-    printdebug("debug toremove: " + str(toremove))
+    printdebug("\ndebug toremove: " + str(toremove))
     print()
     for fileordir in toremove:
         if os.path.exists(fileordir):
@@ -938,7 +947,7 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
     usemega = False
     usegdrive = False
     usemediafire = False
-    global ariamode
+    # global ariamode
     global gdownupgraded
     global mediafireinstalled
     for item in links:
@@ -998,7 +1007,7 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
             printdebug("steps: " + str(steps))
             printdebug("total steps: " + str(totalsteps))
             printdebug("percentage: " + str(round(steps/totalsteps, 1)))
-            ariamode = False
+            # ariamode = False
             if gradiostate == False:
                 if time.time() - batchtime >= 70:
                     remaininglinks = links[links.index(listpart):]
@@ -1076,8 +1085,8 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                     currenttorename = filename
                 print('\n')
                 print(currentlink)
-                currentcondition = f'Downloading {currenttorename}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
+                currentcondition = f'Downloading {currentlink}...'
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + '...')
                 # if everymethod == False:
                 hfdown(currentlink, currentfolder, choosedowner, 'pixeldrain', currenttorename)
                 # else:
@@ -1090,7 +1099,7 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                 currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
-                currentcondition = f'Downloading {currenttorename}...'
+                currentcondition = f'Downloading {currentlink}...'
                 progress(round(steps/totalsteps, 3), desc='Downloading ' + currentlink.split("/")[-2] + '...')
                 # if everymethod == False:
                 mediadrivedown(currentlink, currentfolder, 'mediafire', currenttorename)
@@ -1106,7 +1115,7 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                 print(currentlink)
 
                 currentcondition = f'Retrieving anonfiles link...'
-                print(filename)
+                # print(filename)
                 # Send HTTP request to the website and read the response
                 response = urllib.request.urlopen(currentlink)
                 html_content = response.read().decode('utf-8')
@@ -1115,7 +1124,7 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                 download_links = re.findall(r'href=["\'](https?:\/\/.*?anonfiles.*?)["\']', html_content)
                 currentlink = max(download_links, key=len)
 
-                currentcondition = f'Downloading {currentlink.split("/")[-1]}...'
+                currentcondition = f'Downloading {currentlink}...'
                 progress(round(steps/totalsteps, 3), desc='Downloading ' + currentlink.split("/")[-1] + '...')
                 if everymethod == False:
                     hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
@@ -1152,17 +1161,19 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                             hfdown(currentlink, currentfolder, xmethod, 'debugevery')
                 steps += 1
 
-            elif listpart.startswith("https://civitai.com/api/download/models/"):
+            elif listpart.startswith("https://civitai.com/api/download/models/"): #@note civit direct
                 currentlink, currenttorename = splitrename(listpart)
                 if currenttorename == '':
                     currenttorename = getcivitname(listpart)
                     if currenttorename == '':
                         print("That CivitAI link no longer exist, or the server is currently down.")
                         continue
+                    else:
+                        progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + '...')
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
+                # progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
                     hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                     currentlink = checkcivitconfig(currentlink)
@@ -1191,13 +1202,16 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                             if prockilled == False:
                                 hfdown(currentlink, currentfolder, xmethod, 'debugevery')
                 else:
-                    splits = listpart.split("/")
+                    splits = listpart.split('#')[0].split("/")
                     currentlink = "/".join(splits[:5])
-                    foldername = shlex.quote(listpart.rsplit('/', 1)[-1])
-                    folderpath = shlex.quote(os.path.join(extpath, foldername))
+                    foldername = listpart.split('#')[0].rsplit('/', 1)[-1]
+                    folderpath = os.path.join(extpath, foldername)
                     currentcondition = f'Cloning {currentlink}...'
                     progress(round(steps/totalsteps, 3), desc='Cloning from ' + currentlink.split('/', 3)[-1] + '...')
-                    runwithsubprocess(f"git clone {currentlink} {folderpath}")
+                    if platform.system() == "Windows":
+                        runwithsubprocess(f"git clone {currentlink} {shlex.quote(folderpath)}")
+                    else:
+                        runwithsubprocess(f"git clone {currentlink} {folderpath}")
                 steps += 1
 
             elif listpart.startswith("https://civitai.com/models/"):
