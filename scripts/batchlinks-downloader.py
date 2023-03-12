@@ -284,7 +284,7 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False, additionalcontext=
         if nextline == '' and process.poll() is not None:
             break
         # Check if the line contains progress information
-        if additionalcontext == 'aria2':
+        elif additionalcontext == 'aria2':
             if 'Download Results' in nextline:
                 ariacomplete = True
                 print('\n')
@@ -301,7 +301,7 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False, additionalcontext=
                 else:
                     print(nextline, end='')
                     currentsuboutput = nextline
-        if additionalcontext == '7z':
+        elif additionalcontext == '7z':
             sevenzmessage = [
                 "Extracting", "Everything", "ERROR"
             ]
@@ -498,77 +498,6 @@ def checkcivitconfig(link): #check if the current civit link has a config file (
         #print('The link does not exist')
         return ''
     
-
-
-# def civitdown(url, folder, torename=''):
-#     filename = url.split('?')[0].rsplit('/', 1)[-1] + ".bdgh"
-#     pathtodown = os.path.join(folder, filename)
-#     max_retries = 5
-#     retry_delay = 10
-#     # url_s = quote(url)
-
-#     while prockilled == False:
-
-#         downloaded_size = 0
-#         headers = {}
-
-#         progress = tqdm(total=1000000000, unit="B", unit_scale=True, desc=f"Downloading {filename}. (will be renamed correctly after downloading)", initial=downloaded_size, leave=False)
-#         global currentsuboutput
-#         global currentcondition        
-#         with open(pathtodown, "ab") as f:
-#             while prockilled == False:
-#                 try:
-#                     response = requests.get(url, headers=headers, stream=True)
-#                     total_size = int(response.headers.get("Content-Length", 0))
-#                     # if total_size == 0:
-#                     #     total_size = downloaded_size
-#                     # progress.total = total_size 
-
-                    
-#                     for chunk in response.iter_content(chunk_size=1024):
-#                         if chunk and prockilled == False:
-#                                 f.write(chunk)
-#                                 progress.update(len(chunk))
-#                                 currentsuboutput = str(progress)
-#                         else:
-#                             break
-
-#                     downloaded_size = os.path.getsize(pathtodown)
-#                     currentsuboutput = ''
-#                     break
-#                 except ConnectionError as e:
-#                     max_retries -= 1
-
-#                     if max_retries == 0:
-#                         raise e
-
-#                     time.sleep(retry_delay)
-
-#         progress.close()
-#         if prockilled == True:
-#             if os.path.exists(pathtodown):
-#                 os.remove(pathtodown)
-#             print('[1;31mOperation Cancelled')
-#             print('[0m')
-#             currentcondition = 'Operation Cancelled'
-#             currentsuboutput = ''
-#             return "Operation Cancelled"
-        
-#         if torename:
-#             actualfilename = torename
-#         else:
-#             actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
-#         #%cd {folder}
-#         actualpath = os.path.join(folder, actualfilename)
-#         os.rename(pathtodown, actualpath)
-#         downloaded_size = os.path.getsize(actualpath)
-#         # Check if the download was successful
-#         if downloaded_size >= total_size:
-#             print(f"{actualfilename} successfully downloaded.")
-#             break
-#         else:
-#             print(f"Error: File download failed. Retrying...")
-
 #thank you @rti7743 for this part {
 def civitdown2_get_json(url):
   import re
@@ -856,7 +785,8 @@ def install7zWin(): #@note install7z
     sevenzpath = os.path.join(batchlinksinstallpath, "7zr.exe")
     sevenzlink = "https://www.7-zip.org/a/7zr.exe"
     print(sevenzlink)
-    runwithsubprocess("curl -Lo " + shlex.quote(sevenzpath) + " " + sevenzlink, batchlinksinstallpath)
+    if not os.path.exists(sevenzpath):
+        runwithsubprocess("curl -Lo " + shlex.quote(sevenzpath) + " " + sevenzlink, batchlinksinstallpath)
     return sevenzpath
 
 def savestate_folder(folder):
@@ -1490,7 +1420,7 @@ def on_ui_tabs():
             <h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
             <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-{currentverforlink}">(what's new?)</a></h5>
             <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
-            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox, Google Drive, Pixeldrain, Mediafire, Anonfiles<br/>
+            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox, Google Drive, Pixeldrain, Mediafire, Anonfiles, Dropbox<br/>
             Use hashtag to separate downloaded items based on their download location<br/>
             Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
             (For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>
