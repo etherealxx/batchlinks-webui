@@ -94,7 +94,7 @@ typemain = [
 supportedlinks = [
     "https://mega.nz",
     "https://huggingface.co",
-    "https://civitai.com/api/download/models/",
+    "https://civitai.com/api/download/models",
     "https://civitai.com/models/",
     "https://cdn.discordapp.com/attachments",
     "https://github.com",
@@ -103,7 +103,8 @@ supportedlinks = [
     "https://drive.google.com",
     "https://pixeldrain.com",
     "https://www.mediafire.com/file",
-    "https://anonfiles.com"
+    "https://anonfiles.com",
+    "https://www.dropbox.com/s"
 ]
 
 modelpath = os.path.join(script_path, "models/Stable-diffusion")
@@ -300,6 +301,18 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False, additionalcontext=
                 else:
                     print(nextline, end='')
                     currentsuboutput = nextline
+        if additionalcontext == '7z':
+            sevenzmessage = [
+                "Extracting", "Everything", "ERROR"
+            ]
+            if nextline.strip().startswith(tuple(sevenzmessage)):
+                print(nextline, end=' ')
+                currentsuboutput = nextline
+            else:
+                stripnext = nextline.strip()
+                print("\r", end="")
+                print(f"\r{stripnext}", end='')
+                currentsuboutput = stripnext
         else:
             if justrun:
                 print(nextline, end='')
@@ -312,6 +325,10 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False, additionalcontext=
                     print(nextline, end='')
                     if additionalcontext == 'mega':
                         process.kill()
+                if additionalcontext == 'mega':
+                    if nextline.strip().startswith("Download finished:"):
+                        _ = subprocess.getoutput("taskkill /f /t /im MEGAcmdServer.exe")
+                        printdebug("MEGA server killed")
             currentsuboutput = nextline
             
 
@@ -693,7 +710,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         todownload_s = todownload
         folder_s = pathlib.Path(folder).parent.resolve()
     else:
-        if mode=='pixeldrain':
+        if mode=='pixeldrain' or mode=='dropbox':
             filename = torename
         else:
             filename = todownload.rsplit('/', 1)[-1]
@@ -707,21 +724,22 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         localappdata = os.environ['LOCALAPPDATA']
         batchlinksinstallpath = os.path.join(localappdata, "batchlinks")
         wgetpath = os.path.join(batchlinksinstallpath, "wget-gnutls-x64.exe")
-        sevenzpath = os.path.join(batchlinksinstallpath, "7zr.exe")
+
         ariazippath = os.path.join(batchlinksinstallpath, "aria2-1.36.0-win-64bit-build2.7z")
         ariapath = os.path.join(batchlinksinstallpath, "aria2-1.36.0-win-64bit-build2", "aria2c.exe")
         os.makedirs(batchlinksinstallpath, exist_ok=True)
         if downloader=='gdown':
-            tempcondition = currentcondition
             global gdownupgraded
-            currentcondition = "Upgrading gdown..."
-            print('[1;32mUpgrading gdown ...')
-            print('[0m')
-            runwithsubprocess(f"pip install --upgrade --no-cache-dir gdown")
-            print('[1;32mgdown upgraded!')
-            print('[0m')
-            currentcondition = tempcondition
-            gdownupgraded = True
+            if gdownupgraded == False:
+                tempcondition = currentcondition
+                currentcondition = "Upgrading gdown..."
+                print('[1;32mUpgrading gdown ...')
+                print('[0m')
+                runwithsubprocess(f"pip install --upgrade --no-cache-dir gdown")
+                print('[1;32mgdown upgraded!')
+                print('[0m')
+                currentcondition = tempcondition
+                gdownupgraded = True
             try:
                 runwithsubprocess(f"gdown {todownload_s} -O {filepath_s}", folder)
             except FileNotFoundError:
@@ -753,13 +771,11 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 currentcondition = "Installing aria2 Windows..."
                 print('[1;32mInstalling aria2 Windows...')
                 print('[0m')
-                sevenzlink = "https://www.7-zip.org/a/7zr.exe"
                 ariaziplink = "https://github.com/q3aql/aria2-static-builds/releases/download/v1.36.0/aria2-1.36.0-win-64bit-build2.7z"
                 print(ariaziplink)
                 runwithsubprocess("curl -Lo " + shlex.quote(ariazippath) + " " + ariaziplink, batchlinksinstallpath)
-                print(sevenzlink)
-                runwithsubprocess("curl -Lo " + shlex.quote(sevenzpath) + " " + sevenzlink, batchlinksinstallpath)
-                runwithsubprocess(f"{shlex.quote(sevenzpath)} x {shlex.quote(ariazippath)} -o{shlex.quote(batchlinksinstallpath)}", batchlinksinstallpath)
+                sevenzpath = install7zWin()
+                runwithsubprocess(f"{shlex.quote(sevenzpath)} x {shlex.quote(ariazippath)} -o{shlex.quote(batchlinksinstallpath)}", batchlinksinstallpath, False, '7z')
                 print('[1;32maria2 Windows installed!')
                 print('[0m')
                 currentcondition = tempcondition
@@ -794,9 +810,9 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         if mode=='debugevery':
             time.sleep(2)
             try:
-                os.rename(os.path.join(folder, filename), os.path.join(folder, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
+                os.rename(filepath, os.path.join(folder, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
                 printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
-            except FileNotFoundError:
+            except FileNotFoundError or FileExistsError:
                 printdebug("rename failed somehow")
                 pass
         elif mode=='civitdebugevery':
@@ -809,17 +825,39 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
             try:
                 os.rename(folder, os.path.join(folder_s, f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}"))
                 printdebug("renamed to " + f"{os.path.splitext(filename)[0]}-{downloader}{os.path.splitext(filename)[1]}")
-            except FileNotFoundError:
+            except FileNotFoundError or FileExistsError:
                 printdebug("rename failed somehow")
                 pass
-    if torename:
+    if torename and prockilled == False and filename != torename:
+        def saferename(oldpath, newpath):
+            try:
+                os.rename(oldpath, newpath)
+            except:
+                print("Rename failed.")
+                pass
+
         if mode=='civit':
-            os.rename(folder, os.path.join(folder_s, shlex.quote(torename)))
+            saferename(folder, os.path.join(folder_s, shlex.quote(torename)))
         else:
-            os.rename(os.path.join(folder, filename), os.path.join(folder, shlex.quote(torename)))
+            saferename(filepath, os.path.join(folder, shlex.quote(torename)))
+    if mode=='dropbox':
+        if os.path.getsize(filepath) <= 1024:
+            print('[1;31mDropbox filesize below 1kb')
+            print("There's a chance that the file got too much traffic and dropbox blocked access to it")
+            print('[0m')
     # if prockilled == True:
     #     #rewind_folder(folder_s)
     #     pass
+
+def install7zWin(): #@note install7z
+    #usage: sevenzpath = install7zWin()
+    localappdata = os.environ['LOCALAPPDATA']
+    batchlinksinstallpath = os.path.join(localappdata, "batchlinks")
+    sevenzpath = os.path.join(batchlinksinstallpath, "7zr.exe")
+    sevenzlink = "https://www.7-zip.org/a/7zr.exe"
+    print(sevenzlink)
+    runwithsubprocess("curl -Lo " + shlex.quote(sevenzpath) + " " + sevenzlink, batchlinksinstallpath)
+    return sevenzpath
 
 def savestate_folder(folder):
     global currentfoldertrack
@@ -906,6 +944,23 @@ def splitrename(linkcurrent):
         if file_rename[1]:
             renamecurrent = file_rename[1]
     return linkcurrent, renamecurrent
+
+def extractcurdir(currentdir): #@note extractcurdir
+    allfileshere = os.listdir(currentdir)
+    szfileall = []
+    sevenzpath = install7zWin()
+    global currentcondition
+    for filehere in allfileshere:
+        if filehere.endswith('.7z'):
+            szpath = os.path.join(currentdir, filehere)
+            szfileall.append(szpath)
+    for szfile in szfileall:
+        if prockilled == False:
+            # currentcondition = "Extracting" + os.path.basename(szfile) + "..."
+            if platform.system() == "Windows":
+                runwithsubprocess(f"{shlex.quote(sevenzpath)} x {shlex.quote(szfile)} -p- -o{shlex.quote(currentdir)} -y -sdel -bb0", currentdir, False, '7z')
+            else:
+                runwithsubprocess(f"7z x {shlex.quote(szfile)} -p- -o{shlex.quote(currentdir)} -y -sdel -bb0", currentdir, False, '7z')
 
 #@stopwatch #the decorator mess with the progress bar
 def run(command, choosedowner, progress=gr.Progress()): #@note run
@@ -1054,6 +1109,20 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                             hfdown(currentlink, currentfolder, xmethod, 'debugevery')
                 steps += 1
 
+            elif listpart.startswith("https://www.dropbox.com/s"): #@note dropbox
+                currentlink, currenttorename = splitrename(listpart)
+                if currentlink.endswith("?dl=0"):
+                    currentlink = currentlink.split("?dl=")[0] + "?dl=1"
+                realname = currentlink.split("/")[-1].split("?dl=")[0]
+                if currenttorename == '':
+                    currenttorename = realname
+                print('\n')
+                print(currentlink)
+                currentcondition = f'Downloading {currentlink}...'
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + '...')
+                hfdown(currentlink, currentfolder, choosedowner, 'dropbox', currenttorename)
+                steps += 1
+
             elif listpart.startswith("https://drive.google.com"):
                 currentlink, currenttorename = splitrename(listpart)
                 print('\n')
@@ -1168,8 +1237,7 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                     if currenttorename == '':
                         print("That CivitAI link no longer exist, or the server is currently down.")
                         continue
-                    else:
-                        progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + '...')
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
@@ -1253,6 +1321,12 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                 writefinal = list_to_text(texttowrite)
                 printdebug(str(writefinal))
 
+            elif listpart.startswith("#extract"): #@note hashtagextract
+                print('\n')
+                currentcondition = 'Extracting every 7z file in current directory...'
+                print('Extracting every 7z file in current directory...\n')
+                extractcurdir(currentfolder)
+
             else:
                 for prefix in typechecker:
                     if listpart.startswith("#" + prefix):
@@ -1299,6 +1373,11 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
     else:
         return [downloadedfiles, gr.Button.update(visible=resumebuttonvisible)]
 
+wildcardcommand = [
+    "#debugeverymethod", "#debugresetdownloads",
+    "#extract"
+]
+
 def extract_links(string):
     links = []
     lines = string.split('\n')
@@ -1306,9 +1385,7 @@ def extract_links(string):
         line = line.split('##')[0].strip()
         if line.startswith(tuple(supportedlinks)):
             links.append(line)
-        elif line.startswith("#debugeverymethod"):
-            links.append(line)
-        elif line.startswith("#debugresetdownloads"):
+        elif line.startswith(tuple(wildcardcommand)):
             links.append(line)
         elif line.startswith("!"):
             links.append(line.strip())
@@ -1337,6 +1414,8 @@ def uploaded(textpath):
                     links.append(line.strip())
                 elif line.startswith("!"):
                     links.append(line.strip())
+                elif line.startswith(tuple(wildcardcommand)):
+                    links.append(line.strip())
                 else:
                     for prefix in typechecker:
                         if line.startswith("#" + prefix):
@@ -1356,9 +1435,9 @@ def keeplog():
         logging = True
         return [currentcondition, gr.Button.update(visible=True), gr.Button.update(visible=False)]
     if currentsuboutput == '':
-        return [currentcondition, gr.Button.update(), gr.Button.update()]
+        return [currentcondition, gr.Button.update(visible=True), gr.Button.update(visible=False)]
     else:
-        return [f"{currentcondition}\n{currentsuboutput}", gr.Button.update(), gr.Button.update()]
+        return [f"{currentcondition}\n{currentsuboutput}", gr.Button.update(visible=True), gr.Button.update(visible=False)]
 
 def offlog():
     global currentcondition
