@@ -139,7 +139,7 @@ gdownupgraded = False
 mediafireinstalled = False
 # ariamode = False
 
-globaldebug = False #set this to true to activate every debug features
+globaldebug = True #set this to true to activate every debug features
 if len(sys.argv) > 1:
     if sys.argv[1] == '--debug':
         globaldebug = True
@@ -481,7 +481,7 @@ def civitmodeltypename(name, filelink):
     nameoffile = nameonly + extension
     return nameoffile
 
-def checkcivitconfig(link): #check if the current civit link has a config file (v2.0+)
+def checkcivitconfig(link): #check if the current civit link has a config file (v2.0+) @note checkcivitconfig
     def getrequest(link2):
         response = requests.get(link2)
         return response.status_code
@@ -494,10 +494,36 @@ def checkcivitconfig(link): #check if the current civit link has a config file (
             #print('The link exists')
             return link + param
             #break
+        else:
+            #print('The link does not exist')
+            return ''
+
+def civitmodeltypechooser(modeljson, torchortensor, prunedmodel):
+#   basename = os.path.split(modeljson['modelVersions'][0]['files'][0]['name'])[0]
+
+  if prunedmodel:
+    prunedorfull = '?type=Pruned%20Model'
+    # basename = basename + "_pruned"
+  else:
+    prunedorfull = '?type=Model'
+  if torchortensor== 'ckpt':
+    pickleorsafe = '&format=PickleTensor'
+    # basename = basename + ".ckpt"
+  else:
+    pickleorsafe = '&format=SafeTensor'
+    # basename = basename + ".ckpt"
+  
+  defaultlinkurl = str([link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if not '?type=' in link.get('downloadUrl')][0])
+  pruneorfullurls = [link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if prunedorfull in link.get('downloadUrl')]
+  if not pruneorfullurls:
+    return defaultlinkurl
+  else:
+    pickleorsafeurls = [i for i in pruneorfullurls if pickleorsafe in i]
+    if not pickleorsafeurls:
+      return pruneorfullurls
     else:
-        #print('The link does not exist')
-        return ''
-    
+      return pickleorsafeurls
+
 #thank you @rti7743 for this part {
 def civitdown2_get_json(url):
   import re
@@ -538,7 +564,7 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
   img_resized.save(imagepng_save_path)
   os.remove(imagejpg_save_path)
 
-def civitdown2(url, folder, downloader, isdebugevery):
+def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, isprunedmodel, isdownvae):
   model = civitdown2_get_json(url)
   if model == 'error':
     print('[1;31mFailed retrieving the model data.')
@@ -553,8 +579,12 @@ def civitdown2(url, folder, downloader, isdebugevery):
   
   save_directory = civitdown2_get_save_directory(model['type'], folder)
 
-  data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
-  data_filename = model['modelVersions'][0]['files'][0]['name']
+  if model['type'] == "Checkpoint":
+    data_url = civitmodeltypechooser(model, modeldefaulttype, isprunedmodel)
+    data_filename = civitmodeltypename(model['modelVersions'][0]['files'][0]['name'], data_url)
+  else:
+    data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
+    data_filename = model['modelVersions'][0]['files'][0]['name']
   image_url = model['modelVersions'][0]['images'][0]['url']
 
   if model['type'] == "TextualInversion":
@@ -573,20 +603,29 @@ def civitdown2(url, folder, downloader, isdebugevery):
       currentmode = 'civitdebugevery'
 
   printdebug(f"debug download_url({data_url}, {data_save_path}, {downloader})")
-  while prockilled == False:
+  if prockilled == False:
     hfdown(data_url, data_save_path, downloader, currentmode)
-
-    data_url = checkcivitconfig(data_url.split('?')[0])
-    if not data_url=='':
+    printdebug("normal download done, now check for the config")
+    config_url = checkcivitconfig(data_url.split('?')[0])
+    try:
+        vae_url = [link.get('downloadUrl') for link in model['modelVersions'][0]['files'] if '?type=VAE' in link.get('downloadUrl')][0]
+    except IndexError:
+        vae_url = ''
+  if prockilled == False and isdownvae and vae_url:
+        namefile= os.path.splitext(os.path.basename(data_save_path))[0]
+        namefile = namefile + '.vae.pt'
+        data_save_path = os.path.join(os.path.dirname(data_save_path), namefile)
+        hfdown(vae_url, data_save_path, downloader, currentmode)
+  if prockilled == False and config_url:
         namefile= os.path.splitext(os.path.basename(data_save_path))[0]
         namefile = namefile + '.yaml'
         data_save_path = os.path.join(os.path.dirname(data_save_path), namefile)
-        hfdown(data_url, data_save_path, downloader, currentmode)
+        hfdown(config_url, data_save_path, downloader, currentmode)
 
-    hfdown(image_url, imagejpg_save_path, downloader, currentmode)
-    civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
-    print(f"{data_save_path} successfully downloaded.")
-    break
+  hfdown(image_url, imagejpg_save_path, downloader, currentmode)
+  civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
+  print(f"{data_save_path} successfully downloaded.")
+
 
   if isdebugevery:
     additionalname = '-' + downloader
@@ -893,7 +932,7 @@ def extractcurdir(currentdir): #@note extractcurdir
                 runwithsubprocess(f"7z x {shlex.quote(szfile)} -p- -o{shlex.quote(currentdir)} -y -sdel -bb0", currentdir, False, '7z')
 
 #@stopwatch #the decorator mess with the progress bar
-def run(command, choosedowner, progress=gr.Progress()): #@note run
+def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.Progress()): #@note run
     progress(0.01, desc='')
     global prockilled
     prockilled = False
@@ -1174,11 +1213,11 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                 # progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
                     hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
-                    currentlink = checkcivitconfig(currentlink)
-                    if not currentlink=='':
+                    configlink = checkcivitconfig(currentlink)
+                    if not configlink=='':
                         namefile= os.path.splitext(currenttorename.split('?')[0])[0]
                         currenttorename = namefile + '.yaml'
-                        hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                        hfdown(configlink, currentfolder, choosedowner, 'default', currenttorename)
                 else:
                     for xmethod in downmethod:
                         if prockilled == False:
@@ -1219,11 +1258,11 @@ def run(command, choosedowner, progress=gr.Progress()): #@note run
                 currentcondition = f'Downloading {currentlink}...'
                 progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
-                    civitdown2(currentlink, currentfolder, choosedowner, False)
-                else:
-                    for xmethod in downmethod:
-                        if prockilled == False:
-                            civitdown2(currentlink, currentfolder, xmethod, True)
+                    civitdown2(currentlink, currentfolder, choosedowner, False, civitdefault, civitpruned, civitvae)
+                # else:
+                #     for xmethod in downmethod:
+                #         if prockilled == False:
+                #             civitdown2(currentlink, currentfolder, xmethod, True)
                 steps += 1
 
             elif listpart.startswith("!"):
@@ -1411,32 +1450,49 @@ def fillbox():
         return [text, 'Links updated!\nClick Download All! to download the rest of the links', gr.Button.update(visible=False)]
     return ['', '', gr.Button.update(visible=False)]
 
+def stretchui(stretch):
+    if stretch:
+        return gr.Box.update(visible=False)
+    else:
+        return gr.Box.update(visible=True)
+    
+def hidehelp(hide):
+    if hide:
+        return [gr.Markdown.update(value=titletext), gr.Markdown.update(visible=False)]
+    else:
+        return [gr.Markdown.update(value=introductiontext), gr.Markdown.update(visible=True)]
+
+titletext = f"""<h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>"""
+introductiontext = f"""
+{titletext}
+<h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-{currentverforlink}">(what's new?)</a></h5>
+<p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
+Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox, Google Drive, Pixeldrain, Mediafire, Anonfiles, Dropbox<br/>
+Use hashtag to separate downloaded items based on their download location<br/>
+Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
+(For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>
+Use double hashtag after links for comment</p>
+"""
+knowmoretext = f"""
+<p style="font-size: 14px;">Click these links for more:<br/>
+<a href="https://github.com/etherealxx/batchlinks-webui">Readme Page</a><br/>
+<a href="https://github.com/etherealxx/batchlinks-webui#example">Example</a><br/>
+<a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
+<a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
+<a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a><br/>
+<a href="https://github.com/etherealxx/batchlinks-webui/issues">Report Bug</a></p>
+"""
+
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
         with gr.Row():
           with gr.Column(scale=2):
-            gr.Markdown(
-            f"""
-            <h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>
-            <h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-{currentverforlink}">(what's new?)</a></h5>
-            <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
-            Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox, Google Drive, Pixeldrain, Mediafire, Anonfiles, Dropbox<br/>
-            Use hashtag to separate downloaded items based on their download location<br/>
-            Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
-            (For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>
-            Use double hashtag after links for comment</p>
-            """)
+            introduction = gr.Markdown(introductiontext)
           with gr.Column(scale=1):
-            gr.Markdown(
-            """
-            <p style="font-size: 14px;">Click these links for more:<br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui">Readme Page</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui#example">Example</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a><br/>
-            <a href="https://github.com/etherealxx/batchlinks-webui/issues">Report Bug</a></p>
-            """)
+            with gr.Row():
+                uistretcher = gr.Checkbox(value=False, label="Stretch UI", interactive=True)
+                helphider = gr.Checkbox(value=False, label="Hide Help", interactive=True)
+            knowmore = gr.Markdown(knowmoretext)
         with gr.Group():
           command = gr.Textbox(label="Links", placeholder="type here", lines=5)
           if gradiostate == True:
@@ -1464,10 +1520,20 @@ def on_ui_tabs():
                 # if platform.system() == "Windows":
                 #     choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method")
                 # else:
-                if gradiostate == True:
-                    choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
-                else:
-                    choose_downloader = gr.Radio(["aria2"], value="aria2", label="Download method")
+                with gr.Row():
+                    
+                    if gradiostate == True:
+                        with gr.Column(scale=2):
+                            choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
+                    else:
+                        with gr.Column(scale=1):
+                            choose_downloader = gr.Radio(["aria2"], value="aria2", label="Downloader")
+                    with gr.Box():
+                        with gr.Column(scale=1):
+                            civit_default = gr.Radio(["ckpt", "safetensors"], value="safetensors", label="CivitAI Preferred Model Type", interactive=True)
+                            with gr.Row():
+                                civit_ispruned = gr.Checkbox(True, label="Pruned", interactive=True)
+                                civit_alsodownvae = gr.Checkbox(True, label="Also Download VAE", interactive=True)
 
                 with gr.Row():
                     if gradiostate == True:
@@ -1477,10 +1543,12 @@ def on_ui_tabs():
                         # btn_upload.upload(uploaded, btn_upload, file_output)
                         with gr.Column(scale=1, min_width=100):
                             btn_cancel = gr.Button("Cancel")
+                                        
                     else:
                         btn_run = gr.Button("Download All!", variant="primary")
                         btn_resume = gr.Button("Resume Download", visible=False)
-
+                    with gr.Column(scale=1, min_width=100):
+                        file_output = gr.UploadButton(file_types=['.txt'], label='Upload txt')
                 if gradiostate == False:
                     with gr.Row():
                         gr.Markdown(
@@ -1490,7 +1558,7 @@ def on_ui_tabs():
                         """)
 
                 if gradiostate == True:
-                    run_event = btn_run.click(run, inputs=[command, choose_downloader], outputs=out_text)
+                    run_event = btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=out_text)
                     btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
                 else:
                     btn_run.click(run, inputs=[command, choose_downloader], outputs=[out_text, btn_resume])
@@ -1498,9 +1566,18 @@ def on_ui_tabs():
                 if gradiostate == False:
                     btn_resume.click(fillbox, None, outputs=[command, out_text, btn_resume])
 
-            file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
-            file_output.change(uploaded, file_output, command)
+                # file_output = gr.File(file_types=['.txt'], label="you can upload a .txt file containing links here")
+                # file_output.change(uploaded, file_output, command)
+
+                file_output.upload(uploaded, file_output, command)
+            with gr.Box(visible=True) as boxtohide:
+                gr.Markdown("""
+                <h5 style="text-align: center; vertical-align: middle; font-size: 14px;">If you feel the UI is too cramped, click the Stretch UI button above.</h5>
+                """)
+                # sidetext = gr.Markdown(knowmoretext, visible=True)
             finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
+        helphider.change(hidehelp, helphider, outputs=[introduction, knowmore])
+        uistretcher.change(stretchui, uistretcher, outputs=[boxtohide])
         gr.Markdown(
         f"""
         <center><p style="font-size: 14px;">Current default save directory: {modelpath}</p></center>
