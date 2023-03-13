@@ -471,7 +471,7 @@ def getcivitname(link): #@note getcivitname
 def civitmodeltypename(name, filelink):
     nameonly, extension = os.path.splitext(name)
     if 'type=Pruned' in filelink:
-        nameonly =+ "_pruned"
+        nameonly += "_pruned"
     
     if 'format=Safetensor' in filelink:
         extension = '.safetensors'
@@ -498,31 +498,60 @@ def checkcivitconfig(link): #check if the current civit link has a config file (
             #print('The link does not exist')
             return ''
 
-def civitmodeltypechooser(modeljson, torchortensor, prunedmodel):
-#   basename = os.path.split(modeljson['modelVersions'][0]['files'][0]['name'])[0]
+# def civitmodeltypechooser(modeljson, torchortensor, prunedmodel):
+# #   basename = os.path.split(modeljson['modelVersions'][0]['files'][0]['name'])[0]
 
-  if prunedmodel:
-    prunedorfull = '?type=Pruned%20Model'
-    # basename = basename + "_pruned"
-  else:
-    prunedorfull = '?type=Model'
-  if torchortensor== 'ckpt':
-    pickleorsafe = '&format=PickleTensor'
-    # basename = basename + ".ckpt"
-  else:
-    pickleorsafe = '&format=SafeTensor'
-    # basename = basename + ".ckpt"
+#   if prunedmodel:
+#     prunedorfull = '?type=Pruned%20Model'
+#     # basename = basename + "_pruned"
+#   else:
+#     prunedorfull = '?type=Model'
+#   if torchortensor== 'ckpt':
+#     pickleorsafe = '&format=PickleTensor'
+#     # basename = basename + ".ckpt"
+#   else:
+#     pickleorsafe = '&format=SafeTensor'
+#     # basename = basename + ".ckpt"
   
+#   defaultlinkurl = str([link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if not '?type=' in link.get('downloadUrl')][0])
+#   pruneorfullurls = [link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if prunedorfull in link.get('downloadUrl')]
+#   if not pruneorfullurls:
+#     return defaultlinkurl
+#   else:
+#     pickleorsafeurls = [i for i in pruneorfullurls if pickleorsafe in i]
+#     if not pickleorsafeurls:
+#       return pruneorfullurls
+#     else:
+#       return pickleorsafeurls
+
+def civitmodeltypechooser(modeljson, torchortensor, prunedmodel):
+
+  prunedorfull = ['?type=Model', '?type=Pruned%20Model']
+  if prunedmodel:
+    prunedorfull.reverse()
+  pickleorsafe = ['&format=SafeTensor', '&format=PickleTensor']
+  if torchortensor== 'ckpt':
+    pickleorsafe.reverse()
+
   defaultlinkurl = str([link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if not '?type=' in link.get('downloadUrl')][0])
-  pruneorfullurls = [link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if prunedorfull in link.get('downloadUrl')]
-  if not pruneorfullurls:
+
+  activelink = []
+  for pruned_or_full in prunedorfull:
+    for pickle_or_safe in pickleorsafe:
+        templink = f"{defaultlinkurl}{pruned_or_full}{pickle_or_safe}"
+        print(templink)
+        searcher = 'findstr'
+        try:
+            link_and_code = [line for line in subprocess.getoutput(f"curl -sI {templink} | {searcher} -i content-disposition").splitlines() if line.startswith('location')][0] #subprocess.getoutput(f"curl -sI {templink}") #getrequest(f"{defaultlinkurl}{pruned_or_full}{pickle_or_safe}")
+            activelink.append(templink)
+            print(link_and_code)
+        except:
+           pass
+  print(str(activelink))
+  try:
+    return activelink[0]
+  except:
     return defaultlinkurl
-  else:
-    pickleorsafeurls = [i for i in pruneorfullurls if pickleorsafe in i]
-    if not pickleorsafeurls:
-      return pruneorfullurls
-    else:
-      return pickleorsafeurls
 
 #thank you @rti7743 for this part {
 def civitdown2_get_json(url):
@@ -564,7 +593,7 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
   img_resized.save(imagepng_save_path)
   os.remove(imagejpg_save_path)
 
-def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, isprunedmodel, isdownvae):
+def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, isprunedmodel, isdownvae): #@note civitdown2
   model = civitdown2_get_json(url)
   if model == 'error':
     print('[1;31mFailed retrieving the model data.')
@@ -578,21 +607,30 @@ def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, ispruned
     return
   
   save_directory = civitdown2_get_save_directory(model['type'], folder)
-
+  try:
+    parameter = url.split("?")[1] + "?"
+  except:
+    parameter = ''
   if model['type'] == "Checkpoint":
     data_url = civitmodeltypechooser(model, modeldefaulttype, isprunedmodel)
-    data_filename = civitmodeltypename(model['modelVersions'][0]['files'][0]['name'], data_url)
+    # if isinstance(data_url, list):
+    #     data_url = data_url[0]
+    data_filename = civitmodeltypename(model['modelVersions'][0]['files'][0]['name'], parameter)
+    image_filename = model['modelVersions'][0]['files'][0]['name']
   else:
     data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
     data_filename = model['modelVersions'][0]['files'][0]['name']
+    image_filename = data_filename
   image_url = model['modelVersions'][0]['images'][0]['url']
-
+  printdebug("data_url: " + data_url)
+  printdebug("data_filename: " + data_filename)
+  printdebug("image_url: " + data_filename)
   if model['type'] == "TextualInversion":
-      image_filename_jpg = pathlib.PurePath(data_filename).stem + ".preview.jpg"
-      image_filename_png = pathlib.PurePath(data_filename).stem + ".preview.png"
+      image_filename_jpg = pathlib.PurePath(image_filename).stem + ".preview.jpg"
+      image_filename_png = pathlib.PurePath(image_filename).stem + ".preview.png"
   else:
-      image_filename_jpg = pathlib.PurePath(data_filename).stem + ".jpg"
-      image_filename_png = pathlib.PurePath(data_filename).stem + ".png"
+      image_filename_jpg = pathlib.PurePath(image_filename).stem + ".jpg"
+      image_filename_png = pathlib.PurePath(image_filename).stem + ".png"
 
   data_save_path = os.path.join(save_directory, data_filename)
   imagejpg_save_path = os.path.join(save_directory, image_filename_jpg)
