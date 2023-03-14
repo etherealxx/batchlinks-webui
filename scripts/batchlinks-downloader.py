@@ -82,13 +82,15 @@ typechecker = [
     "addnetlora", "loraaddnet", "additionalnetworks", "addnet",
     "aestheticembedding", "aestheticembed",
     "controlnet", "cnet",
-    "extension", "extensions", "ext"
+    "extension", "extensions", "ext", #obsolete
+    "upscaler", "upscale"
     ]
 
 typemain = [
     "model", "vae", "embed",
     "hynet", "lora", "addnetlora",
-    "aestheticembed", "cnet", "ext"
+    "aestheticembed", "cnet", "ext",
+    "upscaler"
 ]
 
 supportedlinks = [
@@ -115,7 +117,8 @@ addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-netwo
 hynetpath = os.path.join(script_path, "models/hypernetworks")
 aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webui-aesthetic-gradients/aesthetic_embeddings")
 cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
-extpath = os.path.join(script_path, "extensions")
+extpath = os.path.join(script_path, "extensions") #obsolete
+upscalepath = os.path.join(script_path, "models/ESRGAN")
 
 if platform.system() == "Windows":
     for x in typemain: 
@@ -468,6 +471,17 @@ def getcivitname(link): #@note getcivitname
     filename = civitmodeltypename(filename, link)
     return filename
 
+def getcivitname2(link):
+    searcher = "findstr" if platform.system() == "Windows" else "grep"
+    try:
+        contentdis = [line for line in subprocess.getoutput(f"curl -sI {link} | {searcher} -i content-disposition").splitlines() if line.startswith('location')][0]
+        cuttedcontent = contentdis.find('response-content-disposition=attachment%3B%20filename%3D%22') + 59
+        filename = str(contentdis[cuttedcontent:]).replace('%22&x-id=GetObject', '')
+        if filename:
+            return [0, link, filename]
+    except:
+        return []
+
 def civitmodeltypename(name, filelink):
     nameonly, extension = os.path.splitext(name)
     if 'type=Pruned' in filelink:
@@ -486,72 +500,56 @@ def checkcivitconfig(link): #check if the current civit link has a config file (
         response = requests.get(link2)
         return response.status_code
 
-    params = ['?type=Config','&format=Other']
+    params = ['?type=Config','?type=Config&format=Other']
 
     for param in params:
         response = getrequest(link + param)
         if response == 200:
             #print('The link exists')
             return link + param
-            #break
-        else:
-            #print('The link does not exist')
-            return ''
+    return ''
 
-# def civitmodeltypechooser(modeljson, torchortensor, prunedmodel):
-# #   basename = os.path.split(modeljson['modelVersions'][0]['files'][0]['name'])[0]
-
-#   if prunedmodel:
-#     prunedorfull = '?type=Pruned%20Model'
-#     # basename = basename + "_pruned"
-#   else:
-#     prunedorfull = '?type=Model'
-#   if torchortensor== 'ckpt':
-#     pickleorsafe = '&format=PickleTensor'
-#     # basename = basename + ".ckpt"
-#   else:
-#     pickleorsafe = '&format=SafeTensor'
-#     # basename = basename + ".ckpt"
-  
-#   defaultlinkurl = str([link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if not '?type=' in link.get('downloadUrl')][0])
-#   pruneorfullurls = [link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if prunedorfull in link.get('downloadUrl')]
-#   if not pruneorfullurls:
-#     return defaultlinkurl
-#   else:
-#     pickleorsafeurls = [i for i in pruneorfullurls if pickleorsafe in i]
-#     if not pickleorsafeurls:
-#       return pruneorfullurls
-#     else:
-#       return pickleorsafeurls
-
-def civitmodeltypechooser(modeljson, torchortensor, prunedmodel):
+def civitmodeltypechooser(modeljson, prunedmodel, torchortensor, linkandnames):
 
   prunedorfull = ['?type=Model', '?type=Pruned%20Model']
-  if prunedmodel:
+  if prunedmodel == True:
     prunedorfull.reverse()
   pickleorsafe = ['&format=SafeTensor', '&format=PickleTensor']
-  if torchortensor== 'ckpt':
+  if torchortensor=='ckpt':
     pickleorsafe.reverse()
 
-  defaultlinkurl = str([link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if not '?type=' in link.get('downloadUrl')][0])
+  defaultlinkurl = [link.get('downloadUrl') for link in modeljson['modelVersions'][0]['files'] if not '?type=' in link.get('downloadUrl')][0]
 
-  activelink = []
-  for pruned_or_full in prunedorfull:
-    for pickle_or_safe in pickleorsafe:
-        templink = f"{defaultlinkurl}{pruned_or_full}{pickle_or_safe}"
-        print(templink)
-        searcher = 'findstr'
-        try:
-            link_and_code = [line for line in subprocess.getoutput(f"curl -sI {templink} | {searcher} -i content-disposition").splitlines() if line.startswith('location')][0] #subprocess.getoutput(f"curl -sI {templink}") #getrequest(f"{defaultlinkurl}{pruned_or_full}{pickle_or_safe}")
-            activelink.append(templink)
-            print(link_and_code)
-        except:
-           pass
-  print(str(activelink))
-  try:
-    return activelink[0]
-  except:
-    return defaultlinkurl
+  indexlinkname = list()
+  checklater = ''
+  for index, (link, name) in enumerate(linkandnames.items()):
+    if prunedorfull[0] in link:
+        if pickleorsafe[0] in link:
+            indexlinkname.extend([index, link, name])
+            break
+        else:
+            checklater = link
+            continue
+    else: 
+        continue
+
+  if checklater and not indexlinkname:
+    for index, (link, name) in enumerate(linkandnames.items()):
+        if checklater == link:
+            indexlinkname.extend([index, link, name])
+            checklater = ''
+            break
+          
+  if not indexlinkname:
+    indexlinkname = getcivitname2(defaultlinkurl+prunedorfull[0]+pickleorsafe[0])
+
+  if not indexlinkname:
+    for index, (link, name) in enumerate(linkandnames.items()):
+        if defaultlinkurl == link:
+            indexlinkname.extend([index, link, name])
+            break
+
+  return indexlinkname
 
 #thank you @rti7743 for this part {
 def civitdown2_get_json(url):
@@ -594,6 +592,18 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
   os.remove(imagejpg_save_path)
 
 def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, isprunedmodel, isdownvae): #@note civitdown2
+  def civitlinkandnamer(model):
+    linkandname = dict()
+    for i, link in enumerate(model['modelVersions'][0]['files']):
+        name = link.get('name')
+        url = link.get('downloadUrl')
+        if name and url:
+            linkandname[url] = name
+            # print(i, url, name)
+        else:
+          pass
+    return linkandname
+
   model = civitdown2_get_json(url)
   if model == 'error':
     print('[1;31mFailed retrieving the model data.')
@@ -608,19 +618,21 @@ def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, ispruned
   
   save_directory = civitdown2_get_save_directory(model['type'], folder)
   try:
-    parameter = url.split("?")[1] + "?"
+    parameter = url.split("?")[-1] + "?"
   except:
     parameter = ''
+
+  civitlinkandnames = linkandnamer(model)
+
   if model['type'] == "Checkpoint":
-    data_url = civitmodeltypechooser(model, modeldefaulttype, isprunedmodel)
-    # if isinstance(data_url, list):
-    #     data_url = data_url[0]
-    data_filename = civitmodeltypename(model['modelVersions'][0]['files'][0]['name'], parameter)
+    data_index, data_url, data_filename = civitmodeltypechooser(model, False, 'safetensors', civitlinkandnames) #@note
+    data_filename = civitmodeltypename(data_filename, parameter)
     image_filename = model['modelVersions'][0]['files'][0]['name']
   else:
     data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
     data_filename = model['modelVersions'][0]['files'][0]['name']
     image_filename = data_filename
+
   image_url = model['modelVersions'][0]['images'][0]['url']
   printdebug("data_url: " + data_url)
   printdebug("data_filename: " + data_filename)
@@ -644,21 +656,23 @@ def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, ispruned
   if prockilled == False:
     hfdown(data_url, data_save_path, downloader, currentmode)
     printdebug("normal download done, now check for the config")
-    config_url = checkcivitconfig(data_url.split('?')[0])
-    try:
-        vae_url = [link.get('downloadUrl') for link in model['modelVersions'][0]['files'] if '?type=VAE' in link.get('downloadUrl')][0]
-    except IndexError:
-        vae_url = ''
-  if prockilled == False and isdownvae and vae_url:
-        namefile= os.path.splitext(os.path.basename(data_save_path))[0]
-        namefile = namefile + '.vae.pt'
-        data_save_path = os.path.join(os.path.dirname(data_save_path), namefile)
-        hfdown(vae_url, data_save_path, downloader, currentmode)
-  if prockilled == False and config_url:
-        namefile= os.path.splitext(os.path.basename(data_save_path))[0]
-        namefile = namefile + '.yaml'
-        data_save_path = os.path.join(os.path.dirname(data_save_path), namefile)
-        hfdown(config_url, data_save_path, downloader, currentmode)
+    config_url = checkcivitconfig(data_url)
+    vae_url, vae_name = '',''
+    for link, name in civitlinkandnames:
+        if '?type=VAE' in link:
+            vae_url, vae_name = link, name
+            break
+  if model['type'] == "Checkpoint":
+    if prockilled == False and isdownvae and vae_url:
+          namefile = os.path.splitext(data_filename)[0]
+          vae_name = namefile + '.vae.pt'
+          data_save_path = os.path.join(os.path.dirname(data_save_path), vae_name)
+          hfdown(vae_url, data_save_path, downloader, currentmode)
+    if prockilled == False and config_url:
+          namefile = os.path.splitext(data_filename)[0]
+          config_name = namefile + '.yaml'
+          data_save_path = os.path.join(os.path.dirname(data_save_path), config_name)
+          hfdown(config_url, data_save_path, downloader, currentmode)
 
   hfdown(image_url, imagejpg_save_path, downloader, currentmode)
   civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
@@ -1267,7 +1281,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 currentlink, currenttorename = splitrename(listpart)
                 print('\n')
                 print(currentlink)
-                if '/raw/' in listpart:
+                if '/raw/' in listpart or '/releases/download/' in listpart:
                     currentcondition = f'Downloading {currentlink}...'
                     progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
                     if everymethod == False:
@@ -1334,6 +1348,17 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('Extracting every 7z file in current directory...\n')
                 extractcurdir(currentfolder)
 
+            elif listpart.startswith("@new"): #WIP
+                newcommand, newhashtag, newpath = listpart.split()
+                if newhashtag.startswith("#"):
+                    newtype = newhashtag[1:]
+                    global typemain
+                    global typechecker
+                    if not newtype in typemain:
+                        typemain.append(newtype)
+                        typechecker.append(newtype)
+                pass
+
             else:
                 for prefix in typechecker:
                     if listpart.startswith("#" + prefix):
@@ -1396,6 +1421,8 @@ def extract_links(string):
             links.append(line)
         elif line.startswith("!"):
             links.append(line.strip())
+        elif line.startswith("@new"):
+            links.append(line.strip())
         else:
             for prefix in typechecker:
                 if line.startswith("#" + prefix):
@@ -1420,6 +1447,8 @@ def uploaded(textpath):
                 if line.startswith(tuple(supportedlinks)):
                     links.append(line.strip())
                 elif line.startswith("!"):
+                    links.append(line.strip())
+                elif line.startswith("@new"):
                     links.append(line.strip())
                 elif line.startswith(tuple(wildcardcommand)):
                     links.append(line.strip())
