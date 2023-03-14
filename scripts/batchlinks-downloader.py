@@ -118,10 +118,11 @@ hynetpath = os.path.join(script_path, "models/hypernetworks")
 aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webui-aesthetic-gradients/aesthetic_embeddings")
 cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
 extpath = os.path.join(script_path, "extensions") #obsolete
-upscalepath = os.path.join(script_path, "models/ESRGAN")
+upscalerpath = os.path.join(script_path, "models/ESRGAN")
 
 if platform.system() == "Windows":
     for x in typemain: 
+        # exec(f"{x}path = os.path.normpath({x}path)")
         exec(f"{x}path = {x}path.replace('/', '\\\\')")
         #exec(f"print({x}path)")
 
@@ -140,6 +141,7 @@ everyprocessid = []
 remaininglinks = []
 gdownupgraded = False
 mediafireinstalled = False
+# addedcustompath = []
 # ariamode = False
 
 globaldebug = True #set this to true to activate every debug features
@@ -755,7 +757,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 currentcondition = "Upgrading gdown..."
                 print('[1;32mUpgrading gdown ...')
                 print('[0m')
-                runwithsubprocess(f"pip install --upgrade --no-cache-dir gdown")
+                runwithsubprocess(f"pip install -q --upgrade --no-cache-dir gdown")
                 print('[1;32mgdown upgraded!')
                 print('[0m')
                 currentcondition = tempcondition
@@ -906,12 +908,16 @@ def rewind_folder(folder):
                 os.remove(fileordir)
             print("Removed incomplete download: " + fileordir)
 
-def writeall(olddict, shellonly):
+def writeall(olddict, shellonly, custompaths):
     newdict = trackall()
     global finalwrite
     finalwrite = []
 
     finalwrite.append("All done!")
+    if custompaths:
+        finalwrite.append("⬇️Custom path added:⬇️")
+        for hashtag, thepath in custompaths.items():
+            finalwrite.append(f"{hashtag} -> {thepath}")
     finalwrite.append("Downloaded files: ")
     for oldtype, olddir in olddict.items():
         for newtype, newdir in newdict.items():
@@ -1050,7 +1056,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
         currentcondition = "Upgrading gdown..."
         print('[1;32mUpgrading gdown ...')
         print('[0m')
-        runwithsubprocess(f"pip install --upgrade --no-cache-dir gdown")
+        runwithsubprocess(f"pip install -q --upgrade --no-cache-dir gdown")
         print('[1;32mgdown upgraded!')
         print('[0m')
         currentcondition = tempcondition
@@ -1071,6 +1077,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     printdebug('prockilled: ' + str(prockilled))
     global remaininglinks
     batchtime = time.time()
+    addedcustompath = dict()
     downmethod = ['gdown', 'wget', 'curl', 'aria2']
     hfmethods = [
         "https://raw.githubusercontent.com",
@@ -1348,16 +1355,31 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('Extracting every 7z file in current directory...\n')
                 extractcurdir(currentfolder)
 
-            elif listpart.startswith("@new"): #WIP
-                newcommand, newhashtag, newpath = listpart.split()
-                if newhashtag.startswith("#"):
-                    newtype = newhashtag[1:]
-                    global typemain
-                    global typechecker
-                    if not newtype in typemain:
-                        typemain.append(newtype)
-                        typechecker.append(newtype)
-                pass
+            elif listpart.startswith("@new"): #WIP #@note hashtagcustom
+                newcommand, newhashtag, newpath = shlex.split(listpart)
+                if newcommand and newhashtag and newpath:
+                    if newhashtag.startswith("#"):
+                        newtype = newhashtag[1:]
+                        global typemain
+                        global typechecker
+                        if not newtype in typemain and not newpath in typechecker:
+                            try:
+                                typemain.append(newtype)
+                                print('typemain: ' + str(typemain))
+                                typechecker.append(newtype)
+                                print('typechecker: ' + str(typechecker))
+                                newglobalpath = newtype + "path"
+                                print('newglobalpath: ' + newtype + "path")
+                                newpath = os.path.abspath(os.path.normpath(newpath).rstrip(os.sep))
+                                os.makedirs(newpath, exist_ok=True)
+                                globals()[newglobalpath] = newpath
+                                print("modelpath = " + eval(newglobalpath))
+                                # global addedcustompath
+                                addedcustompath[newhashtag] = newpath
+                                printdebug("addedcustompath: " + str(addedcustompath))
+                                print(f"New custom path added!\n{newhashtag} means {newpath}")
+                            except Exception as e:
+                                print("Adding custom path failed! Reason: " + e)
 
             else:
                 for prefix in typechecker:
@@ -1385,7 +1407,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
             return "Operation cancelled"
 
     currentcondition = 'Writing output...'
-    downloadedfiles = writeall(oldfilesdict, isshell)
+    downloadedfiles = writeall(oldfilesdict, isshell, addedcustompath)
     for tokill in everyprocessid:
         try:
             os.kill(tokill, signal.SIGTERM)
@@ -1401,9 +1423,9 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     currentcondition = 'Done!'
     printdebug(f"this should be the output:\n" + str(downloadedfiles))
     if gradiostate == True:
-        return downloadedfiles
+        return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]  #@note dataframe
     else:
-        return [downloadedfiles, gr.Button.update(visible=resumebuttonvisible)]
+        return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
 
 wildcardcommand = [
     "#debugeverymethod", "#debugresetdownloads",
@@ -1519,15 +1541,34 @@ def fillbox():
 
 def stretchui(stretch):
     if stretch:
-        return gr.Box.update(visible=False)
+        return [gr.Box.update(visible=False), gr.Accordion.update(visible=False), gr.Accordion.update(visible=True)] 
     else:
-        return gr.Box.update(visible=True)
+        return [gr.Box.update(visible=True), gr.Accordion.update(visible=True), gr.Accordion.update(visible=False)] 
     
 def hidehelp(hide):
     if hide:
         return [gr.Markdown.update(value=titletext), gr.Markdown.update(visible=False)]
     else:
         return [gr.Markdown.update(value=introductiontext), gr.Markdown.update(visible=True)]
+
+countofdefaulthashtags = len(typemain)
+def buildarrayofhashtags(rightorbottom):
+    printdebug(f"buildarray {rightorbottom} initiated!")
+    defaultpathtime = True
+    def writingpath(j, path):
+        if defaultpathtime:
+            return path + " (default path)"
+        else:
+            if rightorbottom == 'right' and j < countofdefaulthashtags:
+                return path.replace(script_path, "~")
+            else:
+                return path
+    hashtagandpath = []
+    for i, x in enumerate(typemain):
+        xpath = eval(x+"path")
+        hashtagandpath.append(["#"+x, writingpath(i, xpath)])
+        defaultpathtime = False
+    return hashtagandpath
 
 titletext = f"""<h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>"""
 introductiontext = f"""
@@ -1624,12 +1665,6 @@ def on_ui_tabs():
                         colab console, as every information about the download progress is there.</p>
                         """)
 
-                if gradiostate == True:
-                    run_event = btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=out_text)
-                    btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
-                else:
-                    btn_run.click(run, inputs=[command, choose_downloader], outputs=[out_text, btn_resume])
-
                 if gradiostate == False:
                     btn_resume.click(fillbox, None, outputs=[command, out_text, btn_resume])
 
@@ -1638,20 +1673,43 @@ def on_ui_tabs():
 
                 file_output.upload(uploaded, file_output, command)
             with gr.Box(visible=True) as boxtohide:
-                gr.Markdown("""
-                <h5 style="text-align: center; vertical-align: middle; font-size: 14px;">If you feel the UI is too cramped, click the Stretch UI button above.</h5>
-                """)
+                # gr.Markdown("""
+                # <h5 style="text-align: center; vertical-align: middle; font-size: 14px;">If you feel the UI is too cramped, click the Stretch UI button above.</h5>
+                # """)
+                with gr.Accordion("List of Every Hashtags and its Path", open=False, visible=True) as rightlist:
+                    righttable = gr.DataFrame(
+                    buildarrayofhashtags('right'),
+                    headers=["hashtag", "path"],
+                    datatype=["str", "str"],
+                    interactive=False
+                    )
                 # sidetext = gr.Markdown(knowmoretext, visible=True)
             finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
+        # gr.Markdown(
+        # f"""
+        # <center><p style="font-size: 14px;">Current default save directory: {modelpath}</p></center>
+        # """)
+        with gr.Accordion("List of Every Hashtags and its Path", open=False, visible=False) as bottomlist:
+            bottomtable = gr.DataFrame(
+                buildarrayofhashtags('bottom'),
+                headers=["hashtag", "path"],
+                datatype=["str", "str"],
+                interactive=False,
+            )
         helphider.change(hidehelp, helphider, outputs=[introduction, knowmore])
-        uistretcher.change(stretchui, uistretcher, outputs=[boxtohide])
-        gr.Markdown(
-        f"""
-        <center><p style="font-size: 14px;">Current default save directory: {modelpath}</p></center>
-        """)
+        uistretcher.change(stretchui, uistretcher, outputs=[boxtohide, rightlist, bottomlist])
         #batchlinks.load(debug, output=debug_txt, every=1)
+        if gradiostate == True:
+            run_event = btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=[out_text, righttable, bottomtable])
+            btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+        else:
+            btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=[out_text, righttable, bottomtable, btn_resume])
+        
     if sdless:
-        batchlinks.queue(64).launch(share=True)
+        if platform.system() == "Windows":
+            batchlinks.queue(64).launch(inbrowser=True)
+        else:
+            batchlinks.queue(64).launch(share=True)
     else:
         return (batchlinks, "Batchlinks Downloader", "batchlinks"),
 if not sdless:
