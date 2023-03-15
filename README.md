@@ -358,7 +358,7 @@ Changes:
 - [ ] Gradio progress bar
 - [ ] Logo change
 - [ ] Moving most of the content of this Readme.md to Wiki instead
-- [ ] Other download sites (s-ul.eu, gitgud)
+- [ ] Other download sites (s-ul.eu, gitgud, bunkr.ru, icedrive)
 - [ ] Support customizable hashtag from the UI
 - [ ] Support download MEGA and Google Drive folder
 - [ ] UI overhaul

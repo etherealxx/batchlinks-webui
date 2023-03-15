@@ -627,11 +627,11 @@ def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, ispruned
   except:
     parameter = ''
 
-  civitlinkandnames = linkandnamer(model)
+  civitlinkandnames = civitlinkandnamer(model)
 
   if model['type'] == "Checkpoint":
-    data_index, data_url, data_filename = civitmodeltypechooser(model, False, 'safetensors', civitlinkandnames) #@note
-    data_filename = civitmodeltypename(data_filename, parameter)
+    data_index, data_url, data_filename = civitmodeltypechooser(model, isprunedmodel, modeldefaulttype, civitlinkandnames) #@note
+    data_filename = civitmodeltypename(data_filename, data_url)
     image_filename = model['modelVersions'][0]['files'][0]['name']
   else:
     data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
@@ -663,7 +663,7 @@ def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, ispruned
     printdebug("normal download done, now check for the config")
     config_url = checkcivitconfig(data_url)
     vae_url, vae_name = '',''
-    for link, name in civitlinkandnames:
+    for link, name in civitlinkandnames.items():
         if '?type=VAE' in link:
             vae_url, vae_name = link, name
             break
