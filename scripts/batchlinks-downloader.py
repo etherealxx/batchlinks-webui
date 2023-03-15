@@ -908,7 +908,7 @@ def rewind_folder(folder):
                 os.remove(fileordir)
             print("Removed incomplete download: " + fileordir)
 
-def writeall(olddict, shellonly, custompaths):
+def writeall(olddict, shellonly, custompaths=''):
     newdict = trackall()
     global finalwrite
     finalwrite = []
@@ -1008,9 +1008,9 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
         writefinal = list_to_text(texttowrite)
         currentcondition = f'Removing done.'
         if gradiostate == True:
-            return writefinal
+            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
         else:
-            return [writefinal, gr.Button.update(visible=resumebuttonvisible)]
+            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
     
     oldfilesdict = trackall()
     currentfolder = modelpath
@@ -1565,9 +1565,12 @@ def buildarrayofhashtags(rightorbottom):
                 return path
     hashtagandpath = []
     for i, x in enumerate(typemain):
-        xpath = eval(x+"path")
-        hashtagandpath.append(["#"+x, writingpath(i, xpath)])
-        defaultpathtime = False
+        try:
+            xpath = eval(x+"path")
+            hashtagandpath.append(["#"+x, writingpath(i, xpath)])
+            defaultpathtime = False
+        except Exception as e:
+            print(e)
     return hashtagandpath
 
 titletext = f"""<h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>"""
