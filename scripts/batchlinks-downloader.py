@@ -24,7 +24,10 @@ except ImportError: #sdless
         userprofile = os.environ['USERPROFILE']
         downloadpath = os.path.join(userprofile, "Downloads")
         script_path = os.path.join(downloadpath, "stable-diffusion-webui")
-
+    elif platform.system() == "Darwin":
+        userhome = os.environ['HOME']
+        downloadpath = os.path.join(userhome, "Downloads")
+        script_path = os.path.join(downloadpath, "stable-diffusion-webui")
     else:
         script_path = '/content/stable-diffusion-webui'
     gradio_queue = True
