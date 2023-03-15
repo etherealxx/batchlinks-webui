@@ -257,12 +257,11 @@ This mode will run the extension without the need of stable-diffusion-webui. Goo
 Copy-paste this on a new colab cell then run it:
 ```
 from IPython.display import clear_output
-!pip3 show virtualenv >/dev/null || pip install virtualenv
+!pip3 show virtualenv >/dev/null || pip install -q virtualenv
 ![ -d gradiovenv ] || virtualenv gradiovenv
 !git clone https://github.com/etherealxx/batchlinks-webui \
 /content/stable-diffusion-webui/extensions/batchlinks-webui
-!source gradiovenv/bin/activate; \
-pip3 show gradio >/dev/null || pip install gradio==3.16.2
+pip3 show gradio >/dev/null || pip install -q gradio==3.16.2
 clear_output(wait=True)
 !source gradiovenv/bin/activate; \
 python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
@@ -274,6 +273,20 @@ or here's the quicker version without venv:
 !python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
 ```
 
+For Windows, run the sdless-windows.bat. Make sure you have `python3` and `gradio` package version 3.16.2 or above. It won't use venv.
+
+This one for MacOS. Tested on Mojave.
+```
+#!/usr/bin/env bash
+pip3 show virtualenv >/dev/null || pip3 install virtualenv
+[ -d gradiovenv ] || virtualenv gradiovenv
+git clone -b sdless https://github.com/etherealxx/batchlinks-webui \
+$HOME/Downloads/stable-diffusion-webui/extensions/batchlinks-webui
+source gradiovenv/bin/activate; \
+pip3 show gradio >/dev/null || pip3 install gradio==3.16.2
+source gradiovenv/bin/activate; \
+python3 $HOME/Downloads/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
+```
 ### Local Installation Support
 
 This extension was tested to work on Windows 11 at one point, but haven't really ben updated yet since. My main focus is for colab use. Maybe also works on Debian-based linux (but you better inspect the source code first).

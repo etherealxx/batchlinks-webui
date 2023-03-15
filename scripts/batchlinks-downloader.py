@@ -95,6 +95,7 @@ typemain = [
     "aestheticembed", "cnet", "ext",
     "upscaler"
 ]
+countofdefaulthashtags = len(typemain)
 
 supportedlinks = [
     "https://mega.nz",
@@ -147,13 +148,13 @@ mediafireinstalled = False
 # addedcustompath = []
 # ariamode = False
 
-globaldebug = True #set this to true to activate every debug features
+globaldebug = False #set this to true to activate every debug features
 if len(sys.argv) > 1:
     if sys.argv[1] == '--debug':
         globaldebug = True
 
 
-def stopwatch(func):
+def stopwatch(func): #unused
     """
     A function that acts as a stopwatch for another function.
 
@@ -178,8 +179,8 @@ def stopwatch(func):
 
 #debuggingpurpose{
     #Hello debuggers! This will track every files when the extension is launched, and
-    #you can remove every downloaded files after with hashtag '#debugresetdownloads', for debugging purposes on colab
-    #(Note: You need to fill the textbox with only a single line of #debugresetdownloads and nothing more)
+    #you can remove every downloaded files after with hashtag '@debugresetdownloads', for debugging purposes on colab
+    #(Note: You need to fill the textbox with only a single line of @debugresetdownloads and nothing more)
     #There's also another feature, '#debugeverymethod', which will download a single link with all four possible methods available.
 import shutil
 snapshot = []
@@ -402,6 +403,9 @@ def transfare(todownload, folder, torename=''):
                     print(f"\r{line}", end="")
                 else:
                     print(f"\n{line}")
+                    _ = subprocess.getoutput("pkill -f \"mega-cmd-server\"")
+                    printdebug("MEGA server killed")
+
             else:
                 currentsuboutput = ''
                 print('[1;31mOperation Cancelled')
@@ -760,7 +764,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 currentcondition = "Upgrading gdown..."
                 print('[1;32mUpgrading gdown ...')
                 print('[0m')
-                runwithsubprocess(f"pip install -q --upgrade --no-cache-dir gdown")
+                runwithsubprocess(f"pip3 install -q --upgrade --no-cache-dir gdown")
                 print('[1;32mgdown upgraded!')
                 print('[0m')
                 currentcondition = tempcondition
@@ -876,14 +880,26 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
 
 def install7zWin(): #@note install7z
     #usage: sevenzpath = install7zWin()
+    global currentcondition
+    tempcondition = currentcondition
+    currentcondition = "Installing 7z..."
     localappdata = os.environ['LOCALAPPDATA']
     batchlinksinstallpath = os.path.join(localappdata, "batchlinks")
-    sevenzpath = os.path.join(batchlinksinstallpath, "7zr.exe")
-    sevenzlink = "https://www.7-zip.org/a/7zr.exe"
-    print(sevenzlink)
-    if not os.path.exists(sevenzpath):
-        runwithsubprocess("curl -Lo " + shlex.quote(sevenzpath) + " " + sevenzlink, batchlinksinstallpath)
-    return sevenzpath
+    sevenzrpath = os.path.join(batchlinksinstallpath, "7zr.exe")
+    sevenzrlink = "https://www.7-zip.org/a/7zr.exe"
+    svnzpacklink = "https://7-zip.org/a/7z2201-x64.exe"
+    svnzpackpath = os.path.join(batchlinksinstallpath, "7z2201-x64.exe")
+    svnzexecpath = os.path.join(batchlinksinstallpath, "7z.exe")
+    if not os.path.exists(sevenzrpath):
+        print(sevenzrlink)
+        runwithsubprocess("curl -Lo " + shlex.quote(sevenzrpath) + " " + sevenzrlink, batchlinksinstallpath)
+    if not os.path.exists(svnzpackpath):
+        print(svnzpacklink)
+        runwithsubprocess("curl -Lo " + shlex.quote(svnzpackpath) + " " + svnzpacklink, batchlinksinstallpath)
+    if not os.path.exists(svnzexecpath):
+        runwithsubprocess(f"{shlex.quote(sevenzrpath)} x {shlex.quote(svnzpackpath)} -p- -o{shlex.quote(batchlinksinstallpath)} -y -sdel -bb0", batchlinksinstallpath, False, '7z')
+    currentcondition = tempcondition
+    return svnzexecpath
 
 def savestate_folder(folder):
     global currentfoldertrack
@@ -981,7 +997,7 @@ def extractcurdir(currentdir): #@note extractcurdir
     sevenzpath = install7zWin()
     global currentcondition
     for filehere in allfileshere:
-        if filehere.endswith('.7z'):
+        if filehere.endswith('.7z') or filehere.endswith('.zip') or filehere.endswith('.rar'):
             szpath = os.path.join(currentdir, filehere)
             szfileall.append(szpath)
     for szfile in szfileall:
@@ -1002,7 +1018,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     everymethod = False
     global currentcondition
     resumebuttonvisible = False
-    if command.strip() == '#debugresetdownloads' and snapshot != {} and globaldebug == True:
+    if command.strip() == '@debugresetdownloads' and snapshot != {} and globaldebug == True:
         currentcondition = f'Removing downloaded files...'
         removed_files = global_rewind()
         texttowrite = ["⬇️Removed files⬇️"]
@@ -1017,6 +1033,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     
     oldfilesdict = trackall()
     currentfolder = modelpath
+    currenthashtag = '#model'
     os.makedirs(currentfolder, exist_ok=True)
     currentcondition = 'Extracting links...'
     links = extract_links(command)
@@ -1059,7 +1076,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
         currentcondition = "Upgrading gdown..."
         print('[1;32mUpgrading gdown ...')
         print('[0m')
-        runwithsubprocess(f"pip install -q --upgrade --no-cache-dir gdown")
+        runwithsubprocess(f"pip3 install -q --upgrade --no-cache-dir gdown")
         print('[1;32mgdown upgraded!')
         print('[0m')
         currentcondition = tempcondition
@@ -1087,12 +1104,15 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
         "https://huggingface.co",
         "https://cdn.discordapp.com/attachments"
     ]
+    global typemain
+    global typechecker
     for listpart in links:
         if prockilled == False:
             currenttorename = ''
             printdebug("steps: " + str(steps))
             printdebug("total steps: " + str(totalsteps))
             printdebug("percentage: " + str(round(steps/totalsteps, 1)))
+            printdebug("currenttypemain: " + str(typemain))
             # ariamode = False
             if gradiostate == False:
                 if time.time() - batchtime >= 70:
@@ -1121,7 +1141,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading from ' + os.path.basename(currentlink).split('#')[0] + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading from ' + os.path.basename(currentlink).split('#')[0] + f' into {currenthashtag}...')
                 transfare(currentlink, currentfolder, currenttorename)
                 steps += 1
 
@@ -1131,7 +1151,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
                 if everymethod == False:
                     hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                 else:
@@ -1150,7 +1170,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + f' into {currenthashtag}...')
                 hfdown(currentlink, currentfolder, choosedowner, 'dropbox', currenttorename)
                 steps += 1
 
@@ -1165,7 +1185,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                         extracted_string = match.group(1)
                     else:
                         extracted_string = match.group(2)
-                progress(round(steps/totalsteps, 3), desc='Downloading from ' + extracted_string + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading from ' + extracted_string + f' into {currenthashtag}...')
                 mediadrivedown(currentlink, currentfolder, 'gdrive', currenttorename)
                 steps += 1
                 
@@ -1186,7 +1206,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + f' into {currenthashtag}...')
                 # if everymethod == False:
                 hfdown(currentlink, currentfolder, choosedowner, 'pixeldrain', currenttorename)
                 # else:
@@ -1200,7 +1220,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + currentlink.split("/")[-2] + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currentlink.split("/")[-2] + f' into {currenthashtag}...')
                 # if everymethod == False:
                 mediadrivedown(currentlink, currentfolder, 'mediafire', currenttorename)
                 # else:
@@ -1225,7 +1245,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 currentlink = max(download_links, key=len)
 
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + currentlink.split("/")[-1] + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currentlink.split("/")[-1] + f' into {currenthashtag}...')
                 if everymethod == False:
                     hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                 else:
@@ -1252,7 +1272,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                     continue
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
                 if everymethod == False:
                     hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                 else:
@@ -1268,7 +1288,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                     if currenttorename == '':
                         print("That CivitAI link no longer exist, or the server is currently down.")
                         continue
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + f' into {currenthashtag}...')
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
@@ -1293,7 +1313,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print(currentlink)
                 if '/raw/' in listpart or '/releases/download/' in listpart:
                     currentcondition = f'Downloading {currentlink}...'
-                    progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
+                    progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
                     if everymethod == False:
                         hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
                     else:
@@ -1306,7 +1326,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                     foldername = listpart.split('#')[0].rsplit('/', 1)[-1]
                     folderpath = os.path.join(extpath, foldername)
                     currentcondition = f'Cloning {currentlink}...'
-                    progress(round(steps/totalsteps, 3), desc='Cloning from ' + currentlink.split('/', 3)[-1] + '...')
+                    progress(round(steps/totalsteps, 3), desc='Cloning from ' + currentlink.split('/', 3)[-1] + f' into #ext...')
                     if platform.system() == "Windows":
                         runwithsubprocess(f"git clone {currentlink} {shlex.quote(folderpath)}")
                     else:
@@ -1318,7 +1338,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + '...')
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
                 if everymethod == False:
                     civitdown2(currentlink, currentfolder, choosedowner, False, civitdefault, civitpruned, civitvae)
                 # else:
@@ -1334,14 +1354,14 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 runwithsubprocess(commandtorun, None, True)
                 steps += 1
             
-            elif listpart.startswith("#debugeverymethod") and globaldebug == True and gradiostate == True:
+            elif listpart.startswith("@debugeverymethod") and globaldebug == True and gradiostate == True:
                 print('\n')
                 everymethod = True
                 print('[1;32mDebugEveryMethod activated!')
                 print('[1;32mOne link will be downloaded with every possible download method.')
                 print('[0m')
 
-            elif listpart.startswith("#debugresetdownloads") and snapshot != {} and globaldebug == True:
+            elif listpart.startswith("@debugresetdownloads") and snapshot != {} and globaldebug == True:
                 print('\n')
                 currentcondition = f'Removing downloaded files...'
                 removed_files = global_rewind()
@@ -1352,57 +1372,88 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 writefinal = list_to_text(texttowrite)
                 printdebug(str(writefinal))
 
-            elif listpart.startswith("#extract"): #@note hashtagextract
+            elif listpart.startswith("@extract"): #@note hashtagextract
                 print('\n')
-                currentcondition = 'Extracting every 7z file in current directory...'
+                currentcondition = 'Extracting every archive file in current directory...'
                 print('Extracting every 7z file in current directory...\n')
                 extractcurdir(currentfolder)
 
-            elif listpart.startswith("@new"): #WIP #@note hashtagcustom
+            elif listpart.startswith("@new"): #@note hashtagcustom
                 newcommand, newhashtag, newpath = shlex.split(listpart)
                 if newcommand and newhashtag and newpath:
                     if newhashtag.startswith("#"):
+                        printdebug("making custom hashtag")
                         newtype = newhashtag[1:]
-                        global typemain
-                        global typechecker
+                        #global typemain #moved to top
+                        #global typechecker #moved to top
                         if not newtype in typemain and not newpath in typechecker:
                             try:
                                 typemain.append(newtype)
-                                print('typemain: ' + str(typemain))
+                                printdebug('typemain: ' + str(typemain))
                                 typechecker.append(newtype)
-                                print('typechecker: ' + str(typechecker))
+                                printdebug('typechecker: ' + str(typechecker))
                                 newglobalpath = newtype + "path"
-                                print('newglobalpath: ' + newtype + "path")
+                                printdebug('newglobalpath: ' + newtype + "path")
                                 newpath = os.path.abspath(os.path.normpath(newpath).rstrip(os.sep))
                                 os.makedirs(newpath, exist_ok=True)
                                 globals()[newglobalpath] = newpath
-                                print("modelpath = " + eval(newglobalpath))
+                                printdebug("modelpath = " + eval(newglobalpath))
                                 # global addedcustompath
                                 addedcustompath[newhashtag] = newpath
                                 printdebug("addedcustompath: " + str(addedcustompath))
                                 print(f"New custom path added!\n{newhashtag} means {newpath}")
                             except Exception as e:
                                 print("Adding custom path failed! Reason: " + e)
+            
+            elif listpart.startswith("#") and listpart.endswith(tuple(typemain)): #tuple(typemain[countofdefaulthashtags:])
+                try:
+                    printdebug("one of typemain")
+                    currenthashtag = listpart
+                    currentfolder = eval(listpart[1:] + "path")
+                    os.makedirs(currentfolder, exist_ok=True)
+                except Exception as e:
+                    print(f"Cannot use hashtag: {e}")
 
             else:
+                notbreaking = True
+                typemainlocal = []
+                for x in typemain:
+                    typemainlocal.append(x)
+                for y in typemainlocal:
+                    if listpart[1:] == y:
+                        printdebug("one of typemain, found on else")
+                        currenthashtag = listpart
+                        currentfolder = eval(listpart[1:] + "path")
+                        os.makedirs(currentfolder, exist_ok=True)
+                        notbreaking = False
                 for prefix in typechecker:
-                    if listpart.startswith("#" + prefix):
+                    if listpart.startswith("#" + prefix) and notbreaking:
                         if prefix in ["embedding", "embeddings", "embed", "embeds","textualinversion", "ti"]:
-                            currentfolder = embedpath
+                            currenthashtag = '#embed'
                         elif prefix in ["model", "models", "checkpoint", "checkpoints"]:
-                            currentfolder = modelpath
+                            currenthashtag = '#model'
                         elif prefix in ["vae", "vaes"]:
-                            currentfolder = vaepath
+                            currenthashtag = '#vae'
                         elif prefix in ["lora", "loras"]:
-                            currentfolder = lorapath
+                            currenthashtag ='#lora'
                         elif prefix in ["hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",]:
-                            currentfolder = hynetpath
+                            currenthashtag = '#hynet'
                         elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
-                            currentfolder = addnetlorapath
+                            currenthashtag = '#addnetlora'
                         elif prefix in ["controlnet", "cnet"]:
-                            currentfolder = cnetpath
+                            currenthashtag = '#cnet'
+                        elif prefix in ["extension", "extensions", "ext"]:
+                            currenthashtag = '#ext'
                         elif prefix in ["aestheticembedding", "aestheticembed"]:
-                            currentfolder = aestheticembedpath
+                            currenthashtag = '#aestheticembed'
+                        elif prefix in ["upscaler", "upscale"]:
+                            currenthashtag = '#upscaler'
+                        try:
+                            currentfolder = eval(currenthashtag[1:] + 'path')
+                        except:
+                            print(f"Cannot use hashtag: {e}")
+                            continue
+                        
                         os.makedirs(currentfolder, exist_ok=True)
                 
         else:
@@ -1425,14 +1476,15 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     print('[0m')
     currentcondition = 'Done!'
     printdebug(f"this should be the output:\n" + str(downloadedfiles))
+    progress(1.00, desc='')
     if gradiostate == True:
         return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]  #@note dataframe
     else:
         return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
 
 wildcardcommand = [
-    "#debugeverymethod", "#debugresetdownloads",
-    "#extract"
+    "@debugeverymethod", "@debugresetdownloads",
+    "@extract"
 ]
 
 def extract_links(string):
@@ -1448,10 +1500,12 @@ def extract_links(string):
             links.append(line.strip())
         elif line.startswith("@new"):
             links.append(line.strip())
-        else:
-            for prefix in typechecker:
-                if line.startswith("#" + prefix):
-                    links.append(line)
+        elif line.startswith("#"):
+            links.append(line.strip())
+        # else:
+        #     for prefix in typechecker:
+        #         if line.startswith("#" + prefix):
+        #             links.append(line)
 
     #print(f"links: {links}")
     return links
@@ -1477,10 +1531,12 @@ def uploaded(textpath):
                     links.append(line.strip())
                 elif line.startswith(tuple(wildcardcommand)):
                     links.append(line.strip())
-                else:
-                    for prefix in typechecker:
-                        if line.startswith("#" + prefix):
-                            links.append(line.strip())
+                elif line.startswith("#"):
+                    links.append(line.strip())
+                # else:
+                #     for prefix in typechecker:
+                #         if line.startswith("#" + prefix):
+                #             links.append(line.strip())
 
         text = list_to_text(links)
         return text    
@@ -1554,7 +1610,7 @@ def hidehelp(hide):
     else:
         return [gr.Markdown.update(value=introductiontext), gr.Markdown.update(visible=True)]
 
-countofdefaulthashtags = len(typemain)
+# countofdefaulthashtags = len(typemain)
 def buildarrayofhashtags(rightorbottom):
     printdebug(f"buildarray {rightorbottom} initiated!")
     defaultpathtime = True
@@ -1596,6 +1652,14 @@ knowmoretext = f"""
 <a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a><br/>
 <a href="https://github.com/etherealxx/batchlinks-webui/issues">Report Bug</a></p>
 """
+testboxplaceholder = f"""#model
+<your model link here>
+#vae
+<your vae link here>
+#lora
+<your lora link here>
+##this is a comment, and these text is just an example
+"""
 
 def on_ui_tabs():     
     with gr.Blocks() as batchlinks:
@@ -1608,7 +1672,7 @@ def on_ui_tabs():
                 helphider = gr.Checkbox(value=False, label="Hide Help", interactive=True)
             knowmore = gr.Markdown(knowmoretext)
         with gr.Group():
-          command = gr.Textbox(label="Links", placeholder="type here", lines=5)
+          command = gr.Textbox(label="Links", placeholder=testboxplaceholder, lines=5)
           if gradiostate == True:
             logbox = gr.Textbox(label="Log", interactive=False)
           else:

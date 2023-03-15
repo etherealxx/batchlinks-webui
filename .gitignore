@@ -4,6 +4,7 @@ imageratio.*
 *.lnk
 tempCodeRunnerFile.python
 .DS_Store
+gradiovenv/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
