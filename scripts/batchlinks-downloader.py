@@ -1755,10 +1755,6 @@ def on_ui_tabs():
                     )
                 # sidetext = gr.Markdown(knowmoretext, visible=True)
             finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
-        # gr.Markdown(
-        # f"""
-        # <center><p style="font-size: 14px;">Current default save directory: {modelpath}</p></center>
-        # """)
         with gr.Accordion("List of Every Hashtags and its Path", open=False, visible=False) as bottomlist:
             bottomtable = gr.DataFrame(
                 buildarrayofhashtags('bottom'),
@@ -1766,6 +1762,10 @@ def on_ui_tabs():
                 datatype=["str", "str"],
                 interactive=False,
             )
+        gr.Markdown(
+        f"""
+        <center><p style="font-size: 12px; color: gray">Made with ❤️ by <a href="https://github.com/etherealxx">etherealxx</a></p></center>
+        """)
         helphider.change(hidehelp, helphider, outputs=[introduction, knowmore])
         uistretcher.change(stretchui, uistretcher, outputs=[boxtohide, rightlist, bottomlist])
         #batchlinks.load(debug, output=debug_txt, every=1)
