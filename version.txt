@@ -1,9 +1,35 @@
-v2.1.1
+v3.0.0
 (^current version^)
 
 Release notes:
 
-#### Release v2.1.1
+## v3.0.0
+- Added `@extract` syntax
+- Supports for custom hashtags with `@new` syntax
+- (Almost) Full Windows support
+- Auto-download config file if available when downloading from CivitAI (SD 2.0+)
+- Auto-renaming for downloading ckpt/safetensors and pruned model from CivitAI using direct link method
+- CivitAI direct link now use `curl` to get the filename, and use the chosen download method (from the four) to download. Huge download speed boost. `requests` is no longer needed.
+- Supports download from Anonfiles, Dropbox, Google Drive, Mediafire, Pixeldrain
+- Supports download from Github (raw and release files)
+- Supports for SDless mode (read more [here](https://github.com/etherealxx/batchlinks-webui#sdless-mode))
+- UI overhaul:
+  - Now there's a table that shows where does the hashtags points into
+  - Option to stretch the UI, if your monitor is small, or using colab on mobile
+  - Option to hide help text
+  - Option to choose preferred CivitAI models. This will works if you download the model via model page link (https://civitai.com/models/)
+  - Upload txt now use a little button instead of covering half of the screen
+
+Fixes:
+- CivitAI `model page link` no longer randomly download the first model on the json list.
+- Most of Windows bugs
+- Renaming problem when using CivitAI model page link method
+- Warning message when CivitAI download isn't possible (server down)
+
+## v2.1.2
+- CivitAI direct link now use curl to get the filename, and use the chosen download method to download. Requests is no longer needed.
+
+## v2.1.1
 - Partial Windows support is back
 
 Changes:
