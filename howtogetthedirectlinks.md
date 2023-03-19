@@ -11,9 +11,9 @@ choose the model you want, **right click** the arrow button beside the LFS logo,
 
 ## Civit AI
 
-There are two ways to download links from Civit. The model link method, and the direct link method. The model link method **will automatically** choose the directory of the saved model without even using hashtag, **except** if you want to put Lora into `#addnetlora` directory, you can use that hashtag. You still need to define the output directory when using the direct link method.
+There are two ways to download links from Civit. The model page link method, and the direct link method. The model page link method **will automatically** choose the directory of the saved model without even using hashtag, **except** if you want to put Lora into `#addnetlora` directory, you can use that hashtag. You still need to define the output directory when using the direct link method.
 
-### Model Link Method
+### Model Page Link Method
 
 Locate the desired model on the main page of Civitai, **right click** the model thumbnail, then click `copy link address`.<br/><br/>
 <img src="images/civitnew1.jpg" alt="cv" height="600" width="737"><br/><br/>

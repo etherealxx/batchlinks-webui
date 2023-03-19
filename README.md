@@ -8,7 +8,7 @@
 <h3 align="center">BatchLinks Downloader</h3>
 
 <p align="center">
-    Batch-downloading models in SD webui colab made simple.
+    Batch-downloading models and stuff in SD webui colab made simple.
     <br />
     <a href="https://github.com/etherealxx/batchlinks-downloader"><strong></strong></a>
     <br />
@@ -19,7 +19,8 @@
 
 </div>
 
-<details>
+<!-- this is the old one -->
+<!-- <details>
   <summary>Table of Contents</summary>
   <ol>
     <li><a href="#installation">Installation</a></li>
@@ -59,8 +60,87 @@
     <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgments">Acknowledgements</a></li>
   </ol>
-</details>
+</details> -->
 
+<!-- TOC -->
+<!-- - [Installation](#installation)
+- [About](#about)
+- [Example](#example)
+- [Syntax](#syntax)
+    - [Hashtag](#hashtag)
+    - [Links](#links)
+    - [Double Hashtag](#double-hashtag)
+    - [Others](#others)
+  - [Valid Hashtags](#valid-hashtags)
+  - [How to get the direct links (Important!)](#how-to-get-the-direct-links-important)
+  - [Huggingface's download method](#huggingfaces-download-method)
+- [Additional Syntax](#additional-syntax)
+  - [Rename Downloaded Files](#rename-downloaded-files)
+  - [Running Shell Commands](#running-shell-commands)
+  - [Extract Everyting (`@extract`)](#extract-everyting-extract)
+  - [Custom Hashtag Path (`@new`)](#custom-hashtag-path-new)
+- [Gradio Queue](#gradio-queue)
+  - [Logging](#logging)
+  - [Cancel](#cancel)
+  - [Progress Bar](#progress-bar)
+  - [Changes if `--gradio-queue` is off](#changes-if---gradio-queue-is-off)
+- [Other Features](#other-features)
+  - [Notification](#notification)
+  - [SDless mode](#sdless-mode)
+  - [Local Installation Support](#local-installation-support)
+  - [Debug Mode (Developer only)](#debug-mode-developer-only)
+- [Latest release: v3.0.0](#latest-release-v300)
+  - [Release v3.0.0](#release-v300)
+    - [Release v2.1.1](#release-v211)
+  - [Release v2.1.0](#release-v210)
+- [Roadmap](#roadmap)
+- [Known Bugs](#known-bugs)
+- [Contributing](#contributing)
+- [Contact](#contact)
+- [Acknowledgments](#acknowledgments) -->
+<!-- /TOC -->
+
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#example">Example</a></li>
+    <li><a href="#syntax">Syntax</a></li>
+        <ul><li><a href="#hashtag">Hashtag</a></li></ul>
+        <ul><li><a href="#links">Links</a></li></ul>
+        <ul><li><a href="#double-hashtag">Double Hashtag</a></li></ul>
+        <ul><li><a href="#others">Others</a></li></ul>
+      <ul><li><a href="#valid-hashtags">Valid Hashtags</a></li></ul>
+      <ul><li><a href="#how-to-get-the-direct-links-important">How to get the direct links (Important!)</a></li></ul>
+      <ul><li><a href="#huggingfaces-download-method">Huggingface's download method</a></li></ul>
+    <li><a href="#additional-syntax">Additional Syntax</a></li>
+      <ul><li><a href="#rename-downloaded-files">Rename Downloaded Files</a></li></ul>
+      <ul><li><a href="#running-shell-commands">Running Shell Commands</a></li></ul>
+      <ul><li><a href="#extract-everyting-extract">Extract Everyting (`@extract`)</a></li></ul>
+      <ul><li><a href="#custom-hashtag-path-new">Custom Hashtag Path (`@new`)</a></li></ul>
+    <li><a href="#gradio-queue">Gradio Queue</a></li>
+      <ul><li><a href="#logging">Logging</a></li></ul>
+      <ul><li><a href="#cancel">Cancel</a></li></ul>
+      <ul><li><a href="#progress-bar">Progress Bar</a></li></ul>
+      <ul><li><a href="#changes-if---gradio-queue-is-off">Changes if `--gradio-queue` is off</a></li></ul>
+    <li><a href="#other-features">Other Features</a></li>
+      <ul><li><a href="#notification">Notification</a></li></ul>
+      <ul><li><a href="#sdless-mode">SDless mode</a></li></ul>
+      <ul><li><a href="#local-installation-support">Local Installation Support</a></li></ul>
+      <ul><li><a href="#debug-mode-developer-only">Debug Mode (Developer only)</a></li></ul>
+    <li><a href="#latest-release-v300">Latest release: v3.0.0</a></li>
+      <ul><li><a href="#release-v300">Release v3.0.0</a></li></ul>
+        <ul><li><a href="#release-v211">Release v2.1.1</a></li></ul>
+      <ul><li><a href="#release-v210">Release v2.1.0</a></li></ul>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#known-bugs">Known Bugs</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+    </li>
+  </ol>
+</details>
 
 <!-- ABOUT THE PROJECT -->
 
@@ -89,7 +169,7 @@ Using `--gradio-queue` on the launch.py argument is highly recommended, as it en
 
 You can also run this extension in [SDless mode](https://github.com/etherealxx/batchlinks-webui#sdless-mode) btw.
 
-While it's not recommended to use this extension on your local installation, you can use this extension on Windows. [More here](https://github.com/etherealxx/batchlinks-webui#local-installation-support)
+While it's not recommended to use this extension on your local installation, you can use this extension on Windows. [More here.](https://github.com/etherealxx/batchlinks-webui#local-installation-support)
 
 ## About
 
@@ -128,29 +208,33 @@ When the download is complete, the downloaded file will be listed<br/>
 
 ## Syntax
 
-**Hashtag** - Hashtag means change current output directory to this directory. `#model` means every links below this hashtag, will be downloaded to _/content/stable-diffusion-webui/models/Stable-diffusion_, until it hits another hashtag, which will change the output directory again. See below for valid hashtags.
+#### Hashtag 
+- Hashtag means change current output directory to this directory. `#model` means every links below this hashtag, will be downloaded to _/content/stable-diffusion-webui/models/Stable-diffusion_, until it hits another hashtag, which will change the output directory again. See [below](https://github.com/etherealxx/batchlinks-webui#valid-hashtags) for valid hashtags.
 
-Note: If you use some colab that doesn't support native LoRA on webui (that means, using `sd-webui-additional-networks` extension in order to work), like [camenduru's v1.6](https://github.com/camenduru/stable-diffusion-webui-colab) colab, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
+  Note: If you use some colab that purposefully uses `sd-webui-additional-networks` extension to load Lora, use `#addnetlora` instead of `#lora`. It will download the lora to where it supposed to be.
 
-**Links** - Links are the main things you wants to be downloaded. Current supported links are from:
-- Huggingface (https://huggingface.co/)
-- MEGA (https://mega.nz/) {using `mega-cmd`}
-- CivitAI (https://civitai.com/)
-- Discord attachments (https://cdn.discordapp.com/attachments/)
-- catbox (https://files.catbox.moe)
-- Github (https://github.com or https://raw.githubusercontent.com)
-- Google Drive (https://drive.google.com) {using `gdown`}
-- Pixeldrain (https://pixeldrain.com/u/)
-- Mediafire (https://www.mediafire.com/file) {using `mediafire-dl`}
-- anonfiles (https://anonfiles.com)
+#### Links
+- Links are the main things you wants to be downloaded. Current supported links are from:
+  - Huggingface (https://huggingface.co/)
+  - MEGA (https://mega.nz/) {using `mega-cmd`}
+  - CivitAI (https://civitai.com/)
+  - Discord attachments (https://cdn.discordapp.com/attachments/)
+  - catbox (https://files.catbox.moe)
+  - Github (https://github.com or https://raw.githubusercontent.com)
+  - Google Drive (https://drive.google.com) {using `gdown`}
+  - Pixeldrain (https://pixeldrain.com/u/)
+  - Mediafire (https://www.mediafire.com/file) {using `mediafire-dl`}
+  - anonfiles (https://anonfiles.com)
 
-Every links other than that will be ignored. Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface, Civitai (model link method), Discord attachments, catbox, pixeldrain, and anonfiles, there will be four different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For Github, if, the link is a raw file, it will download the file. Else, it will use `git clone`, useful to clone extension repo into the webui extension folder.
+  Every links other than that will be ignored. Keep in mind the only supported links are direct download links (see [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md)). For Huggingface, Civitai (model page link method), Discord attachments, catbox, pixeldrain, and anonfiles, there will be four different method of downloading offered (see [below](https://github.com/etherealxx/batchlinks-webui#huggingfaces-download-method)). For MEGA, it will use `mega-cmd` to download. For Github, if, the link is a raw file, it will download the file. Else, it will use `git clone`, useful to clone extension repo into the webui extension folder.
 
-More about CivitAI download method [here](https://github.com/etherealxx/batchlinks-webui#civitais-download-method).
+  More about CivitAI download method [here](https://github.com/etherealxx/batchlinks-webui#civitais-download-method).
 
-**Double Hashtag** - Double hashtag means comment. You can put double hashtag in the same line of the link and it will be ignored (keep in mind to put the link first then the double hashtag)
+#### Double Hashtag
+- Double hashtag means comment. You can put double hashtag in the same line of the link and it will be ignored (keep in mind to put the link first then the double hashtag)
 
-**Others** - Other texts will be ignored.
+#### Others
+- Other texts will be ignored.
 
 ### Valid Hashtags
 
@@ -170,6 +254,8 @@ More about CivitAI download method [here](https://github.com/etherealxx/batchlin
 
 `#controlnet` or `#cnet` will put the downloaded file to _/content/stable-diffusion-webui/extensions/sd-webui-controlnet/models_
 
+`#upscale` or `#upscaler` will put the downloaded file to _/content/stable-diffusion-webui/models/ESRGAN_
+
 Github links (if it does not contain `/raw/` in it) doesn't need hashtag. It will always considered as webui extension, and the repository will be cloned to _/content/stable-diffusion-webui/extensions/(reponame)_
 
 ### How to get the direct links (Important!)
@@ -178,19 +264,19 @@ See [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtoge
 
 ### Huggingface's download method
 
-So there's four supported method: `gdown`, `wget`, `curl` and `aria2`. Use whatever, really. The difference between them are actually little. Myself love using `gdown` since the output is cleaner than the others. Some says `aria2` has the fastest download speed.
+So there's four supported method: `gdown`, `wget`, `curl` and `aria2`. Use whatever, really. The difference between them are actually little. Myself love using `gdown` since the output is cleaner than the others. `aria2` has the fastest download speed though.
 
-### Civitai's download method
+<!-- ### Civitai's download method
 
-There are two ways to download links from Civit. The `model link` method, and the `direct link` method.
+There are two ways to download links from Civit. The `model page link` method, and the `direct link` method.
 
-The `model link` method **will automatically** choose the directory of the saved model without even using hashtag. It will download the default model of a model page. The advantage of this method is you will also get the model preview images that can shows up on the latest version of [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui). This method will also uses the same download protocol as huggingface's (see above). <br/>The `model link` method's link starts with **https://civitai.com/models/**
+The `model page link` method **will automatically** choose the directory of the saved model without even using hashtag. It will download the default model of a model page. The advantage of this method is you will also get the model preview images that can shows up on the latest version of [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui). This method will also uses the same download protocol as huggingface's (see above). <br/>The `model page link` method's link starts with **https://civitai.com/models/**
 
 The `direct link` method is the old method, which needs hashtag for the downloaded model to be properly placed, and uses `request` module to download. The advantage of this method is you can choose what model variation you want to download by grabbing the right url. See [here](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md) for more.<br/>The `direct link` method's link starts with **https://civitai.com/api/download/models/**
 
 Here's the difference of syntax between two methods:
 
-Model link:
+Model page link:
 ```
 https://civitai.com/models/4823/deliberate
 ```
@@ -200,8 +286,9 @@ Direct link:
 https://civitai.com/api/download/models/5616
 ```
 
-Check [this page](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md) to learn more on how to get the links for each methods.
+Check [this page](https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md) to learn more on how to get the links for each methods. -->
 
+## Additional Syntax
 ### Rename Downloaded Files
 Using `>` symbol, you can rename files. Take this for example<br/>
 <img src="images/rename.jpg" alt="Log" width="407"><br/>
@@ -213,6 +300,24 @@ You can run shell commands by using `!` in front of the command you want, just l
 <img src="images/shell2.jpg" alt="Log" width="200"><br/>
 You can run many lines at once too!
 
+### Extract Everyting (`@extract`)
+You can use `@extract` to extract every `*.7z`, `*.rar`, and `*.zip` on current directory). 
+```
+#lora
+<example lora .zip link>
+@extract
+#embed
+```
+This will extract everything on Lora folder, since the code runs from top to bottom, and when the `@extract` executes, the current directory is still on Lora folder.
+
+### Custom Hashtag Path (`@new`)
+You can use `@new <hashtagname> <directory>` to make a new usable hashtag and assign a directory path to it.<br/>For example, you type this and press the `Download All!` button:
+```
+@new #private /content/stable-diffusion-webui/outputs
+#private
+<example model link>
+```
+This will make a new hashtag `#private`, make it points to _/content/stable-diffusion-webui/outputs_, set `#private` as current directory, then download whatever into it. You can check if the new hashtag is assigned successfully by looking at the hashtag table on the right/bottom of the screen.
 <!--
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -275,7 +380,7 @@ or here's the quicker version without venv:
 
 For Windows, run the sdless-windows.bat. Make sure you have `python3` and `gradio` package version 3.16.2 or above. It won't use venv.
 
-This one for MacOS. Tested on Mojave.
+This one for MacOS. Tested on Mojave. Create a shell script and give execute access to it.
 ```
 #!/usr/bin/env bash
 pip3 show virtualenv >/dev/null || pip3 install virtualenv
@@ -287,26 +392,49 @@ pip3 show gradio >/dev/null || pip3 install gradio==3.16.2
 source gradiovenv/bin/activate; \
 python3 $HOME/Downloads/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
 ```
+
 ### Local Installation Support
 
-This extension was tested to work on Windows 11 at one point, but haven't really ben updated yet since. My main focus is for colab use. Maybe also works on Debian-based linux (but you better inspect the source code first).
-On Windows, this extension will install [MEGAcmd](https://github.com/meganz/MEGAcmd) for MEGA file download.
-MacOS is not supported.
+This extension was tested to work on Windows 11. But ultimately, the number one priority for me is colab use, so there's might be bugs on Windows 11 one. Maybe also works on Debian-based linux (but you better inspect the source code first).
+On Windows, this extension will install [MEGAcmd](https://github.com/meganz/MEGAcmd) for MEGA file download, [wget-windows](https://github.com/webfolderio/wget-windows) for download using `wget`, [aria2-static-builds](https://github.com/q3aql/aria2-static-builds) for download using `aria2`, [7zr and 7z](https://www.7-zip.org) for extracting `aria2` installation, and for `@extract` command.
+MacOS is just partially supported.
 
-## Latest release: v2.2.0
+### Debug Mode (Developer only)
 
-### Release v2.2.0
-- Auto-download config file if available when downloading from CivitAI(SD 2.0+)
+By manually switching `globaldebug = False` to `True` on the source code, or using `--debug` argument when running the sdless mode, the Debug Mode will be activated. It shows every `print` calls i use to track variables. It will also tracks every files on the models (etc.) paths into a `snapshot.txt` file (if there isn't one).
+
+There are some batchlinks syntax features that only available on debug mode (putting it on the textbox and click `Download All!`):
+
+`@debugresetdownload` - This command will check every model (etc.) directory, and remove every file that isn't on `snapshot.txt`. Useful for me to removes file quickly when testing. **Be careful using this on your local installation.**
+
+`@debugresetdownload` - This command is (supposed to) download a single link with every method available (gdown, curl, wget, aria2), but now i rarely use this command, and haven't updated since. Might be buggy.
+
+## Latest release: v3.0.0
+
+### Release v3.0.0
+- Added `@extract` syntax
+- (Almost) Full Windows support
+- Auto-download config file if available when downloading from CivitAI (SD 2.0+)
 - Auto-renaming for downloading ckpt/safetensors and pruned model from CivitAI using direct link method
-- CivitAI direct link now use curl to get the filename, and use the chosen download method to download. Huge download speed boost. `requests` is no longer needed.
-- Supports download from anonfiles
-- Supports download from Google Drive
-- Supports download from Mediafire
-- Supports download from Pixeldrain
+- CivitAI direct link now use `curl` to get the filename, and use the chosen download method (from the four) to download. Huge download speed boost. `requests` is no longer needed.
+- Supports download from Anonfiles, Dropbox, Google Drive, Mediafire, Pixeldrain
+- Supports download from Github (raw and release files)
+- Supports for custom hashtags with `@new` syntax
 - Supports for SDless mode (read more [here](https://github.com/etherealxx/batchlinks-webui#sdless-mode))
+- UI overhaul:
+  - Now there's a table that shows where does the hashtags points into
+  - Option to stretch the UI, if your monitor is small, or using colab on mobile
+  - Option to hide help text
+  - Option to choose preferred CivitAI models. This will works if you download the model via model page link (https://civitai.com/models/)
+  - Upload txt now use a little button instead of covering half of the screen
 
 Fixes:
+- CivitAI `model page link` no longer randomly download the first model on the json list.
+- Most of Windows bugs
+- Renaming problem when using CivitAI model page link method
 - Warning message when CivitAI download isn't possible (server down)
+
+_
 
 #### Release v2.1.1
 - Partial Windows support is back
@@ -366,21 +494,24 @@ Changes:
 
 - [ ] Add checker for downloaded models (so that it won't download again after the model is downloaded)
 - [ ] Different UI for mobile
-- [ ] Download every sd-webui related file from a huggingface repo
-- [ ] Download every model from a civitai user page
 - [ ] Gradio progress bar
+- [ ] Integrating refresh button (`create_refresh_button`) to refresh models etc. all at once
 - [ ] Logo change
-- [ ] Moving most of the content of this Readme.md to Wiki instead
+- [ ] Moving most of the content of this `Readme.md` to Wiki instead
 - [ ] Other download sites (s-ul.eu, gitgud, bunkr.ru, icedrive)
-- [ ] Support customizable hashtag from the UI
 - [ ] Support download MEGA and Google Drive folder
-- [ ] UI overhaul
+- [ ] Using `yield` instead of gradio's `every`
+- [ ] Youtube video (Tutorial)
+- [ ] (Crawler) Download every sd-webui related file from a huggingface repo
+- [ ] (Crawler) Download every model from a civitai user page
 - [ ] (Windows) wget & aria2 support
 <br/>_
 - [x] aria2 for huggingface download method
 - [x] Cleaning the code from unnecesarry comments
 - [x] Completed download will use the webui's notification.mp3
+- [x] Support customizable hashtag from the UI
 - [x] Supports Windows local installation
+- [x] UI overhaul
 - [x] Using threading/subprocess instead of os.system to download files
 
 ## Known Bugs
@@ -425,4 +556,7 @@ My Youtube - [MJ Devlog](https://www.youtube.com/@mjdevlog)
 - [Mega-to-Google-Drive](https://github.com/menukaonline/Mega-to-Google-Drive) - MEGA download script
 - [MEGAcmd](https://github.com/meganz/MEGAcmd)
 - [mediafire-dl](https://github.com/Juvenal-Yescas/mediafire-dl)
-- [Pixeldrain downloader](https://github.com/FayasNoushad/Pixeldrain)
+- [Pixeldrain downloader](https://github.com/FayasNoushad/Pixeldrain) - Inspiration for Pixeldrain download method
+- [wget-windows](https://github.com/webfolderio/wget-windows)
+- [aria2-static-builds](https://github.com/q3aql/aria2-static-builds)
+- [7zr, 7z](https://www.7-zip.org)

@@ -589,7 +589,10 @@ def civitdown2_get_save_directory(model_type, default_folder):
   elif model_type == "VAE":
     return vaepath
   elif model_type == "LORA":
-    return lorapath
+    if default_folder == addnetlorapath:
+        return addnetlorapath
+    else:
+        return lorapath
   else:
     return default_folder
 
@@ -600,7 +603,7 @@ def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
   img_resized.save(imagepng_save_path)
   os.remove(imagejpg_save_path)
 
-def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, isprunedmodel, isdownvae): #@note civitdown2
+def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefaulttype, isprunedmodel, isdownvae): #@note civitdown2
   def civitlinkandnamer(model):
     linkandname = dict()
     for i, link in enumerate(model['modelVersions'][0]['files']):
@@ -640,6 +643,10 @@ def civitdown2(url, folder, downloader, isdebugevery, modeldefaulttype, ispruned
   else:
     data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
     data_filename = model['modelVersions'][0]['files'][0]['name']
+    image_filename = data_filename
+
+  if renamedfilename:
+    data_filename = renamedfilename
     image_filename = data_filename
 
   image_url = model['modelVersions'][0]['images'][0]['url']
@@ -1340,7 +1347,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 currentcondition = f'Downloading {currentlink}...'
                 progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
                 if everymethod == False:
-                    civitdown2(currentlink, currentfolder, choosedowner, False, civitdefault, civitpruned, civitvae)
+                    civitdown2(currentlink, currentfolder, choosedowner, currenttorename, False, civitdefault, civitpruned, civitvae)
                 # else:
                 #     for xmethod in downmethod:
                 #         if prockilled == False:
