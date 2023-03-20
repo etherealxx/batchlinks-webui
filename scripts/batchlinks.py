@@ -1,7 +1,6 @@
 #github.com/etherealxx
 import os
 import time
-import gradio as gr
 import urllib.request, subprocess, contextlib #these handle mega.nz
 import http.client
 import requests #this handle civit
@@ -16,6 +15,21 @@ import signal
 import sys
 sdless = False
 importable = False
+nogradio = False
+try:
+    import gradio as gr
+except ModuleNotFoundError:
+    importable = True
+    nogradio = True
+    class gr:
+        def Progress():
+            pass
+        class Dataframe():
+            def update(value=''):
+                pass
+    def progress(a, desc=''):
+        pass
+
 try:
     from modules import script_callbacks #,scripts
     from modules.paths import models_path, script_path #, data_path
@@ -1099,6 +1113,9 @@ def extractcurdir(currentdir): #@note extractcurdir
 
 #@stopwatch #the decorator mess with the progress bar
 def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.Progress()): #@note run
+    if nogradio:
+        def progress(a, desc=''):
+            pass
     progress(0.01, desc='')
     global prockilled
     prockilled = False
