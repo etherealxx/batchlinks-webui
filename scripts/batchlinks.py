@@ -15,11 +15,13 @@ import shlex
 import signal
 import sys
 sdless = False
+importable = False
 try:
     from modules import script_callbacks #,scripts
-    from modules.paths import script_path
+    from modules.paths import models_path, script_path #, data_path
     from modules.shared import cmd_opts #check for gradio queue
 except ImportError: #sdless
+    importable = True
     if platform.system() == "Windows":
         userprofile = os.environ['USERPROFILE']
         downloadpath = os.path.join(userprofile, "Downloads")
@@ -30,11 +32,14 @@ except ImportError: #sdless
         script_path = os.path.join(downloadpath, "stable-diffusion-webui")
     else:
         script_path = '/content/stable-diffusion-webui'
+    models_path = os.path.join(script_path, 'models')
     gradio_queue = True
+    ckpt_dir = None
     import sys
     import types
     module = types.ModuleType('cmd_opts')
     module.gradio_queue = gradio_queue
+    module.ckpt_dir = ckpt_dir
     sys.modules['cmd_opts'] = module
     import cmd_opts
     sdless = True
@@ -113,16 +118,19 @@ supportedlinks = [
     "https://www.dropbox.com/s"
 ]
 
-modelpath = os.path.join(script_path, "models/Stable-diffusion")
+if cmd_opts.ckpt_dir:
+    modelpath = cmd_opts.ckpt_dir
+else:
+    modelpath = os.path.join(models_path, "Stable-diffusion")
 embedpath = os.path.join(script_path, "embeddings")
-vaepath = os.path.join(script_path, "models/VAE")
-lorapath = os.path.join(script_path, "models/Lora")
+vaepath = os.path.join(models_path, "VAE")
+lorapath = os.path.join(models_path, "Lora")
 addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
-hynetpath = os.path.join(script_path, "models/hypernetworks")
+hynetpath = os.path.join(models_path, "hypernetworks")
 aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webui-aesthetic-gradients/aesthetic_embeddings")
 cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
 extpath = os.path.join(script_path, "extensions") #obsolete
-upscalerpath = os.path.join(script_path, "models/ESRGAN")
+upscalerpath = os.path.join(models_path, "ESRGAN")
 
 if platform.system() == "Windows":
     for x in typemain: 
@@ -150,7 +158,7 @@ mediafireinstalled = False
 
 globaldebug = False #set this to true to activate every debug features
 if len(sys.argv) > 1:
-    if sys.argv[1] == '--debug':
+    if '--debug' in sys.argv:
         globaldebug = True
 
 
@@ -254,8 +262,9 @@ def global_rewind():
     return removedall
 
 # Take a snapshot of the directories
-if globaldebug == True:
-    take_snapshot()
+if __name__ == "__main__":
+    if globaldebug == True:
+        take_snapshot()
 # }
 
 def printdebug(toprint):
@@ -1869,7 +1878,11 @@ def on_ui_tabs():
             batchlinks.queue(64).launch(share=True)
     else:
         return (batchlinks, "Batchlinks Downloader", "batchlinks"),
-if not sdless:
+
+if not importable:
     script_callbacks.on_ui_tabs(on_ui_tabs)
 else:
-    on_ui_tabs()
+    if __name__ == "__main__":
+        on_ui_tabs()
+    else:
+        pass
