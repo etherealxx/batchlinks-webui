@@ -366,7 +366,8 @@ from IPython.display import clear_output
 ![ -d gradiovenv ] || virtualenv gradiovenv
 !git clone https://github.com/etherealxx/batchlinks-webui \
 /content/stable-diffusion-webui/extensions/batchlinks-webui
-pip3 show gradio >/dev/null || pip install -q gradio==3.16.2
+pip3 show gradio >/dev/null || pip install -q gradio==3.16.2; \
+pip3 show tqdm >/dev/null || pip3 install -q tqdm
 clear_output(wait=True)
 !source gradiovenv/bin/activate; \
 python /content/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
@@ -388,7 +389,8 @@ pip3 show virtualenv >/dev/null || pip3 install virtualenv
 git clone -b sdless https://github.com/etherealxx/batchlinks-webui \
 $HOME/Downloads/stable-diffusion-webui/extensions/batchlinks-webui
 source gradiovenv/bin/activate; \
-pip3 show gradio >/dev/null || pip3 install gradio==3.16.2
+pip3 show gradio >/dev/null || pip3 install gradio==3.16.2; \
+pip3 show tqdm >/dev/null || pip3 install -q tqdm
 source gradiovenv/bin/activate; \
 python3 $HOME/Downloads/stable-diffusion-webui/extensions/batchlinks-webui/scripts/batchlinks-downloader.py
 ```
@@ -409,7 +411,10 @@ There are some batchlinks syntax features that only available on debug mode (put
 
 `@debugresetdownload` - This command is (supposed to) download a single link with every method available (gdown, curl, wget, aria2), but now i rarely use this command, and haven't updated since. Might be buggy.
 
-## Latest release: v3.0.0
+## Latest release: v3.0.1
+
+#### Release v3.0.1
+- Hotfix: using `urllib.request` instead of `curl -sI` to get the model name on CivitAI direct link method, since it's more reliable (and the curl method always fails somehow). The `requests` method is returned as a fallback.
 
 ### Release v3.0.0
 - Added `@extract` syntax

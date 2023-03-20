@@ -1,7 +1,10 @@
-v3.0.0
+v3.0.1
 (^current version^)
 
 Release notes:
+
+## v3.0.1
+- Hotfix: using `urllib.request` instead of `curl -sI` to get the model name on CivitAI direct link method, since it's more reliable (and the curl method always fails somehow). The `requests` method is returned as a fallback.
 
 ## v3.0.0
 - Added `@extract` syntax
