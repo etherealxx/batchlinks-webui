@@ -701,7 +701,8 @@ def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefa
     print('[0m')
     return
   
-  save_directory = civitdown2_get_save_directory(model['type'], folder)
+  save_directory = folder # civitdown2_get_save_directory(model['type'], folder)
+
   try:
     parameter = url.split("?")[-1] + "?"
   except:
