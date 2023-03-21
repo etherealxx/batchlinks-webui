@@ -129,7 +129,9 @@
       <ul><li><a href="#sdless-mode">SDless mode</a></li></ul>
       <ul><li><a href="#local-installation-support">Local Installation Support</a></li></ul>
       <ul><li><a href="#debug-mode-developer-only">Debug Mode (Developer only)</a></li></ul>
-    <li><a href="#latest-release-v300">Latest release: v3.0.0</a></li>
+    <li><a href="#latest-release-v302">Latest release: v3.0.2</a></li>
+      <ul><li><a href="#release-v302">Release v3.0.2</a></li></ul>
+      <ul><li><a href="#release-v301">Release v3.0.1</a></li></ul>
       <ul><li><a href="#release-v300">Release v3.0.0</a></li></ul>
         <ul><li><a href="#release-v211">Release v2.1.1</a></li></ul>
       <ul><li><a href="#release-v210">Release v2.1.0</a></li></ul>
@@ -411,7 +413,10 @@ There are some batchlinks syntax features that only available on debug mode (put
 
 `@debugresetdownload` - This command is (supposed to) download a single link with every method available (gdown, curl, wget, aria2), but now i rarely use this command, and haven't updated since. Might be buggy.
 
-## Latest release: v3.0.1
+## Latest release: v3.0.2
+
+#### Release v3.0.2
+- Hotfix: removed a comment that messed up the non queue mode. Now the extension works again without `--gradio-queue`.
 
 #### Release v3.0.1
 - Hotfix: using `urllib.request` instead of `curl -sI` to get the model name on CivitAI direct link method, since it's more reliable (and the curl method always fails somehow). The `requests` method is returned as a fallback.

@@ -1088,8 +1088,8 @@ def extractcurdir(currentdir): #@note extractcurdir
             else:
                 runwithsubprocess(f"7z x {shlex.quote(szfile)} -p- -o{shlex.quote(currentdir)} -y -sdel -bb0", currentdir, False, '7z')
 
-#@stopwatch #the decorator mess with the progress bar
-def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.Progress()): #@note run
+#@stopwatch #the decorator mess with the progress bar #@note run
+def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.Progress()):
     progress(0.01, desc='')
     global prockilled
     prockilled = False
