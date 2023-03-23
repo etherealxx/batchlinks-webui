@@ -19,49 +19,6 @@
 
 </div>
 
-<!-- this is the old one -->
-<!-- <details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li><a href="#installation">Installation</a></li>
-    <li><a href="#about">About</a></li>
-    <li><a href="#example">Example</a></li>
-    <li>
-      <a href="#syntax">Syntax</a>
-      <ul>
-        <li><a href="#valid-hashtags">Valid Hastags</a></li>
-        <li><a href="https://github.com/etherealxx/batchlinks-downloader/blob/main/howtogetthedirectlinks.md">How to get the direct links (Important!)</a></li>
-        <li><a href="#huggingfaces-download-method">Huggingface's download method</a></li>
-        <li><a href="#civitais-download-method">CivitAI's download method</a></li>
-        <li><a href="#rename-downloaded-files">Rename-Downloaded-Files</a></li>
-        <li><a href="#running-shell-command">Running-Shell-Commands</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#gradio-queue">Gradio Queue</a>
-      <ul>
-        <li><a href="#logging">Logging</a></li>
-        <li><a href="#cancel">Cancel</a></li>
-        <li><a href="#progress-bar">Progress Bar</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#other-features">Other Features</a>
-      <ul>
-        <li><a href="#notification">Notification</a></li>
-        <li><a href="#local-installation-support">Local Installation Support</a></li>
-        <li><a href="#sdless-mode">SDless Mode</a></li>
-        <li><a href="#latest-release-v220">Latest Release: v2.2.0</a></li>
-      </ul>
-    </li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#known-bugs">Known Bugs</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgements</a></li>
-  </ol>
-</details> -->
-
 <!-- TOC -->
 <!-- - [Installation](#installation)
 - [About](#about)
@@ -143,8 +100,6 @@
     </li>
   </ol>
 </details>
-
-<!-- ABOUT THE PROJECT -->
 
 ## Installation
 
@@ -258,7 +213,13 @@ When the download is complete, the downloaded file will be listed<br/>
 
 `#upscale` or `#upscaler` will put the downloaded file to _/content/stable-diffusion-webui/models/ESRGAN_
 
-Github links (if it does not contain `/raw/` in it) doesn't need hashtag. It will always considered as webui extension, and the repository will be cloned to _/content/stable-diffusion-webui/extensions/(reponame)_
+`#lycoris`, `#locon`, or `#loha` will put the downloaded file to _/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora/lycoris_
+
+`#altmodel` or `#altmodels` will put the downloaded file to the path you choose when using `--ckptdir` argument on `launch.py` line. If you didn't use that argument, this hashtag will points to the same directory as `#model`
+
+_Lycoris/Locon/Loha_ will works just fine if you use `#addnetlora` instead, as long as you have both [addnet extension](https://github.com/kohya-ss/sd-webui-additional-networks) and [locon extension](https://github.com/KohakuBlueleaf/a1111-sd-webui-locon) installed. It's unclear if it's can be loaded by native auto1111 lora. (Tell me if you know more about this.)
+
+Github links (if it does not contain `/raw/` or `/release/download/` in it) doesn't need hashtag. It will always considered as webui extension, and the repository will be cloned to _/content/stable-diffusion-webui/extensions/(reponame)_
 
 ### How to get the direct links (Important!)
 
@@ -320,11 +281,6 @@ You can use `@new <hashtagname> <directory>` to make a new usable hashtag and as
 <example model link>
 ```
 This will make a new hashtag `#private`, make it points to _/content/stable-diffusion-webui/outputs_, set `#private` as current directory, then download whatever into it. You can check if the new hashtag is assigned successfully by looking at the hashtag table on the right/bottom of the screen.
-<!--
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
--->
 
 ## Gradio Queue
 
@@ -388,7 +344,7 @@ This one for MacOS. Tested on Mojave. Create a shell script and give execute acc
 #!/usr/bin/env bash
 pip3 show virtualenv >/dev/null || pip3 install virtualenv
 [ -d gradiovenv ] || virtualenv gradiovenv
-git clone -b sdless https://github.com/etherealxx/batchlinks-webui \
+git clone https://github.com/etherealxx/batchlinks-webui \
 $HOME/Downloads/stable-diffusion-webui/extensions/batchlinks-webui
 source gradiovenv/bin/activate; \
 pip3 show gradio >/dev/null || pip3 install gradio==3.16.2; \
@@ -403,6 +359,9 @@ This extension was tested to work on Windows 11. But ultimately, the number one 
 On Windows, this extension will install [MEGAcmd](https://github.com/meganz/MEGAcmd) for MEGA file download, [wget-windows](https://github.com/webfolderio/wget-windows) for download using `wget`, [aria2-static-builds](https://github.com/q3aql/aria2-static-builds) for download using `aria2`, [7zr and 7z](https://www.7-zip.org) for extracting `aria2` installation, and for `@extract` command.
 MacOS is just partially supported.
 
+Also remember, in order for this extension to work properly, you need make sure that you tick that `add Python 3.10 to PATH` checkbox when you installed Python (Which is already recommended when installing stable-diffusion-webui)<br/>
+<img src="images/python.png" alt="python" width="400"><br/>
+
 ### Debug Mode (Developer only)
 
 By manually switching `globaldebug = False` to `True` on the source code, or using `--debug` argument when running the sdless mode, the Debug Mode will be activated. It shows every `print` calls i use to track variables. It will also tracks every files on the models (etc.) paths into a `snapshot.txt` file (if there isn't one).
@@ -413,7 +372,19 @@ There are some batchlinks syntax features that only available on debug mode (put
 
 `@debugresetdownload` - This command is (supposed to) download a single link with every method available (gdown, curl, wget, aria2), but now i rarely use this command, and haven't updated since. Might be buggy.
 
-## Latest release: v3.0.2
+## Latest release: v3.1.0
+
+### Release v3.1.0
+- New hashtag: `#altmodel`, when you use `--ckptdir` argument on `launch.py` line, this hashtag will points to that directory. Otherwise, it'll point to the same directory as `#model`
+- New hashtag: `#lycoris`, change current save directory to _/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora/lycoris_<br/>(Side note: _Lycoris/Locon/Loha_ will works just fine if you use `#addnetlora` instead, as long as you have both [addnet extension](https://github.com/kohya-ss/sd-webui-additional-networks) and [locon extension](https://github.com/KohakuBlueleaf/a1111-sd-webui-locon) installed)
+- New hashtag: `#upscaler`, change current save directory to _/content/stable-diffusion-webui/models/ESRGAN_ (This was added few commits ago, but i forgot to write it on the release notes)
+
+Fixes:
+- Fixed bug when installing wget/aria2 on Windows
+- Fixed sdless scripts so that it also installs `tqdm`
+- Fixed bug where custom paths doesn't put CivitAi download (Model Path method) when custom hashtag is used
+- Ongoing downloads will correctly stops when Cancel button is pressed on Windows
+- CivitAi (Model Path method) now will not download training dataset by accident
 
 #### Release v3.0.2
 - Hotfix: removed a comment that messed up the non queue mode. Now the extension works again without `--gradio-queue`.
@@ -444,58 +415,60 @@ Fixes:
 - Renaming problem when using CivitAI model page link method
 - Warning message when CivitAI download isn't possible (server down)
 
-_
-
-#### Release v2.1.1
-- Partial Windows support is back
-
-Changes:
-- wget disabled on windows currently, until it fixed
-
-Fixes:
-- gdown & curl bug fixed
-- utf-8 as default encoding for queue checker (fix bug in Windows)
-
-### Release v2.1.0
-Features:
-- Supports renaming downloaded file with `>` (for example: `https://files.catbox.moe/uarze8.safetensors > neurosama.safetensors`)
-- Supports extension usage without `--gradio-queue` (ported from [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix))
-- Supports running shell command from the UI with `!` (for example: type `!pip freeze`, then hit the `Download all!` button and see the colab console)
-- Progress bar for `--gradio-queue`
-
-Changes:
-- `aria2` as *the only* download method when using without `--gradio-queue`
-- Download session will be cut every 80 seconds on when using without `--gradio-queue` (just like [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix))
-- _Debug stopwatch (decorator)_ won't run automatically when `globaldebug = True`, must be uncommented manually (it disrupt the progress bar)
-- Dropped support for webui based on Gradio 3.9 (update your installation, or use [onedotsix](https://github.com/etherealxx/batchlinks-webui/tree/onedotsix) instead)
-- UI tweak (Smaller font size)
-
+### Older Release
 <details>
-  <summary>Older Release</summary>
+  <summary>👈v2.0.0 - v2.1.1</summary>
   <ol>
+    <h3>Release v2.1.1</h3>
+    Partial Windows support is back
+    Changes:
+    <ul>
+      <li><code>wget</code> disabled on windows currently, until it fixed
+    </ul>
+    Fixes:
+    <ul>
+      <li><code>gdown</code> & <code>curl</code> bug fixed
+      <li><code>utf-8</code> as default encoding for queue checker (fix bug in Windows)
+    </ul>
+    <h3>Release v2.1.0</h3>
+    Features:
+    <ul>
+      <li>Supports renaming downloaded file with <code>></code> (for example: <code>https://files.catbox.moe/uarze8.safetensors > neurosama.safetensors</code>)
+      <li>Supports extension usage without <code>--gradio-queue</code> (ported from <a href="https://github.com/etherealxx/batchlinks-webui/tree/onedotsix">onedotsix</a>)
+      <li>Supports running shell command from the UI with <code>!</code> (for example: type <code>!pip freeze</code>, then hit the <code>Download all!</code> button and see the colab console)
+      <li>Progress bar for <code>--gradio-queue</code>
+    </ul>
+    Changes:
+    <ul>
+      <li><code>aria2</code> as <em>the only</em> download method when using without <code>--gradio-queue</code>
+      <li>Download session will be cut every 80 seconds on when using without <code>--gradio-queue</code> (just like <a href="https://github.com/etherealxx/batchlinks-webui/tree/onedotsix">onedotsix</a>)
+      <li><em>Debug stopwatch (decorator)</em> won't run automatically when <code>globaldebug = True</code>, must be uncommented manually (it disrupt the progress bar)
+      <li>Dropped support for webui based on Gradio 3.9 (update your installation, or use <a href="https://github.com/etherealxx/batchlinks-webui/tree/onedotsix">onedotsix</a> instead)
+      <li>UI tweak (Smaller font size)
+    </ul>
     <h3>Release v2.0.0</h3>
     Features:
     <ul>
-      <li>`aria2` as download method.</li>
-      <li>Cancel button for cancelling download process (`--gradio-queue` required)
+      <li><code>aria2</code> as download method.
+      <li>Cancel button for cancelling download process (<code>--gradio-queue</code> required)
       <li>Detection if a CivitAI links no longer exist
-      <li>New hashtags: `#textualinversion`, `#ti`, `#aestheticembedding`, `#aestheticembed`, `#controlnet`, and `#cnet`
+      <li>New hashtags: <code>#textualinversion</code>, <code>#ti</code>, <code>#aestheticembedding</code>, <code>#aestheticembed</code>, <code>#controlnet</code>, and <code>#cnet</code>
       <li>Toggle logging on/off
-      <li>`shlex.quote` to properly quote links (Thanks **[@rti7743](https://github.com/rti7743)**!)
+      <li><code>shlex.quote</code> to properly quote links (Thanks <strong><a href="https://github.com/rti7743">@rti7743</a></strong>!)
       <li>Supports cloning webui extensions
       <li>Supports download from catbox.moe
-      <li>Supports download from CivitAI model links (Thanks **[@rti7743](https://github.com/rti7743)**!)
+      <li>Supports download from CivitAI model links (Thanks <strong><a href="https://github.com/rti7743">@rti7743</a></strong>!)
       <li>Supports download from Github (repository and raw files)
       <li>Supports for aesthetic gradients, controlnet model, and extensions path.
       <li>UI font scaled down
-      <li>Uses `subprocess.Popen` instead of `os.system`
+      <li>Uses <code>subprocess.Popen</code> instead of <code>os.system</code>
       <br/>_
-      <li>_Debug snapshot_<br/>
-      When `globaldebug = True`, the moment this extension launch, it saves the current state of the webui on various location (into `snapshot.txt`), and when you type `#debugresetdownloads` on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
-      <li>_Debug every download method_<br/>
-      When `globaldebug = True` and you type `#debugevery method` on the textbox, every link that has 4 different method of download (Huggingface etc.) will be downloaded with every method, regardless of the radio button choice. The result is 4 file being downloaded.
-      <li>_Debug stopwatch_<br/>
-      When `globaldebug = True`, it will give an output for how long a single download session lasts
+      <li><em>Debug snapshot</em><br/>
+      When <code>globaldebug = True</code>, the moment this extension launch, it saves the current state of the webui on various location (into <code>snapshot.txt</code>), and when you type <code>#debugresetdownloads</code> on the textbox, it will compare the current state and the last saved state, and removes every new file/folder. This will be useful for debugging and testing.
+      <li><em>Debug every download method</em><br/>
+      When <code>globaldebug = True</code> and you type <code>#debugevery method</code> on the textbox, every link that has 4 different method of download (Huggingface etc.) will be downloaded with every method, regardless of the radio button choice. The result is 4 file being downloaded.
+      <li><em>Debug stopwatch</em><br/>
+      When <code>globaldebug = True</code>, it will give an output for how long a single download session lasts
     </ul>
   </ol>
 </details>
@@ -514,7 +487,6 @@ Changes:
 - [ ] Youtube video (Tutorial)
 - [ ] (Crawler) Download every sd-webui related file from a huggingface repo
 - [ ] (Crawler) Download every model from a civitai user page
-- [ ] (Windows) wget & aria2 support
 <br/>_
 - [x] aria2 for huggingface download method
 - [x] Cleaning the code from unnecesarry comments
@@ -523,19 +495,30 @@ Changes:
 - [x] Supports Windows local installation
 - [x] UI overhaul
 - [x] Using threading/subprocess instead of os.system to download files
+- [x] (Windows) wget & aria2 support
 
 ## Known Bugs
 
 - Progress bar (the yellow bar) doesn't progress as expected
-- Sometimes colab cannot be shut down with a single click on the stop button. Hitting the button several times will raise a KeyboardInterrupt and forcely stopping the cell.
 - Sometimes notification sound doesn't play when downloading same file twice in a row
 - Sometimes notification sound shows up when starting download, instead of when the download process is completed.
 - There's still a chance that the UI of non `--gradio-queue` session and/or onedotsix freezes after a download session
 - Windows: The delay between file is downloaded and the output shows is pretty long, and even sometimes the notification comes at the wrong time.
-<br/>_
-- ~~Links that has bracket in it needs to be 'escaped' (For example, `Baka-DiffusionV1(Fp16).safetensors` must be typed `Baka-DiffusionV1\(Fp16\).safetensors`)~~ Fixed in [v2.0.0](dbb2adb3d07e41654244076b8ef4e851c3bb1f0c)
-- ~~The delay between file is downloaded and the output shows is really long (1min+) on [camenduru's v1.6 colab](https://github.com/camenduru/stable-diffusion-webui-colab) (Gradio related?)~~ Seems like fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
-- ~~File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.~~ Fixed in [v1.1.0](fe6feafc07fbbe3efd2883b33855f8d66b5f89ea)
+<br/>
+
+### Known Fixed Bugs
+
+<details>
+  <summary>👈Fixed Bugs</summary>
+  <ol>
+    <ul>
+      <li><s>Links that has bracket in it needs to be 'escaped' (For example, <code>Baka-DiffusionV1(Fp16).safetensors</code> must be typed <code>Baka-DiffusionV1\(Fp16\).safetensors</code>)</s><br/>☝️Fixed in <a href="dbb2adb3d07e41654244076b8ef4e851c3bb1f0c">v2.0.0</a>
+      <li><s>The delay between file is downloaded and the output shows is really long (1min+) on <a href="https://github.com/camenduru/stable-diffusion-webui-colab">camenduru's v1.6 colab</a> (Gradio related?)</s><br/>☝️Seems like fixed in <a href="fe6feafc07fbbe3efd2883b33855f8d66b5f89ea">v1.1.0</a>
+      <li><s>File downloaded from MEGA will not listed on the output, as it use different download method. There is some delay between the transfare() function complete until it writes the file. I don't know how long the delay is.</s><br/>☝️Fixed in <a href="fe6feafc07fbbe3efd2883b33855f8d66b5f89ea">v1.1.0</a>
+      <li><s>Sometimes colab cannot be shut down with a single click on the stop button. Hitting the button several times will raise a KeyboardInterrupt and forcely stopping the cell.</s><br/>☝️Seems like fixed somewhere on <a href="0acffad539179b9f6cf4b76581818b62c93a8551">v3.0.0</a> and after
+    </ul>
+  </ol>
+</details>
 
 ## Contributing
 
@@ -562,7 +545,7 @@ My Youtube - [MJ Devlog](https://www.youtube.com/@mjdevlog)
 ## Acknowledgments
 
 - [Camenduru's Webui Huggingface](https://github.com/camenduru/stable-diffusion-webui-huggingface) - I use his extension as my base (my gradio skill sucks T.T)
-- [SD Civitai Browser](https://github.com/Vetchems/sd-civitai-browser) - Civit download script (Obsolete)
+- [SD Civitai Browser](https://github.com/Vetchems/sd-civitai-browser) - Civit download script
 - [Mega-to-Google-Drive](https://github.com/menukaonline/Mega-to-Google-Drive) - MEGA download script
 - [MEGAcmd](https://github.com/meganz/MEGAcmd)
 - [mediafire-dl](https://github.com/Juvenal-Yescas/mediafire-dl)

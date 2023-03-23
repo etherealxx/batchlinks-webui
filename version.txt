@@ -1,7 +1,18 @@
-v3.0.2
+v3.1.0
 (^current version^)
 
 Release notes:
+
+## v3.1.0
+- New hashtag: `#altmodel`, when you use `--ckptdir` argument on `launch.py` line, this hashtag will points to that directory. Otherwise, it'll point to the same directory as `#model`
+- New hashtag: `#lycoris`, change current save directory to _/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora/lycoris_<br/>(Side note: _Lycoris/Locon/Loha_ will works just fine if you use `#addnetlora` instead, as long as you have both [addnet extension](https://github.com/kohya-ss/sd-webui-additional-networks) and [locon extension](https://github.com/KohakuBlueleaf/a1111-sd-webui-locon) installed)
+- New hashtag: `#upscaler`, change current save directory to _/content/stable-diffusion-webui/models/ESRGAN_ (This was added few commits ago, but i forgot to write it on the release notes)
+
+Fixes:
+- Fixed bug when installing wget/aria2 on Windows
+- Fixed bug where custom paths doesn't put CivitAi download (Model Path method) when custom hashtag is used
+- Ongoing downloads will correctly stops when Cancel button is pressed on Windows
+- CivitAi (Model Path method) now will not download training dataset by accident
 
 ## v3.0.2
 - Hotfix: removed a comment that messed up the non queue mode. Now the extension works again without `--gradio-queue`.

@@ -17,7 +17,7 @@ import sys
 sdless = False
 try:
     from modules import script_callbacks #,scripts
-    from modules.paths import script_path
+    from modules.paths import models_path, script_path #, data_path
     from modules.shared import cmd_opts #check for gradio queue
 except ImportError: #sdless
     if platform.system() == "Windows":
@@ -30,11 +30,14 @@ except ImportError: #sdless
         script_path = os.path.join(downloadpath, "stable-diffusion-webui")
     else:
         script_path = '/content/stable-diffusion-webui'
+    models_path = os.path.join(script_path, 'models')
     gradio_queue = True
+    ckpt_dir = None
     import sys
     import types
     module = types.ModuleType('cmd_opts')
     module.gradio_queue = gradio_queue
+    module.ckpt_dir = ckpt_dir
     sys.modules['cmd_opts'] = module
     import cmd_opts
     sdless = True
@@ -86,14 +89,16 @@ typechecker = [
     "aestheticembedding", "aestheticembed",
     "controlnet", "cnet",
     "extension", "extensions", "ext", #obsolete
-    "upscaler", "upscale"
+    "upscaler", "upscale",
+    "altmodel", "altmodels",
+    "lycoris", "locon", "loha"
     ]
 
 typemain = [
-    "model", "vae", "embed",
-    "hynet", "lora", "addnetlora",
-    "aestheticembed", "cnet", "ext",
-    "upscaler"
+    "model", "altmodel", "vae",
+    "embed", "hynet", "lora",
+    "addnetlora", "aestheticembed", "cnet",
+    "ext", "upscaler", "lycoris"
 ]
 countofdefaulthashtags = len(typemain)
 
@@ -123,6 +128,13 @@ aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webu
 cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
 extpath = os.path.join(script_path, "extensions") #obsolete
 upscalerpath = os.path.join(script_path, "models/ESRGAN")
+lycorispath = os.path.join(addnetlorapath, "lycoris")
+if cmd_opts.ckpt_dir:
+    altmodelpath = cmd_opts.ckpt_dir
+    currentfolder = altmodelpath
+else:
+    altmodelpath = modelpath
+    currentfolder = modelpath
 
 if platform.system() == "Windows":
     for x in typemain: 
@@ -132,7 +144,6 @@ if platform.system() == "Windows":
 
 newlines = ['\n', '\r\n', '\r']
 currentlink = ''
-currentfolder = modelpath
 finalwrite = []
 currentcondition = ''
 currentsuboutput = ''
@@ -153,6 +164,7 @@ if len(sys.argv) > 1:
     if sys.argv[1] == '--debug':
         globaldebug = True
 
+process = ''
 
 def stopwatch(func): #unused
     """
@@ -262,6 +274,15 @@ def printdebug(toprint):
     if globaldebug == True:
         print(toprint)
 
+def printvardebug(toprint):
+    if globaldebug == True:
+        import inspect
+        caller = inspect.currentframe().f_back
+        name = [k for k, v in caller.f_locals.items() if v is toprint][0]
+        if not isinstance(toprint, str):
+            toprint = str(toprint)
+        print(f"debug {name}: {toprint}")
+
 def runwithsubprocess(rawcommand, folder=None, justrun=False, additionalcontext=''): #@note runwithsubprocess
     
     commandtorun = shlex.split(rawcommand) #construct_command(rawcommand)
@@ -276,6 +297,8 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False, additionalcontext=
         printdebug("debug folderforsavestate: " + str(folder))
         savestate_folder(folder)
         printdebug("debug currentfoldertrack: " + str(currentfoldertrack))
+
+    global process
     if justrun:
         process = subprocess.Popen(rawcommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, shell=True)
     else:
@@ -345,6 +368,8 @@ def runwithsubprocess(rawcommand, folder=None, justrun=False, additionalcontext=
     currentsuboutput = ''
     processid = ''
     if prockilled == True:
+        printdebug("before rewind folder")
+        printvardebug(folder)
         rewind_folder(folder)
         print('[1;31mOperation Cancelled')
         print('[0m')
@@ -380,7 +405,8 @@ def transfare(todownload, folder, torename=''):
         savestate_folder(folder)
         localappdata = os.environ['LOCALAPPDATA']
         megagetloc = os.path.join(localappdata, "MEGAcmd", "mega-get.bat")
-        runwithsubprocess(f"{shlex.quote(megagetloc)} {todownload_s} {folder_s}", folder, False, 'mega')
+        global process
+        process = runwithsubprocess(f"{shlex.quote(megagetloc)} {todownload_s} {folder_s}", folder, False, 'mega')
     else:
         savestate_folder(folder_s)
         cmd = ["mega-get", todownload_s, folder_s]
@@ -651,8 +677,19 @@ def civitdown2_get_json(url):
     return 'error'
 
 def civitdown2_get_save_directory(model_type, default_folder):
+  printdebug("model_type: " + model_type)
+  customtypemains = list(typemain[countofdefaulthashtags:])
+  printdebug("customtypemains: " + str(customtypemains))
+  for type in customtypemains:
+      xpath = eval(type + "path")
+      if default_folder == xpath:
+          printdebug("customtype returned")
+          return default_folder
   if model_type == "Checkpoint":
-    return modelpath
+    if cmd_opts.ckpt_dir and default_folder == altmodelpath:
+        return altmodelpath
+    else:
+        return modelpath
   elif model_type == "Hypernetwork":
     return hynetpath
   elif model_type == "TextualInversion":
@@ -666,7 +703,10 @@ def civitdown2_get_save_directory(model_type, default_folder):
         return addnetlorapath
     else:
         return lorapath
+  elif model_type == "LoCon":
+        return lycorispath
   else:
+    printdebug("defaultfolder returned")
     return default_folder
 
 def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
@@ -702,6 +742,8 @@ def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefa
     return
   
   save_directory = civitdown2_get_save_directory(model['type'], folder)
+  if not os.path.exists(save_directory):
+    os.makedirs(save_directory, exist_ok=True)
   try:
     parameter = url.split("?")[-1] + "?"
   except:
@@ -716,6 +758,11 @@ def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefa
   else:
     data_url = model['modelVersions'][0]['files'][0]['downloadUrl']
     data_filename = model['modelVersions'][0]['files'][0]['name']
+    if "?type=Training%20Data" in data_url:
+        data_url = data_url.partition("?")[0]
+        wannabename = getcivitname(data_url)
+        if wannabename:
+            data_filename = wannabename
     image_filename = data_filename
 
   if renamedfilename:
@@ -723,9 +770,9 @@ def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefa
     image_filename = data_filename
 
   image_url = model['modelVersions'][0]['images'][0]['url']
-  printdebug("data_url: " + data_url)
-  printdebug("data_filename: " + data_filename)
-  printdebug("image_url: " + data_filename)
+  printvardebug(data_url)
+  printvardebug(data_filename)
+  printvardebug(image_url)
   if model['type'] == "TextualInversion":
       image_filename_jpg = pathlib.PurePath(image_filename).stem + ".preview.jpg"
       image_filename_png = pathlib.PurePath(image_filename).stem + ".preview.png"
@@ -763,8 +810,9 @@ def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefa
           data_save_path = os.path.join(os.path.dirname(data_save_path), config_name)
           hfdown(config_url, data_save_path, downloader, currentmode)
 
-  hfdown(image_url, imagejpg_save_path, downloader, currentmode)
-  civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
+  if prockilled == False:
+    hfdown(image_url, imagejpg_save_path, downloader, currentmode)
+    civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
   print(f"{data_save_path} successfully downloaded.")
 
 
@@ -832,11 +880,14 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
     if platform.system() == "Windows": #@note windows downloader
         localappdata = os.environ['LOCALAPPDATA']
         batchlinksinstallpath = os.path.join(localappdata, "batchlinks")
+        printvardebug(batchlinksinstallpath)
         wgetpath = os.path.join(batchlinksinstallpath, "wget-gnutls-x64.exe")
 
         ariazippath = os.path.join(batchlinksinstallpath, "aria2-1.36.0-win-64bit-build2.7z")
         ariapath = os.path.join(batchlinksinstallpath, "aria2-1.36.0-win-64bit-build2", "aria2c.exe")
         os.makedirs(batchlinksinstallpath, exist_ok=True)
+        if os.path.exists(batchlinksinstallpath):
+            printdebug("batchlinksinstallpath created")
         if downloader=='gdown':
             global gdownupgraded
             if gdownupgraded == False:
@@ -858,8 +909,9 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
             #os.system("python -m wget -o " + os.path.join(folder, filename) + " " + todownload)
             # import wget
             # wget.download(todownload, filepath)
-            checkwget = subprocess.getoutput(wgetpath)
-            if "is not recognized" in checkwget:
+            # checkwget = subprocess.getoutput(wgetpath)
+            # if "is not recognized" in checkwget:
+            if not os.path.exists(wgetpath):
                 tempcondition = currentcondition
                 currentcondition = "Installing wget Windows..."
                 print('[1;32mInstalling wget Windows...')
@@ -874,8 +926,9 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         elif downloader=='curl':
             runwithsubprocess(f"curl -Lo {filepath_s} {todownload_s}", folder)
         elif downloader=='aria2':
-            checkaria = subprocess.getoutput(ariapath)
-            if "is not recognized" in checkaria or "cannot find the path" in checkaria:
+            # checkaria = subprocess.getoutput(ariapath)
+            # if "is not recognized" in checkaria or "cannot find the path" in checkaria:
+            if not os.path.exists(ariapath):
                 tempcondition = currentcondition
                 currentcondition = "Installing aria2 Windows..."
                 print('[1;32mInstalling aria2 Windows...')
@@ -885,6 +938,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 runwithsubprocess("curl -Lo " + shlex.quote(ariazippath) + " " + ariaziplink, batchlinksinstallpath)
                 sevenzpath = install7zWin()
                 runwithsubprocess(f"{shlex.quote(sevenzpath)} x {shlex.quote(ariazippath)} -o{shlex.quote(batchlinksinstallpath)}", batchlinksinstallpath, False, '7z')
+                print()
                 print('[1;32maria2 Windows installed!')
                 print('[0m')
                 currentcondition = tempcondition
@@ -1046,6 +1100,8 @@ def writepart(box, path):
 def trackall():
     filesdict = dict()
     for x in typemain:
+        if x == "altmodel" and altmodelpath == modelpath:
+            continue
         exec(f"os.makedirs({x}path, exist_ok=True)")
         exec(f"filesdict['{x}'] = os.listdir({x}path)")
     return filesdict
@@ -1112,7 +1168,12 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
             return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
     
     oldfilesdict = trackall()
-    currentfolder = modelpath
+    if cmd_opts.ckpt_dir:
+        altmodelpath = cmd_opts.ckpt_dir
+        currentfolder = altmodelpath
+    else:
+        altmodelpath = os.path.join(models_path, "Stable-diffusion")
+        currentfolder = modelpath
     currenthashtag = '#model'
     os.makedirs(currentfolder, exist_ok=True)
     currentcondition = 'Extracting links...'
@@ -1425,7 +1486,14 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
+                customtypemains = list
+                for tag in tuple((typemain[countofdefaulthashtags:])):
+                    if "#" + tag == currenthashtag and gradiostate:
+                        progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
+                        pass
+                        break
+                    else:
+                        progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f'...')
                 if everymethod == False:
                     civitdown2(currentlink, currentfolder, choosedowner, currenttorename, False, civitdefault, civitpruned, civitvae)
                 # else:
@@ -1462,7 +1530,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
             elif listpart.startswith("@extract"): #@note hashtagextract
                 print('\n')
                 currentcondition = 'Extracting every archive file in current directory...'
-                print('Extracting every 7z file in current directory...\n')
+                print('Extracting every archive file in current directory...\n')
                 extractcurdir(currentfolder)
 
             elif listpart.startswith("@new"): #@note hashtagcustom
@@ -1485,6 +1553,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                                 os.makedirs(newpath, exist_ok=True)
                                 globals()[newglobalpath] = newpath
                                 printdebug("modelpath = " + eval(newglobalpath))
+                                oldfilesdict[newtype] = os.listdir(newpath)
                                 # global addedcustompath
                                 addedcustompath[newhashtag] = newpath
                                 printdebug("addedcustompath: " + str(addedcustompath))
@@ -1535,6 +1604,10 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                             currenthashtag = '#aestheticembed'
                         elif prefix in ["upscaler", "upscale"]:
                             currenthashtag = '#upscaler'
+                        elif prefix in ["altmodel", "altmodels"]:
+                            currenthashtag = '#altmodel'
+                        elif prefix in ["lycoris", "locon", "loha"]:
+                            currenthashtag = '#lycoris'
                         try:
                             currentfolder = eval(currenthashtag[1:] + 'path')
                         except:
@@ -1661,14 +1734,20 @@ def cancelrun():
     global prockilled
     printdebug("debug processid: " + str(processid))
     if not processid == '':
-        try:
-            os.kill(processid, signal.SIGTERM)
-        except ProcessLookupError:
-            pass
-        except PermissionError:
-            pass
-        except OSError:
-            pass
+        if platform.system() == "Windows":
+            global process
+            process.terminate()
+            _ = subprocess.getoutput("taskkill /F /T /PID" + str(process.pid))
+            _ = subprocess.getoutput("taskkill /f /t /im MEGAcmdServer.exe")
+        else:
+            try:
+                os.kill(processid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            except PermissionError:
+                pass
+            except OSError:
+                pass
         #os.killpg(os.getpgid(processid.pid), signal.SIGTERM)
     prockilled = True
     if prockilled == True and globaldebug == True:
@@ -1700,10 +1779,12 @@ def hidehelp(hide):
 # countofdefaulthashtags = len(typemain)
 def buildarrayofhashtags(rightorbottom):
     printdebug(f"buildarray {rightorbottom} initiated!")
-    defaultpathtime = True
+    # defaultpathtime = True
     def writingpath(j, path):
-        if defaultpathtime:
+        if path == modelpath:
             return path + " (default path)"
+        elif path == altmodelpath:
+            return path
         else:
             if rightorbottom == 'right' and j < countofdefaulthashtags:
                 return path.replace(script_path, "~")
@@ -1713,8 +1794,11 @@ def buildarrayofhashtags(rightorbottom):
     for i, x in enumerate(typemain):
         try:
             xpath = eval(x+"path")
-            hashtagandpath.append(["#"+x, writingpath(i, xpath)])
-            defaultpathtime = False
+            if cmd_opts.ckpt_dir:
+                hashtagandpath.append(["#"+x, writingpath(i, xpath)])
+            elif x != "altmodel":
+                hashtagandpath.append(["#"+x, writingpath(i, xpath)])
+            # defaultpathtime = False
         except Exception as e:
             print(e)
     return hashtagandpath
