@@ -374,7 +374,7 @@ There are some batchlinks syntax features that only available on debug mode (put
 
 ## Latest release: v3.1.0a
 
-## v3.1.0a
+#### Release v3.1.0a
 - Hotfix: Indented block on line 1497 fix
 
 ### Release v3.1.0
