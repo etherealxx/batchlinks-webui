@@ -372,7 +372,10 @@ There are some batchlinks syntax features that only available on debug mode (put
 
 `@debugresetdownload` - This command is (supposed to) download a single link with every method available (gdown, curl, wget, aria2), but now i rarely use this command, and haven't updated since. Might be buggy.
 
-## Latest release: v3.1.0
+## Latest release: v3.1.0a
+
+## v3.1.0a
+- Hotfix: Indented block on line 1497 fix
 
 ### Release v3.1.0
 - New hashtag: `#altmodel`, when you use `--ckptdir` argument on `launch.py` line, this hashtag will points to that directory. Otherwise, it'll point to the same directory as `#model`
