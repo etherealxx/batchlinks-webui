@@ -1494,6 +1494,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                         break
                     else:
                         progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f'...')
+                        pass
                 if everymethod == False:
                     civitdown2(currentlink, currentfolder, choosedowner, currenttorename, False, civitdefault, civitpruned, civitvae)
                 # else:
