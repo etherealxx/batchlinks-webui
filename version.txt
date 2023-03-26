@@ -2,6 +2,8 @@ v3.1.0a
 (^current version^)
 
 Release notes:
+## v3.1.0a
+- Hotfix: Indented block on line 1497 fix
 
 ## v3.1.1
 - Added some fix and messages in case CivitAI website is down
