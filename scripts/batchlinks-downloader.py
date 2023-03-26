@@ -141,6 +141,8 @@ if platform.system() == "Windows":
         # exec(f"{x}path = os.path.normpath({x}path)")
         exec(f"{x}path = {x}path.replace('/', '\\\\')")
         #exec(f"print({x}path)")
+if os.path.exists(addnetlorapath) and not os.path.exists(lycorispath):
+    os.makedirs(lycorispath, exist_ok=True)
 
 newlines = ['\n', '\r\n', '\r']
 currentlink = ''
@@ -246,7 +248,7 @@ def global_rewind():
                     shutil.rmtree(fileordir)
                     removed_dirs.append(fileordir)
                 except PermissionError as e:
-                    print(e)
+                    print("Error: " + str(e))
             else:
                 os.remove(fileordir)
                 removed_files.append(fileordir)
@@ -278,7 +280,10 @@ def printvardebug(toprint):
     if globaldebug == True:
         import inspect
         caller = inspect.currentframe().f_back
-        name = [k for k, v in caller.f_locals.items() if v is toprint][0]
+        try:
+            name = [k for k, v in caller.f_locals.items() if v is toprint][0]
+        except IndexError:
+            name = "idk"
         if not isinstance(toprint, str):
             toprint = str(toprint)
         print(f"debug {name}: {toprint}")
@@ -551,7 +556,12 @@ def civitdown(url, folder, torename=''):
         if torename:
             actualfilename = torename
         else:
-            actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
+            try:
+                actualfilename = response.headers['Content-Disposition'].split("filename=")[1].strip('"')
+            except KeyError:
+                print('[1;31mLink Error')
+                print('[0m')
+                break
         #%cd {folder}
         actualpath = os.path.join(folder, actualfilename)
         os.rename(pathtodown, actualpath)
@@ -565,18 +575,31 @@ def civitdown(url, folder, torename=''):
 
 def getcivitname(link): #@note getcivitname
     # searcher = "findstr" if platform.system() == "Windows" else "grep"
+    global currentcondition
+    tempcondition = currentcondition
+    currentcondition = "Connecting to CivitAI..."
     try:
         req = urllib.request.Request(link, headers={'User-Agent': 'Mozilla/5.0'})
-        response = urllib.request.urlopen(req)
+        response = urllib.request.urlopen(req, timeout=7)
         contentdis = response.geturl()
         # contentdis = [line for line in subprocess.getoutput(f"curl -sI {link} | {searcher} -i content-disposition").splitlines() if line.startswith('location')][0]
     except Exception as e:
-        print("Cannot get the filename. Download will continue with the old slow method.\nReason:" + e)
-        return ''
+        errortype = str(type(e))
+        printdebug("Error: " + errortype)
+        if 'TimeoutError' in errortype:
+            print("Unable to connect to CivitAI in 7 seconds. Skipping the link...")
+            return 'batchlinksskip'
+        else:
+            print("Cannot get the filename. Download will continue with the old slow method.\nReason:" + str(e))
+            return 'batchlinksold'
+    if contentdis == "https://civitai.com/":
+        print('[1;31mCivitAI website is currently down ツ')
+        print('[0m')
+        return 'batchlinksskip'
     cuttedcontent = contentdis.find('response-content-disposition=attachment%3B%20filename%3D%22') + 59
     filename = str(contentdis[cuttedcontent:]).replace('%22&x-id=GetObject', '')
-    
     filename = civitmodeltypename(filename, link)
+    currentcondition = tempcondition
     return filename
 
 def getcivitname2(link):
@@ -649,8 +672,10 @@ def civitmodeltypechooser(modeljson, prunedmodel, torchortensor, linkandnames):
             break
           
   if not indexlinkname:
-    indexlinkname = getcivitname2(defaultlinkurl+prunedorfull[0]+pickleorsafe[0])
-
+    indexlinkname = getcivitname(defaultlinkurl+prunedorfull[0]+pickleorsafe[0]) #@note indexlinkname
+    if indexlinkname == "batchlinksskip" or indexlinkname == "batchlinksold":
+        indexlinkname = ''
+        
   if not indexlinkname:
     for index, (link, name) in enumerate(linkandnames.items()):
         if defaultlinkurl == link:
@@ -762,7 +787,10 @@ def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefa
         data_url = data_url.partition("?")[0]
         wannabename = getcivitname(data_url)
         if wannabename:
-            data_filename = wannabename
+            if wannabename != 'batchlinksskip':
+                data_filename = wannabename
+            else:
+                return ''
     image_filename = data_filename
 
   if renamedfilename:
@@ -1072,6 +1100,7 @@ def writeall(olddict, shellonly, custompaths=''):
         for hashtag, thepath in custompaths.items():
             finalwrite.append(f"{hashtag} -> {thepath}")
     finalwrite.append("Downloaded files: ")
+    
     for oldtype, olddir in olddict.items():
         for newtype, newdir in newdict.items():
             if newtype == oldtype:
@@ -1083,6 +1112,11 @@ def writeall(olddict, shellonly, custompaths=''):
                         finalwrite.append(item)
     if bool(remaininglinks):
         finalwrite.append("(There are still some files that have not been downloaded. Click the 'Resume Download' button to load the links that haven't been downloaded.)")
+    printvardebug(finalwrite)
+
+    if len(finalwrite) > 1 and "Downloaded files:" in finalwrite[1] and len(finalwrite) < 3:
+        finalwrite.append("(Not finding something here? Check the terminal/colab console)")
+
     finaloutput = list_to_text(finalwrite)
     finalwrite = []
     if shellonly:
@@ -1166,7 +1200,14 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
             return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
         else:
             return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
-    
+    if not command.strip():
+        currentcondition = "Logging activated."
+        texttowrite = ["The link box is empty."]
+        writefinal = list_to_text(texttowrite)
+        if gradiostate == True:
+            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
+        else:
+            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
     oldfilesdict = trackall()
     if cmd_opts.ckpt_dir:
         altmodelpath = cmd_opts.ckpt_dir
@@ -1427,15 +1468,16 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 currentlink, currenttorename = splitrename(listpart)
                 if currenttorename == '':
                     currenttorename = getcivitname(listpart)
-                    if currenttorename == '':
+                    if currenttorename == 'batchlinksold':
                         usenewmethod = False
+                    elif currenttorename == 'batchlinksskip':
+                        continue
                         # print("That CivitAI link no longer exist, or the server is currently down.")
                         # continue
                 
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                # progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
                 if everymethod == False:
                     if usenewmethod:
                         progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + f' into {currenthashtag}...')
@@ -1486,7 +1528,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print('\n')
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
-                customtypemains = list
+                #customtypemains = list
                 for tag in tuple((typemain[countofdefaulthashtags:])):
                     if "#" + tag == currenthashtag and gradiostate:
                         progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
@@ -1494,6 +1536,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                         break
                     else:
                         progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f'...')
+                        pass
                 if everymethod == False:
                     civitdown2(currentlink, currentfolder, choosedowner, currenttorename, False, civitdefault, civitpruned, civitvae)
                 # else:
@@ -1559,7 +1602,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                                 printdebug("addedcustompath: " + str(addedcustompath))
                                 print(f"New custom path added!\n{newhashtag} means {newpath}")
                             except Exception as e:
-                                print("Adding custom path failed! Reason: " + e)
+                                print("Adding custom path failed! Reason: " + str(e))
             
             elif listpart.startswith("#") and listpart.endswith(tuple(typemain)): #tuple(typemain[countofdefaulthashtags:])
                 try:
@@ -1568,7 +1611,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                     currentfolder = eval(listpart[1:] + "path")
                     os.makedirs(currentfolder, exist_ok=True)
                 except Exception as e:
-                    print(f"Cannot use hashtag: {e}")
+                    print(f"Cannot use hashtag: {str(e)}")
 
             else:
                 notbreaking = True
@@ -1800,7 +1843,7 @@ def buildarrayofhashtags(rightorbottom):
                 hashtagandpath.append(["#"+x, writingpath(i, xpath)])
             # defaultpathtime = False
         except Exception as e:
-            print(e)
+            print(str(e))
     return hashtagandpath
 
 titletext = f"""<h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>"""
