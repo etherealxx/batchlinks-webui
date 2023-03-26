@@ -46,12 +46,17 @@
   - [SDless mode](#sdless-mode)
   - [Local Installation Support](#local-installation-support)
   - [Debug Mode (Developer only)](#debug-mode-developer-only)
-- [Latest release: v3.0.0](#latest-release-v300)
+- [Latest release: v3.1.1](#latest-release-v311)
+    - [Release v3.1.1](#release-v311)
+    - [Release v3.1.0a](#release-v310a)
+  - [Release v3.1.0](#release-v310)
+    - [Release v3.0.2](#release-v302)
+    - [Release v3.0.1](#release-v301)
   - [Release v3.0.0](#release-v300)
-    - [Release v2.1.1](#release-v211)
-  - [Release v2.1.0](#release-v210)
+  - [Older Release](#older-release)
 - [Roadmap](#roadmap)
 - [Known Bugs](#known-bugs)
+  - [Known Fixed Bugs](#known-fixed-bugs)
 - [Contributing](#contributing)
 - [Contact](#contact)
 - [Acknowledgments](#acknowledgments) -->
@@ -72,8 +77,8 @@
       <ul><li><a href="#how-to-get-the-direct-links-important">How to get the direct links (Important!)</a></li></ul>
       <ul><li><a href="#huggingfaces-download-method">Huggingface's download method</a></li></ul>
     <li><a href="#additional-syntax">Additional Syntax</a></li>
-      <ul><li><a href="#rename-downloaded-files">Rename Downloaded Files</a></li></ul>
-      <ul><li><a href="#running-shell-commands">Running Shell Commands</a></li></ul>
+      <ul><li><a href="#rename-downloaded-files">Rename Downloaded Files</a></li></ul>   
+      <ul><li><a href="#running-shell-commands">Running Shell Commands</a></li></ul>     
       <ul><li><a href="#extract-everyting-extract">Extract Everyting (`@extract`)</a></li></ul>
       <ul><li><a href="#custom-hashtag-path-new">Custom Hashtag Path (`@new`)</a></li></ul>
     <li><a href="#gradio-queue">Gradio Queue</a></li>
@@ -86,14 +91,17 @@
       <ul><li><a href="#sdless-mode">SDless mode</a></li></ul>
       <ul><li><a href="#local-installation-support">Local Installation Support</a></li></ul>
       <ul><li><a href="#debug-mode-developer-only">Debug Mode (Developer only)</a></li></ul>
-    <li><a href="#latest-release-v302">Latest release: v3.0.2</a></li>
-      <ul><li><a href="#release-v302">Release v3.0.2</a></li></ul>
-      <ul><li><a href="#release-v301">Release v3.0.1</a></li></ul>
+    <li><a href="#latest-release-v311">Latest release: v3.1.1</a></li>
+        <ul><li><a href="#release-v311">Release v3.1.1</a></li></ul>
+        <ul><li><a href="#release-v310a">Release v3.1.0a</a></li></ul>
+      <ul><li><a href="#release-v310">Release v3.1.0</a></li></ul>
+        <ul><li><a href="#release-v302">Release v3.0.2</a></li></ul>
+        <ul><li><a href="#release-v301">Release v3.0.1</a></li></ul>
       <ul><li><a href="#release-v300">Release v3.0.0</a></li></ul>
-        <ul><li><a href="#release-v211">Release v2.1.1</a></li></ul>
-      <ul><li><a href="#release-v210">Release v2.1.0</a></li></ul>
+      <ul><li><a href="#older-release">Older Release</a></li></ul>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#known-bugs">Known Bugs</a></li>
+      <ul><li><a href="#known-fixed-bugs">Known Fixed Bugs</a></li></ul>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
@@ -139,7 +147,7 @@ Look at this example<br/>
 
 ```
 #model
-https://huggingface.co/WarriorMama777/OrangeMixs/resolve/main/Models/AbyssOrangeMix3/AOM3(orangemixs).safetensors
+https://huggingface.co/WarriorMama777/OrangeMixs/resolve/main/Models/AbyssOrangeMix3/AOM3_orangemixs.safetensors
 #vae
 https://huggingface.co/hakurei/waifu-diffusion-v1-4/resolve/main/vae/kl-f8-anime2.ckpt
 #embed
@@ -372,7 +380,12 @@ There are some batchlinks syntax features that only available on debug mode (put
 
 `@debugresetdownload` - This command is (supposed to) download a single link with every method available (gdown, curl, wget, aria2), but now i rarely use this command, and haven't updated since. Might be buggy.
 
-## Latest release: v3.1.0a
+## Latest release: v3.1.1
+
+#### Release v3.1.1
+- Added some fix in case CivitAI website is down
+- Added message when user pressed "Download All!" but the textbox is empty
+- Fixed bug where Lycoris folder always shows on downloaded files the first time user download something
 
 #### Release v3.1.0a
 - Hotfix: Indented block on line 1497 fix

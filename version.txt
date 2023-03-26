@@ -5,6 +5,14 @@ Release notes:
 ## v3.1.0a
 - Hotfix: Indented block on line 1497 fix
 
+## v3.1.1
+- Added some fix and messages in case CivitAI website is down
+- Added message when user pressed "Download All!" but the textbox is empty
+- Fixed bug where Lycoris folder always shows on downloaded files the first time user download something
+
+## v3.1.0a
+- Hotfix: Indented block on line 1497 fix
+
 ## v3.1.0
 - New hashtag: `#altmodel`, when you use `--ckptdir` argument on `launch.py` line, this hashtag will points to that directory. Otherwise, it'll point to the same directory as `#model`
 - New hashtag: `#lycoris`, change current save directory to _/content/stable-diffusion-webui/extensions/sd-webui-additional-networks/models/lora/lycoris_<br/>(Side note: _Lycoris/Locon/Loha_ will works just fine if you use `#addnetlora` instead, as long as you have both [addnet extension](https://github.com/kohya-ss/sd-webui-additional-networks) and [locon extension](https://github.com/KohakuBlueleaf/a1111-sd-webui-locon) installed)
