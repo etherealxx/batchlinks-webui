@@ -1,9 +1,10 @@
-v3.1.0a
+v3.1.1a
 (^current version^)
 
 Release notes:
-## v3.1.0a
-- Hotfix: Indented block on line 1497 fix
+
+## v3.1.1a
+- Hotfix: Fixed CivitAI 'model type chooser' bug and fixed `@extract` bug on colab
 
 ## v3.1.1
 - Added some fix and messages in case CivitAI website is down

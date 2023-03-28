@@ -573,8 +573,10 @@ def civitdown(url, folder, torename=''):
         else:
             print(f"Error: File download failed. Retrying...")
 
-def getcivitname(link): #@note getcivitname
+def getcivitname(link, frommodeltypechooser=False): #@note getcivitname
     # searcher = "findstr" if platform.system() == "Windows" else "grep"
+    printdebug("getcivitname:")
+    printvardebug(link)
     global currentcondition
     tempcondition = currentcondition
     currentcondition = "Connecting to CivitAI..."
@@ -590,8 +592,11 @@ def getcivitname(link): #@note getcivitname
             print("Unable to connect to CivitAI in 7 seconds. Skipping the link...")
             return 'batchlinksskip'
         else:
-            print("Cannot get the filename. Download will continue with the old slow method.\nReason:" + str(e))
-            return 'batchlinksold'
+            if frommodeltypechooser:
+                return ''
+            else:
+                print("Cannot get the filename. Download will continue with the old slow method.\nReason:" + str(e))
+                return 'batchlinksold'
     if contentdis == "https://civitai.com/":
         print('[1;31mCivitAI website is currently down ツ')
         print('[0m')
@@ -672,9 +677,9 @@ def civitmodeltypechooser(modeljson, prunedmodel, torchortensor, linkandnames):
             break
           
   if not indexlinkname:
-    indexlinkname = getcivitname(defaultlinkurl+prunedorfull[0]+pickleorsafe[0]) #@note indexlinkname
-    if indexlinkname == "batchlinksskip" or indexlinkname == "batchlinksold":
-        indexlinkname = ''
+    indexlinkname = getcivitname(defaultlinkurl+prunedorfull[0]+pickleorsafe[0], True) #@note indexlinkname
+    if indexlinkname == "batchlinksskip" or not indexlinkname:
+        indexlinkname = list()
         
   if not indexlinkname:
     for index, (link, name) in enumerate(linkandnames.items()):
@@ -1164,10 +1169,12 @@ def splitrename(linkcurrent):
 def extractcurdir(currentdir): #@note extractcurdir
     allfileshere = os.listdir(currentdir)
     szfileall = []
-    sevenzpath = install7zWin()
+    if platform.system() == "Windows":
+        sevenzpath = install7zWin()
     global currentcondition
+    extensiontoextract = [".zip", ".rar", ".7z", ".tar"]
     for filehere in allfileshere:
-        if filehere.endswith('.7z') or filehere.endswith('.zip') or filehere.endswith('.rar'):
+        if filehere.endswith(tuple(extensiontoextract)):
             szpath = os.path.join(currentdir, filehere)
             szfileall.append(szpath)
     for szfile in szfileall:

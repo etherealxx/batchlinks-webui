@@ -380,7 +380,10 @@ There are some batchlinks syntax features that only available on debug mode (put
 
 `@debugresetdownload` - This command is (supposed to) download a single link with every method available (gdown, curl, wget, aria2), but now i rarely use this command, and haven't updated since. Might be buggy.
 
-## Latest release: v3.1.1
+## Latest release: v3.1.1a
+
+#### Release v3.1.1a
+- Hotfix: Fixed CivitAI 'model type chooser' bug and fixed `@extract` bug on colab
 
 #### Release v3.1.1
 - Added some fix in case CivitAI website is down
@@ -498,6 +501,7 @@ Fixes:
 - [ ] Logo change
 - [ ] Moving most of the content of this `Readme.md` to Wiki instead
 - [ ] Other download sites (s-ul.eu, gitgud, bunkr.ru, icedrive)
+- [ ] Separate 'download' and 'run command' function with a subtab
 - [ ] Support download MEGA and Google Drive folder
 - [ ] Using `yield` instead of gradio's `every`
 - [ ] Youtube video (Tutorial)
