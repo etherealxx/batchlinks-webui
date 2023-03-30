@@ -1,7 +1,11 @@
-v3.1.1a
+v3.1.1b
 (^current version^)
 
 Release notes:
+
+## v3.1.1b
+- Hotfix: Fixed CivitAI link refuses to be downloaded properly. Seems like CivitAI changes its API.
+- Fixed several bugs on Windows, especially SDless
 
 ## v3.1.1a
 - Hotfix: Fixed CivitAI 'model type chooser' bug and fixed `@extract` bug on colab

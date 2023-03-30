@@ -602,7 +602,9 @@ def getcivitname(link, frommodeltypechooser=False): #@note getcivitname
         print('[0m')
         return 'batchlinksskip'
     cuttedcontent = contentdis.find('response-content-disposition=attachment%3B%20filename%3D%22') + 59
-    filename = str(contentdis[cuttedcontent:]).replace('%22&x-id=GetObject', '')
+    # filename = str(contentdis[cuttedcontent:]).replace('%22&x-id=GetObject', '') #obsolete since 30-03-2023
+    filename = str(contentdis[cuttedcontent:]).partition('%22&')[0]
+    # filename = contentdis.split('filename=')[-1].split('%22')[1] #this also works i guess
     filename = civitmodeltypename(filename, link)
     currentcondition = tempcondition
     return filename
@@ -845,7 +847,10 @@ def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefa
 
   if prockilled == False:
     hfdown(image_url, imagejpg_save_path, downloader, currentmode)
-    civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
+    if os.path.exists(imagejpg_save_path):
+        civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
+    else:
+        print(imagejpg_save_path + " doesn't exist")
   print(f"{data_save_path} successfully downloaded.")
 
 
@@ -898,7 +903,10 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         filepath = folder
         filepath_s = shlex.quote(folder)
         todownload_s = todownload
-        folder_s = pathlib.Path(folder).parent.resolve()
+        folder = os.path.dirname(filepath)
+        # folder_s = pathlib.Path(folder).parent.resolve()
+        folder_s = shlex.quote(folder)
+        folder_win = folder
     else:
         if mode=='pixeldrain' or mode=='dropbox':
             filename = torename
@@ -909,6 +917,16 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         filepath_s = shlex.quote(filepath)
         todownload_s = shlex.quote(todownload)
         folder_s = shlex.quote(folder)
+        folder_win = folder
+    printvardebug(folder)
+    printvardebug(todownload)
+    printvardebug(filename)
+    printvardebug(filename_s)
+    printvardebug(filepath)
+    printvardebug(filepath_s)
+    printvardebug(todownload_s)
+    printvardebug(folder_s)
+    printvardebug(folder_win)
     #savestate_folder(folder_s)
     if platform.system() == "Windows": #@note windows downloader
         localappdata = os.environ['LOCALAPPDATA']
@@ -934,7 +952,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 currentcondition = tempcondition
                 gdownupgraded = True
             try:
-                runwithsubprocess(f"gdown {todownload_s} -O {filepath_s}", folder)
+                runwithsubprocess(f"gdown {todownload_s} -O {filepath_s}", folder_win)
             except FileNotFoundError:
                 import gdown
                 gdown.download(todownload, filepath, quiet=False)
@@ -955,9 +973,9 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 print('[1;32mwget Windows installed!')
                 print('[0m')
                 currentcondition = tempcondition
-            runwithsubprocess(f"{shlex.quote(wgetpath)} -O {filepath_s} {todownload_s} --progress=bar:force", folder)
+            runwithsubprocess(f"{shlex.quote(wgetpath)} -O {filepath_s} {todownload_s} --progress=bar:force", folder_win)
         elif downloader=='curl':
-            runwithsubprocess(f"curl -Lo {filepath_s} {todownload_s}", folder)
+            runwithsubprocess(f"curl -Lo {filepath_s} {todownload_s}", folder_win)
         elif downloader=='aria2':
             # checkaria = subprocess.getoutput(ariapath)
             # if "is not recognized" in checkaria or "cannot find the path" in checkaria:
@@ -976,8 +994,8 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 print('[0m')
                 currentcondition = tempcondition
             # ariamode = True
-            runwithsubprocess(f"{shlex.quote(ariapath)} --summary-interval=1 --console-log-level=error --check-certificate=false -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder, False, 'aria2')
-    else:
+            runwithsubprocess(f"{shlex.quote(ariapath)} --summary-interval=1 --console-log-level=error --check-certificate=false -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_win, False, 'aria2')
+    else: #non-windows
         if downloader=='gdown':
             printdebug(f"debug gdown {todownload_s} -O {filepath_s}")
             runwithsubprocess(f"gdown {todownload_s} -O {filepath_s}", folder_s)

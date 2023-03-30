@@ -91,7 +91,9 @@
       <ul><li><a href="#sdless-mode">SDless mode</a></li></ul>
       <ul><li><a href="#local-installation-support">Local Installation Support</a></li></ul>
       <ul><li><a href="#debug-mode-developer-only">Debug Mode (Developer only)</a></li></ul>
-    <li><a href="#latest-release-v311">Latest release: v3.1.1</a></li>
+    <li><a href="#latest-release-v311b">Latest release: v3.1.1b</a></li>
+        <ul><li><a href="#release-v311b">Release v3.1.1b</a></li></ul>
+        <ul><li><a href="#release-v311a">Release v3.1.1a</a></li></ul>
         <ul><li><a href="#release-v311">Release v3.1.1</a></li></ul>
         <ul><li><a href="#release-v310a">Release v3.1.0a</a></li></ul>
       <ul><li><a href="#release-v310">Release v3.1.0</a></li></ul>
@@ -380,7 +382,11 @@ There are some batchlinks syntax features that only available on debug mode (put
 
 `@debugresetdownload` - This command is (supposed to) download a single link with every method available (gdown, curl, wget, aria2), but now i rarely use this command, and haven't updated since. Might be buggy.
 
-## Latest release: v3.1.1a
+## Latest release: v3.1.1b
+
+#### Release v3.1.1b
+- Hotfix: Fixed CivitAI link refuses to be downloaded properly. Seems like CivitAI changes its API.
+- Fixed several bugs on Windows, especially SDless
 
 #### Release v3.1.1a
 - Hotfix: Fixed CivitAI 'model type chooser' bug and fixed `@extract` bug on colab
