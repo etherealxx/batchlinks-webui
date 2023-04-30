@@ -1,6 +1,6 @@
 # Release Notes
 
-## Latest Release: v3.1.2
+## Latest Release: v3.2.0
 - Bug fixed when downloading with aria2 on Windows
 - Bug fixed on gradio update checker on sdless batch file for windows
 - CivitAi error prevention (when the website is down)

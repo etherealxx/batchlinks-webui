@@ -1,4 +1,4 @@
-v3.1.2
+v3.2.0
 (^current version, hopefully not the last^)
 
 Release notes:
