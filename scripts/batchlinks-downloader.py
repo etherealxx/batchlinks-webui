@@ -1662,28 +1662,41 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
             
             elif listpart.startswith("@aria") or listpart.startswith("@aria2"): #@note customaria
                 
-                checkariacommand = ['##', '>']
+                # checkariacommand = ['##', '>']
+                printvardebug(listpart)
+                if "##" in listpart:
+                    listpart = listpart.split('##')[0]
+                if ":\\" in listpart: #windows path
+                    listpart = listpart.replace('\\', '\\\\').replace('"', '\\"')
                 ariacmd = shlex.split(listpart)
                 printvardebug(ariacmd)
-                ariarename, ariapath = '', ''
-                if (ariacmd[0] == '@aria2' or ariacmd[0] == '@aria') and len(ariacmd) > 1:
-                    if not listpart[1].startswith(tuple(checkariacommand)):
+                arialink, ariarename, ariapath = '', '', ''
+                renamedalready = False
+                custompath = False
+                # startcomment = False
+                if (ariacmd[0] == '@aria2' or ariacmd[0] == '@aria') and len(ariacmd) > 1:  #two items. @aria and link
+                    if ariacmd[1].startswith('http'):
                         arialink = ariacmd[1]
 
-                    if len(ariacmd) > 2:
-                        if not ariacmd[2].startswith(tuple(checkariacommand)):
-                            if ariacmd[2].startswith('#'):
+                    if len(ariacmd) > 2: #three items. @aria, link, and path
+                        if ariacmd[2].startswith(">") and len(ariacmd) > 3: #four items. @aria, link, '>', and rename (no custom path)
+                            ariarename = shlex.quote(ariacmd[3])
+                            renamedalready = True
+                        else:
+                            if ariacmd[2].startswith('#'): #three items. @aria, link, hashtagpath
                                 tobeariapath, _ = hashtagtopath(ariacmd[2])
                                 if tobeariapath:
                                     ariapath = tobeariapath
-                            else:
-                                ariapath = shlex.quote(ariacmd[2])
+                            else: #three items. @aria, link, custompath
+                                # ariapath = shlex.quote(ariacmd[2])
+                                ariapath = ariacmd[2]
+                                custompath = True #message for file downloaded to custom path will be added later
                     # if len(cmd) > 3:
                     #     if cmd[3].startswith('>'):
                     #         renaming = True
                     #     else:
                     #         renaming = False
-                    if len(ariacmd) > 3 and ariacmd[3].startswith('>'):
+                    if len(ariacmd) > 4 and ariacmd[3].startswith('>') and not renamedalready:  #five items. @aria, link, path, '>', and rename
                         ariarename = shlex.quote(ariacmd[4])
                     
                     if not ariapath:
@@ -1691,9 +1704,12 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
 
                     if not ariarename:
                         ariarename = arialink.rsplit('/', 1)[-1]
-
+                    
                     #finalcommand = f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {arialink} -d {ariapath} -o {ariarename}"
-                    if prockilled == False:
+                    printvardebug(arialink)
+                    printvardebug(ariapath)
+                    printvardebug(ariarename)
+                    if arialink and not prockilled:
                         try:
                             currentcondition = f'Downloading from {arialink} into {ariapath}...'
                             hfdown(arialink, ariapath, 'aria2', 'default', ariarename)
@@ -1990,13 +2006,14 @@ def copyfrompastebin(boxwithlink):
 titletext = f"""<h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>"""
 introductiontext = f"""
 {titletext}
-<h5 style="display: inline-block; font-size: 14px;"><u><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-{currentverforlink}" target="_blank">(what's new?)</a></u></h5>
+<h5 style="display: inline-block; font-size: 14px;"><u><a href="https://github.com/etherealxx/batchlinks-webui/blob/main/releasenotes.md" target="_blank">(what's new?)</a></u></h5>
 <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
 Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox, Google Drive, Pixeldrain, Mediafire, Anonfiles, Dropbox<br/>
 Use hashtag to separate downloaded items based on their download location<br/>
 Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
 (For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>
-Use double hashtag after links for comment</p>
+Use double hashtag (##) after links for comment. Useful to mark which links downloads what.<br/>
+Remember to always press the 🔄️ refresh button on the UI after downloading models etc. in order for them to show up on the list.</p>
 """
 knowmoretext = f"""
 <p style="font-size: 14px;">Click these links for more:<br/>
