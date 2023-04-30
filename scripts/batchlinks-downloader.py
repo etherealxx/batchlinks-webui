@@ -158,6 +158,7 @@ everyprocessid = []
 remaininglinks = []
 gdownupgraded = False
 mediafireinstalled = False
+prevciviterror = False
 # addedcustompath = []
 # ariamode = False
 
@@ -896,6 +897,8 @@ def mediadrivedown(todownload, folder, mode, torename=''): #@note mediadrivedown
 
 def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note hfdown
     global currentcondition
+    global prevciviterror
+    prevciviterror = False
     # global ariamode
     if mode=='civit' or mode=='civitdebugevery':
         filename = pathlib.Path(folder).name
@@ -918,6 +921,10 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         todownload_s = shlex.quote(todownload)
         folder_s = shlex.quote(folder)
         folder_win = folder
+        if torename:
+            ariafilename_s = shlex.quote(torename)
+        else:
+            ariafilename_s = filename_s
     printvardebug(folder)
     printvardebug(todownload)
     printvardebug(filename)
@@ -928,6 +935,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
     printvardebug(folder_s)
     printvardebug(folder_win)
     #savestate_folder(folder_s)
+
     if platform.system() == "Windows": #@note windows downloader
         localappdata = os.environ['LOCALAPPDATA']
         batchlinksinstallpath = os.path.join(localappdata, "batchlinks")
@@ -994,7 +1002,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 print('[0m')
                 currentcondition = tempcondition
             # ariamode = True
-            runwithsubprocess(f"{shlex.quote(ariapath)} --summary-interval=1 --console-log-level=error --check-certificate=false -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_win, False, 'aria2')
+            runwithsubprocess(f"{shlex.quote(ariapath)} --summary-interval=1 --console-log-level=error --check-certificate=false -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {ariafilename_s}", folder_win, False, 'aria2')
     else: #non-windows
         if downloader=='gdown':
             printdebug(f"debug gdown {todownload_s} -O {filepath_s}")
@@ -1019,7 +1027,7 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 print('[0m')
                 currentcondition = tempcondition
             # ariamode = True
-            runwithsubprocess(f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {filename_s}", folder_s, False, 'aria2')
+            runwithsubprocess(f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {todownload_s} -d {folder_s} -o {ariafilename_s}", folder_s, False, 'aria2')
         printdebug("\nmode: " + mode)
         if mode=='debugevery':
             time.sleep(2)
@@ -1042,18 +1050,29 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
             except FileNotFoundError or FileExistsError:
                 printdebug("rename failed somehow")
                 pass
-    if torename and prockilled == False and filename != torename:
+    if torename and prockilled == False and filename != torename and downloader != 'aria2':
         def saferename(oldpath, newpath):
             try:
                 os.rename(oldpath, newpath)
-            except:
-                print("Rename failed.")
+            except Exception as e:
+                print("Rename failed. Reason: " + str(e))
                 pass
 
-        if mode=='civit':
-            saferename(folder, os.path.join(folder_s, shlex.quote(torename)))
-        else:
-            saferename(filepath, os.path.join(folder, shlex.quote(torename)))
+        saferename(filepath, os.path.join(folder, shlex.quote(torename)))
+    if mode=='civit0':
+        # if torename:
+        #     filepath = os.path.join(folder, torename)
+        try:
+            if os.path.exists(filepath):
+                if os.path.getsize(filepath) <= 5 * 1024:
+                    with open(filepath, "r", encoding="utf-8") as file:
+                        if "<title>We'll be right back | Civitai</title>" in file.read():
+                            prevciviterror = True
+                            print('[1;31mCivitAI website is currently down ツ')
+                            print('[0m')
+        except Exception as e:
+            print("File size checking failed. Reason: " + str(e))
+            pass
     if mode=='dropbox':
         if os.path.getsize(filepath) <= 1024:
             print('[1;31mDropbox filesize below 1kb')
@@ -1213,6 +1232,13 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     everymethod = False
     global currentcondition
     resumebuttonvisible = False
+    if command.strip().startswith('https://pastebin.com/') and command.strip().count('\n') == 0:
+        currentcondition = f'Done.'
+        if gradiostate == True:
+            return ["Use the 'Copy from Pastebin' button instead", gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
+        else:
+            return ["Use the 'Copy from Pastebin' button instead", gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
+    
     if command.strip() == '@debugresetdownloads' and snapshot != {} and globaldebug == True:
         currentcondition = f'Removing downloaded files...'
         removed_files = global_rewind()
@@ -1225,6 +1251,7 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
             return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
         else:
             return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
+        
     if not command.strip():
         currentcondition = "Logging activated."
         texttowrite = ["The link box is empty."]
@@ -1506,15 +1533,16 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 if everymethod == False:
                     if usenewmethod:
                         progress(round(steps/totalsteps, 3), desc='Downloading ' + currenttorename + f' into {currenthashtag}...')
-                        hfdown(currentlink, currentfolder, choosedowner, 'default', currenttorename)
+                        hfdown(currentlink, currentfolder, choosedowner, 'civit0', currenttorename)
                     else:
                         progress(round(steps/totalsteps, 3), desc='Downloading model number ' + os.path.basename(currentlink) + '...')
                         civitdown(currentlink, currentfolder, currenttorename)
-                    configlink = checkcivitconfig(currentlink)
-                    if not configlink=='':
-                        namefile= os.path.splitext(currenttorename.split('?')[0])[0]
-                        currenttorename = namefile + '.yaml'
-                        hfdown(configlink, currentfolder, choosedowner, 'default', currenttorename)
+                    if not prevciviterror:
+                        configlink = checkcivitconfig(currentlink)
+                        if not configlink=='':
+                            namefile= os.path.splitext(currenttorename.split('?')[0])[0]
+                            currenttorename = namefile + '.yaml'
+                            hfdown(configlink, currentfolder, choosedowner, 'civit0', currenttorename)
                 else:
                     for xmethod in downmethod:
                         if prockilled == False:
@@ -1609,25 +1637,84 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                         newtype = newhashtag[1:]
                         #global typemain #moved to top
                         #global typechecker #moved to top
-                        if not newtype in typemain and not newpath in typechecker:
-                            try:
-                                typemain.append(newtype)
-                                printdebug('typemain: ' + str(typemain))
-                                typechecker.append(newtype)
-                                printdebug('typechecker: ' + str(typechecker))
-                                newglobalpath = newtype + "path"
-                                printdebug('newglobalpath: ' + newtype + "path")
-                                newpath = os.path.abspath(os.path.normpath(newpath).rstrip(os.sep))
-                                os.makedirs(newpath, exist_ok=True)
-                                globals()[newglobalpath] = newpath
-                                printdebug("modelpath = " + eval(newglobalpath))
-                                oldfilesdict[newtype] = os.listdir(newpath)
-                                # global addedcustompath
-                                addedcustompath[newhashtag] = newpath
-                                printdebug("addedcustompath: " + str(addedcustompath))
-                                print(f"New custom path added!\n{newhashtag} means {newpath}")
-                            except Exception as e:
-                                print("Adding custom path failed! Reason: " + str(e))
+                        if not newtype[0].isdigit():
+                            if not newtype in typemain and not newpath in typechecker:
+                                try:
+                                    typemain.append(newtype)
+                                    printdebug('typemain: ' + str(typemain))
+                                    typechecker.append(newtype)
+                                    printdebug('typechecker: ' + str(typechecker))
+                                    newglobalpath = newtype + "path"
+                                    printdebug('newglobalpath: ' + newtype + "path")
+                                    newpath = os.path.abspath(os.path.normpath(newpath).rstrip(os.sep))
+                                    os.makedirs(newpath, exist_ok=True)
+                                    globals()[newglobalpath] = newpath
+                                    printdebug("modelpath = " + eval(newglobalpath))
+                                    oldfilesdict[newtype] = os.listdir(newpath)
+                                    # global addedcustompath
+                                    addedcustompath[newhashtag] = newpath
+                                    printdebug("addedcustompath: " + str(addedcustompath))
+                                    print(f"New custom path added!\n{newhashtag} means {newpath}")
+                                except Exception as e:
+                                    print("Adding custom path failed! Reason: " + str(e))
+                        else:
+                            print("Adding custom path failed! Reason: Custom hashtag name cannot starts with a number")
+            
+            elif listpart.startswith("@aria") or listpart.startswith("@aria2"): #@note customaria
+                
+                # checkariacommand = ['##', '>']
+                printvardebug(listpart)
+                if "##" in listpart:
+                    listpart = listpart.split('##')[0]
+                if ":\\" in listpart: #windows path
+                    listpart = listpart.replace('\\', '\\\\').replace('"', '\\"')
+                ariacmd = shlex.split(listpart)
+                printvardebug(ariacmd)
+                arialink, ariarename, ariapath = '', '', ''
+                renamedalready = False
+                custompath = False
+                # startcomment = False
+                if (ariacmd[0] == '@aria2' or ariacmd[0] == '@aria') and len(ariacmd) > 1:  #two items. @aria and link
+                    if ariacmd[1].startswith('http'):
+                        arialink = ariacmd[1]
+
+                    if len(ariacmd) > 2: #three items. @aria, link, and path
+                        if ariacmd[2].startswith(">") and len(ariacmd) > 3: #four items. @aria, link, '>', and rename (no custom path)
+                            ariarename = shlex.quote(ariacmd[3])
+                            renamedalready = True
+                        else:
+                            if ariacmd[2].startswith('#'): #three items. @aria, link, hashtagpath
+                                tobeariapath, _ = hashtagtopath(ariacmd[2])
+                                if tobeariapath:
+                                    ariapath = tobeariapath
+                            else: #three items. @aria, link, custompath
+                                # ariapath = shlex.quote(ariacmd[2])
+                                ariapath = ariacmd[2]
+                                custompath = True #message for file downloaded to custom path will be added later
+                    # if len(cmd) > 3:
+                    #     if cmd[3].startswith('>'):
+                    #         renaming = True
+                    #     else:
+                    #         renaming = False
+                    if len(ariacmd) > 4 and ariacmd[3].startswith('>') and not renamedalready:  #five items. @aria, link, path, '>', and rename
+                        ariarename = shlex.quote(ariacmd[4])
+                    
+                    if not ariapath:
+                        ariapath = currentfolder
+
+                    if not ariarename:
+                        ariarename = arialink.rsplit('/', 1)[-1]
+                    
+                    #finalcommand = f"aria2c --summary-interval=1 --console-log-level=error -c -x 16 -s 16 -k 1M {arialink} -d {ariapath} -o {ariarename}"
+                    printvardebug(arialink)
+                    printvardebug(ariapath)
+                    printvardebug(ariarename)
+                    if arialink and not prockilled:
+                        try:
+                            currentcondition = f'Downloading from {arialink} into {ariapath}...'
+                            hfdown(arialink, ariapath, 'aria2', 'default', ariarename)
+                        except Exception as e:
+                            print(f"Custom aria download failed. Reason: {str(e)}")
             
             elif listpart.startswith("#") and listpart.endswith(tuple(typemain)): #tuple(typemain[countofdefaulthashtags:])
                 try:
@@ -1639,50 +1726,11 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                     print(f"Cannot use hashtag: {str(e)}")
 
             else:
-                notbreaking = True
-                typemainlocal = []
-                for x in typemain:
-                    typemainlocal.append(x)
-                for y in typemainlocal:
-                    if listpart[1:] == y:
-                        printdebug("one of typemain, found on else")
-                        currenthashtag = listpart
-                        currentfolder = eval(listpart[1:] + "path")
-                        os.makedirs(currentfolder, exist_ok=True)
-                        notbreaking = False
-                for prefix in typechecker:
-                    if listpart.startswith("#" + prefix) and notbreaking:
-                        if prefix in ["embedding", "embeddings", "embed", "embeds","textualinversion", "ti"]:
-                            currenthashtag = '#embed'
-                        elif prefix in ["model", "models", "checkpoint", "checkpoints"]:
-                            currenthashtag = '#model'
-                        elif prefix in ["vae", "vaes"]:
-                            currenthashtag = '#vae'
-                        elif prefix in ["lora", "loras"]:
-                            currenthashtag ='#lora'
-                        elif prefix in ["hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",]:
-                            currenthashtag = '#hynet'
-                        elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
-                            currenthashtag = '#addnetlora'
-                        elif prefix in ["controlnet", "cnet"]:
-                            currenthashtag = '#cnet'
-                        elif prefix in ["extension", "extensions", "ext"]:
-                            currenthashtag = '#ext'
-                        elif prefix in ["aestheticembedding", "aestheticembed"]:
-                            currenthashtag = '#aestheticembed'
-                        elif prefix in ["upscaler", "upscale"]:
-                            currenthashtag = '#upscaler'
-                        elif prefix in ["altmodel", "altmodels"]:
-                            currenthashtag = '#altmodel'
-                        elif prefix in ["lycoris", "locon", "loha"]:
-                            currenthashtag = '#lycoris'
-                        try:
-                            currentfolder = eval(currenthashtag[1:] + 'path')
-                        except:
-                            print(f"Cannot use hashtag: {e}")
-                            continue
-                        
-                        os.makedirs(currentfolder, exist_ok=True)
+                tobecurrentfolder, tobecurrenthashtag = hashtagtopath(listpart)
+                if tobecurrentfolder:
+                    currentfolder = tobecurrentfolder
+                if tobecurrentfolder:
+                    currenthashtag = tobecurrenthashtag
                 
         else:
             currentcondition = 'Operation cancelled'
@@ -1710,9 +1758,58 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     else:
         return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
 
+def hashtagtopath(thehashtag):
+    hashtagcurrent, foldercurrent = '',''
+    notbreaking = True
+    typemainlocal = []
+    for x in typemain:
+        typemainlocal.append(x)
+    for y in typemainlocal:
+        if thehashtag[1:] == y:
+            printdebug("one of typemain, found on else")
+            hashtagcurrent = thehashtag
+            foldercurrent = eval(thehashtag[1:] + "path")
+            os.makedirs(foldercurrent, exist_ok=True)
+            notbreaking = False
+    for prefix in typechecker:
+        if thehashtag.startswith("#" + prefix) and notbreaking:
+            if prefix in ["embedding", "embeddings", "embed", "embeds","textualinversion", "ti"]:
+                hashtagcurrent = '#embed'
+            elif prefix in ["model", "models", "checkpoint", "checkpoints"]:
+                hashtagcurrent = '#model'
+            elif prefix in ["vae", "vaes"]:
+                hashtagcurrent = '#vae'
+            elif prefix in ["lora", "loras"]:
+                hashtagcurrent ='#lora'
+            elif prefix in ["hypernetwork", "hypernetworks", "hypernet", "hypernets", "hynet", "hynets",]:
+                hashtagcurrent = '#hynet'
+            elif prefix in ["addnetlora", "loraaddnet", "additionalnetworks", "addnet"]:
+                hashtagcurrent = '#addnetlora'
+            elif prefix in ["controlnet", "cnet"]:
+                hashtagcurrent = '#cnet'
+            elif prefix in ["extension", "extensions", "ext"]:
+                hashtagcurrent = '#ext'
+            elif prefix in ["aestheticembedding", "aestheticembed"]:
+                hashtagcurrent = '#aestheticembed'
+            elif prefix in ["upscaler", "upscale"]:
+                hashtagcurrent = '#upscaler'
+            elif prefix in ["altmodel", "altmodels"]:
+                hashtagcurrent = '#altmodel'
+            elif prefix in ["lycoris", "locon", "loha"]:
+                hashtagcurrent = '#lycoris'
+            try:
+                foldercurrent = eval(hashtagcurrent[1:] + 'path')
+            except Exception as e:
+                print(f"Cannot use hashtag: {e}")
+                continue
+            
+            os.makedirs(foldercurrent, exist_ok=True)
+    
+    return foldercurrent, hashtagcurrent
+
 wildcardcommand = [
     "@debugeverymethod", "@debugresetdownloads",
-    "@extract"
+    "@extract", "@aria", "@aria2", "@new"
 ]
 
 def extract_links(string):
@@ -1725,8 +1822,6 @@ def extract_links(string):
         elif line.startswith(tuple(wildcardcommand)):
             links.append(line)
         elif line.startswith("!"):
-            links.append(line.strip())
-        elif line.startswith("@new"):
             links.append(line.strip())
         elif line.startswith("#"):
             links.append(line.strip())
@@ -1754,8 +1849,6 @@ def uploaded(textpath):
                 if line.startswith(tuple(supportedlinks)):
                     links.append(line.strip())
                 elif line.startswith("!"):
-                    links.append(line.strip())
-                elif line.startswith("@new"):
                     links.append(line.strip())
                 elif line.startswith(tuple(wildcardcommand)):
                     links.append(line.strip())
@@ -1871,25 +1964,65 @@ def buildarrayofhashtags(rightorbottom):
             print(str(e))
     return hashtagandpath
 
+def copyfrompastebin(boxwithlink):
+    pastebinlink = boxwithlink.strip()
+    if pastebinlink.startswith('https://pastebin.com/'):
+        if pastebinlink.count('\n') == 0:
+            global currentcondition
+            currentcondition = f'Gathering links from Pastebin..'
+            if not '/raw/' in pastebinlink:
+                pastebinlink = pastebinlink.replace("pastebin.com/", "pastebin.com/raw/")
+            
+            pbinresponse = requests.get(pastebinlink)
+
+            if pbinresponse.status_code == 200:
+                pbintextlist = pbinresponse.text.splitlines()
+                links = []
+                for line in pbintextlist:
+                    if line.startswith(tuple(supportedlinks)):
+                        links.append(line.strip())
+                    elif line.startswith("!"):
+                        links.append(line.strip())
+                    elif line.startswith("@new"):
+                        links.append(line.strip())
+                    elif line.startswith(tuple(wildcardcommand)):
+                        links.append(line.strip())
+                    elif line.startswith("#"):
+                        links.append(line.strip())
+                currentcondition = f'Done.'
+                finallinks = list_to_text(links)
+                return [finallinks, "Pastebin links retrieved successfully."]
+            else:
+                currentcondition = f'Done.'
+                print("Error retrieving data from pastebin")
+                return [boxwithlink, "Error retrieving data from pastebin"]
+        else:
+            currentcondition = f'Done.'
+            return [boxwithlink, "Pastebin link must be the only one link on the textbox! (And only one pastebin link supported)"]
+    else:
+        currentcondition = f'Done.'
+        return [boxwithlink, "Pastebin link must be the first (and the only) link on the textbox!"]
+
 titletext = f"""<h3 style="display: inline-block; font-size: 20px;">⬇️ Batchlinks Downloader ({currentversion}) {latestversiontext}</h3>"""
 introductiontext = f"""
 {titletext}
-<h5 style="display: inline-block; font-size: 14px;"><a href="https://github.com/etherealxx/batchlinks-webui#latest-release-{currentverforlink}">(what's new?)</a></h5>
+<h5 style="display: inline-block; font-size: 14px;"><u><a href="https://github.com/etherealxx/batchlinks-webui/blob/main/releasenotes.md" target="_blank">(what's new?)</a></u></h5>
 <p style="font-size: 14px;;">This tool will read the textbox and download every links from top to bottom one by one<br/>
 Put your links down below. Supported link: Huggingface, CivitAI, MEGA, Discord, Github, Catbox, Google Drive, Pixeldrain, Mediafire, Anonfiles, Dropbox<br/>
 Use hashtag to separate downloaded items based on their download location<br/>
 Valid hashtags: <code>#embed</code>, <code>#model</code>,  <code>#hypernet</code>, <code>#lora</code>, <code>#vae</code>, <code>#addnetlora</code>, etc.<br/>
 (For colab that uses sd-webui-additional-networks extension to load LoRA, use <code>#addnetlora</code> instead)<br/>
-Use double hashtag after links for comment</p>
+Use double hashtag (##) after links for comment. Useful to mark which links downloads what.<br/>
+Remember to always press the 🔄️ refresh button on the UI after downloading models etc. in order for them to show up on the list.</p>
 """
 knowmoretext = f"""
 <p style="font-size: 14px;">Click these links for more:<br/>
-<a href="https://github.com/etherealxx/batchlinks-webui">Readme Page</a><br/>
-<a href="https://github.com/etherealxx/batchlinks-webui#example">Example</a><br/>
-<a href="https://github.com/etherealxx/batchlinks-webui#syntax">Syntax</a><br/>
-<a href="https://github.com/etherealxx/batchlinks-webui#valid-hashtags">Valid Hashtags</a><br/>
-<a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a><br/>
-<a href="https://github.com/etherealxx/batchlinks-webui/issues">Report Bug</a></p>
+<u><a href="https://github.com/etherealxx/batchlinks-webui">Readme Page</a></u><br/>
+<u><a href="https://github.com/etherealxx/batchlinks-webui/wiki/Usage-Example">Example</a></u><br/>
+<u><a href="https://github.com/etherealxx/batchlinks-webui/wiki/Main-Syntax">Syntax</a></u><br/>
+<u><a href="https://github.com/etherealxx/batchlinks-webui/wiki/Valid-Hashtags">Valid Hashtags</a></u><br/>
+<u><a href="https://github.com/etherealxx/batchlinks-webui/blob/main/howtogetthedirectlinks.md">Here's how you can get the direct links</a></u><br/>
+<u><a href="https://github.com/etherealxx/batchlinks-webui/issues">Report Bug</a></u></p>
 """
 testboxplaceholder = f"""#model
 <your model link here>
@@ -1920,12 +2053,14 @@ def on_ui_tabs():
           with gr.Row():
             with gr.Box():
                 if gradiostate == True:
-                    with gr.Row():
-                    #   gr.Textbox(value=None, interactive=False, show_label=False)
+                    with gr.Column():
+                        # with gr.Row():
+                        #   gr.Textbox(value=None, interactive=False, show_label=False)
                         btn_onlog = gr.Button("Turn On Logging", variant="primary", visible=True)
+                        # with gr.Row():
                         btn_offlog = gr.Button("Turn Off Logging", visible=False)
-                        loggingon = btn_onlog.click(keeplog, outputs=[logbox, btn_offlog, btn_onlog], every=1)
-                        btn_offlog.click(offlog, outputs=[logbox, btn_offlog, btn_onlog], cancels=[loggingon])
+                    loggingon = btn_onlog.click(keeplog, outputs=[logbox, btn_offlog, btn_onlog], every=1)
+                    btn_offlog.click(offlog, outputs=[logbox, btn_offlog, btn_onlog], cancels=[loggingon])
                         #   gr.Textbox(value=None, interactive=False, show_label=False)
                     #   logging = gr.Radio(["Turn On Logging"], show_label=False)
                     #   logging.change(keeplog, outputs=logbox, every=1)
@@ -1937,10 +2072,10 @@ def on_ui_tabs():
                 # if platform.system() == "Windows":
                 #     choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method")
                 # else:
-                with gr.Row():
+                with gr.Row(variant='panel'):
                     
                     if gradiostate == True:
-                        with gr.Column(scale=2):
+                        with gr.Column(scale=1):
                             choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
                     else:
                         with gr.Column(scale=1):
@@ -1954,18 +2089,26 @@ def on_ui_tabs():
 
                 with gr.Row():
                     if gradiostate == True:
-                        with gr.Column(scale=2, min_width=100):
+                        with gr.Column(scale=1, min_width=100):
                             btn_run = gr.Button("Download All!", variant="primary")
                         # btn_upload = gr.UploadButton("Upload .txt", file_types="text")
                         # btn_upload.upload(uploaded, btn_upload, file_output)
                         with gr.Column(scale=1, min_width=100):
                             btn_cancel = gr.Button("Cancel")
+                            with gr.Row():
+                                file_output = gr.UploadButton(file_types=['.txt'], label='Upload txt')
+                                btn_pastebin = gr.Button("Copy from Pastebin")
                                         
                     else:
                         btn_run = gr.Button("Download All!", variant="primary")
                         btn_resume = gr.Button("Resume Download", visible=False)
-                    with gr.Column(scale=1, min_width=100):
-                        file_output = gr.UploadButton(file_types=['.txt'], label='Upload txt')
+                        with gr.Column(scale=1, min_width=100):
+                            with gr.Row():
+                                file_output = gr.UploadButton(file_types=['.txt'], label='Upload txt')
+                                btn_pastebin = gr.Button("Copy from Pastebin")
+                    # with gr.Column(scale=1, min_width=100):
+                        # file_output = gr.UploadButton(file_types=['.txt'], label='Upload txt')
+                        # copy_pastebin = gr.Button("Copy from Pastebin")
                 if gradiostate == False:
                     with gr.Row():
                         gr.Markdown(
@@ -2014,6 +2157,8 @@ def on_ui_tabs():
         else:
             btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=[out_text, righttable, bottomtable, btn_resume])
         
+        btn_pastebin.click(copyfrompastebin, inputs=[command], outputs=[command, out_text])
+
     if sdless:
         if platform.system() == "Windows":
             batchlinks.queue(64).launch(inbrowser=True)

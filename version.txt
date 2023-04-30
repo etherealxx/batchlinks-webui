@@ -1,7 +1,21 @@
-v3.1.1b
-(^current version^)
+v3.1.2
+(^current version, hopefully not the last^)
 
 Release notes:
+
+## v3.1.2
+- Bug fixed when downloading with aria2 on Windows
+- Bug fixed on gradio update checker on sdless batch file for windows
+- CivitAi error prevention (when the website is down)
+- Cleaned the code of the hashtag system
+- `Copy from Pastebin` feature
+- Custom aria command with `@aria`
+- Making sure custom hashtag doesn't start with number
+- New calmer notification sound
+- Readme page cleanup
+- Some help link changed to link into wiki instead
+- UI fix to adapt with latest gradio (v3.23.0)
+- Various bug fixes related to CivitAI download
 
 ## v3.1.1b
 - Hotfix: Fixed CivitAI link refuses to be downloaded properly. Seems like CivitAI changes its API.
@@ -111,3 +125,5 @@ Older releases:
 - commit "Civit support, i hope it works." is v0.2.0 (2420ea4dd670ec71481a2ed43ff22c7c1a959543)
 - commit "🪲Bug fix and 🖼️stuff" is v0.2.1 (c7a91b6e14ca6f35438e29ab7ad3d2e00d62c99b)
 - commit "Merge pull request #1 from etherealxx/gradioevery" is v1.0.0 (a89e50fdfb5008f703750cf0e7878fc6c25f9219)
+
+.

@@ -8,11 +8,9 @@ python -c "import gradio" 2>nul && (
     )
 ) || (
     pip install gradio==3.16.2
-	
 )
 pip show tqdm >nul || pip install tqdm
-
-pip freeze | findstr /i "\<gradio\>" >nul && pip freeze | findstr /i "\<tqdm\>" >nul && >gradioinstalled.bak
+pip freeze | findstr /i "\<gradio\>" >nul && pip freeze | findstr /i "\<tqdm\>" >nul && (echo. > gradioinstalled.bak)
 echo.
 
 :beginning
