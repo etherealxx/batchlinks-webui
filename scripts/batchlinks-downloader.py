@@ -69,15 +69,23 @@ else:
 currentverforlink = latestversion.replace('.', '')
 #}
 
+vladmandic = False
 try:
     global gradiostate
-    if cmd_opts.gradio_queue:
+    if cmd_opts.gradio_queue: #automatic1111
         gradiostate = True
     else:
         gradiostate = False
 except AttributeError:
-    gradiostate = False #at this point just use onedotsix
-    pass
+    try:
+        if not cmd_opts.disable_queue: #vladmandic
+            gradiostate = True
+        else:
+            gradiostate = False
+        vladmandic = True
+    except AttributeError:
+        gradiostate = False #at this point just use onedotsix
+        pass
 
 typechecker = [
     "embedding", "embeddings", "embed", "embeds", "textualinversion", "ti",
@@ -129,6 +137,11 @@ cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
 extpath = os.path.join(script_path, "extensions") #obsolete
 upscalerpath = os.path.join(script_path, "models/ESRGAN")
 lycorispath = os.path.join(addnetlorapath, "lycoris")
+
+if vladmandic:
+    cnetpath = os.path.join(script_path, "models/ControlNet")
+    lycorispath = os.path.join(script_path, "models/LyCORIS")
+
 if cmd_opts.ckpt_dir:
     altmodelpath = cmd_opts.ckpt_dir
     currentfolder = altmodelpath
@@ -2048,7 +2061,10 @@ def on_ui_tabs():
           if gradiostate == True:
             logbox = gr.Textbox(label="Log", interactive=False)
           else:
-            logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
+            if vladmandic:
+                logbox = gr.Textbox("(remove the --disable-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
+            else:
+                logbox = gr.Textbox("(use --gradio-queue args on launch.py to enable optional logging)", label="Log", interactive=False)
 
           with gr.Row():
             with gr.Box():
@@ -2066,7 +2082,10 @@ def on_ui_tabs():
                     #   logging.change(keeplog, outputs=logbox, every=1)
                     out_text = gr.Textbox(label="Output")
                 else:
-                    print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
+                    if vladmandic:
+                        print("Batchlinks webui extension: (Optional) Remove the --disable-queue args to enable logging & cancel button on this extension")
+                    else:
+                        print("Batchlinks webui extension: (Optional) Use --gradio-queue args to enable logging & cancel button on this extension")
                     out_text = gr.Textbox("(If this text disappear, that means a download session is in progress.)", label="Output")
 
                 # if platform.system() == "Windows":
