@@ -1,5 +1,8 @@
 # Release Notes
 
+### Latest Patch: v3.2.0a
+- Added support for [vladmantic's fork of automatic1111's webui](https://github.com/vladmandic/automatic)
+
 ## Latest Release: v3.2.0
 - Bug fixed when downloading with aria2 on Windows
 - Bug fixed on gradio update checker on sdless batch file for windows

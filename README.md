@@ -144,7 +144,7 @@ https://huggingface.co/WarriorMama777/OrangeMixs/resolve/main/Models/AbyssOrange
 https://huggingface.co/hakurei/waifu-diffusion-v1-4/resolve/main/vae/kl-f8-anime2.ckpt
 #embed
 https://huggingface.co/datasets/Nerfgun3/bad_prompt/resolve/main/bad_prompt_version2.pt
-https://huggingface.co/NiXXerHATTER59/bad-artist/resolve/main/bad-artist.pt
+https://huggingface.co/etherealxx/whoseisthis/resolve/main/bad_artist.pt
 #lora
 https://civitai.com/api/download/models/8840 ##1-mb-lora-trained-in-5-mins-that-does-the-same-thing-as-25-gb-model-but-better
 https://civitai.com/api/download/models/6891 ##sans undertale
