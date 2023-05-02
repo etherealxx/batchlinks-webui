@@ -1,6 +1,12 @@
 # Release Notes
 
-### Latest Patch: v3.2.0a
+### Latest Patch: v3.2.1
+- Changed "pruned" option to "fp precision" due to CivitAI API changes
+- Fixed bug: No matter when the download process is cancelled or not, CivitAI download will give print out notification that the download process is successful
+- Fixed bug: Preventing the UI errored out when storage is full and trying to convert jpg image while downloading civitai stuff (PIL.UnidentifiedImageError)
+- UI overhaul
+
+#### Patch: v3.2.0a
 - Added support for [vladmandic's fork of automatic1111's webui](https://github.com/vladmandic/automatic)
 
 ## Latest Release: v3.2.0
