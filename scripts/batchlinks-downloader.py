@@ -604,16 +604,20 @@ def getcivitname(link, frommodeltypechooser=False): #@note getcivitname
         printdebug("Error: " + errortype)
         if 'TimeoutError' in errortype:
             print("Unable to connect to CivitAI in 7 seconds. Skipping the link...")
+            currentcondition = tempcondition
             return 'batchlinksskip'
         else:
             if frommodeltypechooser:
+                currentcondition = tempcondition
                 return ''
             else:
                 print("Cannot get the filename. Download will continue with the old slow method.\nReason:" + str(e))
+                currentcondition = tempcondition
                 return 'batchlinksold'
     if contentdis == "https://civitai.com/":
         print('[1;31mCivitAI website is currently down ツ')
         print('[0m')
+        currentcondition = tempcondition
         return 'batchlinksskip'
     cuttedcontent = contentdis.find('response-content-disposition=attachment%3B%20filename%3D%22') + 59
     # filename = str(contentdis[cuttedcontent:]).replace('%22&x-id=GetObject', '') #obsolete since 30-03-2023
@@ -663,8 +667,10 @@ def checkcivitconfig(link): #check if the current civit link has a config file (
 
 def civitmodeltypechooser(modeljson, prunedmodel, torchortensor, linkandnames):
 
-  prunedorfull = ['?type=Model', '?type=Pruned%20Model']
-  if prunedmodel == True:
+#   prunedorfull = ['?type=Model', '?type=Pruned%20Model']
+#   if prunedmodel == 'True':
+  prunedorfull = ['&fp=fp32', '&fp=fp16']
+  if prunedmodel == 'fp16':
     prunedorfull.reverse()
   pickleorsafe = ['&format=SafeTensor', '&format=PickleTensor']
   if torchortensor=='ckpt':
@@ -757,10 +763,15 @@ def civitdown2_get_save_directory(model_type, default_folder):
 
 def civitdown2_convertimage(imagejpg_save_path, imagepng_save_path):
   from PIL import Image
-  img = Image.open(imagejpg_save_path)
-  img_resized = img.resize((img.width // 2, img.height // 2))
-  img_resized.save(imagepng_save_path)
-  os.remove(imagejpg_save_path)
+  try:
+    img = Image.open(imagejpg_save_path)
+    img_resized = img.resize((img.width // 2, img.height // 2))
+    img_resized.save(imagepng_save_path)
+    if os.path.exists(imagejpg_save_path):
+        os.remove(imagejpg_save_path)
+  except Exception as e:
+    print("Civitai image convertion failed. Reason: " + str(e))
+    pass
 
 def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefaulttype, isprunedmodel, isdownvae): #@note civitdown2
   def civitlinkandnamer(model):
@@ -865,8 +876,8 @@ def civitdown2(url, folder, downloader, renamedfilename, isdebugevery, modeldefa
         civitdown2_convertimage(imagejpg_save_path, imagepng_save_path)
     else:
         print(imagejpg_save_path + " doesn't exist")
-  print(f"{data_save_path} successfully downloaded.")
-
+  if prockilled == False:
+    print(f"{data_save_path} successfully downloaded.")
 
   if isdebugevery:
     additionalname = '-' + downloader
@@ -934,10 +945,10 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         todownload_s = shlex.quote(todownload)
         folder_s = shlex.quote(folder)
         folder_win = folder
-        if torename:
-            ariafilename_s = shlex.quote(torename)
-        else:
-            ariafilename_s = filename_s
+    ariafilename_s = filename_s
+    if torename:
+        ariafilename_s = shlex.quote(torename)
+            
     printvardebug(folder)
     printvardebug(todownload)
     printvardebug(filename)
@@ -1072,25 +1083,30 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
                 pass
 
         saferename(filepath, os.path.join(folder, shlex.quote(torename)))
-    if mode=='civit0':
+    if mode=='civit0' and prockilled == False:
         # if torename:
         #     filepath = os.path.join(folder, torename)
         try:
             if os.path.exists(filepath):
                 if os.path.getsize(filepath) <= 5 * 1024:
-                    with open(filepath, "r", encoding="utf-8") as file:
-                        if "<title>We'll be right back | Civitai</title>" in file.read():
-                            prevciviterror = True
-                            print('[1;31mCivitAI website is currently down ツ')
-                            print('[0m')
+                    try:
+                        with open(filepath, "r", encoding="utf-8") as file:
+                            if "<title>We'll be right back | Civitai</title>" in file.read():
+                                prevciviterror = True
+                                print('[1;31mCivitAI website is currently down ツ')
+                                print('[0m')
+                    except Exception as e:
+                        print("File size checking failed. Reason: " + str(e))
+                        pass
         except Exception as e:
             print("File size checking failed. Reason: " + str(e))
             pass
-    if mode=='dropbox':
-        if os.path.getsize(filepath) <= 1024:
-            print('[1;31mDropbox filesize below 1kb')
-            print("There's a chance that the file got too much traffic and dropbox blocked access to it")
-            print('[0m')
+    if mode=='dropbox' and prockilled == False:
+        if os.path.exists(filepath):
+            if os.path.getsize(filepath) <= 1024:
+                print('[1;31mDropbox filesize below 1kb')
+                print("There's a chance that the file got too much traffic and dropbox blocked access to it")
+                print('[0m')
     # if prockilled == True:
     #     #rewind_folder(folder_s)
     #     pass
@@ -1248,9 +1264,9 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     if command.strip().startswith('https://pastebin.com/') and command.strip().count('\n') == 0:
         currentcondition = f'Done.'
         if gradiostate == True:
-            return ["Use the 'Copy from Pastebin' button instead", gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
+            return ["Use the 'Copy from Pastebin' button instead", gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
         else:
-            return ["Use the 'Copy from Pastebin' button instead", gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
+            return ["Use the 'Copy from Pastebin' button instead", gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
     
     if command.strip() == '@debugresetdownloads' and snapshot != {} and globaldebug == True:
         currentcondition = f'Removing downloaded files...'
@@ -1261,18 +1277,18 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
         writefinal = list_to_text(texttowrite)
         currentcondition = f'Removing done.'
         if gradiostate == True:
-            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
+            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
         else:
-            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
+            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')),
         
     if not command.strip():
         currentcondition = "Logging activated."
         texttowrite = ["The link box is empty."]
         writefinal = list_to_text(texttowrite)
         if gradiostate == True:
-            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
+            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right'))
         else:
-            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
+            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
     oldfilesdict = trackall()
     if cmd_opts.ckpt_dir:
         altmodelpath = cmd_opts.ckpt_dir
@@ -1595,14 +1611,12 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 print(currentlink)
                 currentcondition = f'Downloading {currentlink}...'
                 #customtypemains = list
+                progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f'...')
                 for tag in tuple((typemain[countofdefaulthashtags:])):
                     if "#" + tag == currenthashtag and gradiostate:
                         progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f' into {currenthashtag}...')
                         pass
                         break
-                    else:
-                        progress(round(steps/totalsteps, 3), desc='Downloading ' + os.path.basename(currentlink) + f'...')
-                        pass
                 if everymethod == False:
                     civitdown2(currentlink, currentfolder, choosedowner, currenttorename, False, civitdefault, civitpruned, civitvae)
                 # else:
@@ -1767,9 +1781,9 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     printdebug(f"this should be the output:\n" + str(downloadedfiles))
     progress(1.00, desc='')
     if gradiostate == True:
-        return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]  #@note dataframe
+        return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]  #@note dataframe #gr.Dataframe.update(value=buildarrayofhashtags('right')), was here
     else:
-        return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('right')), gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)]
+        return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), was here
 
 def hashtagtopath(thehashtag):
     hashtagcurrent, foldercurrent = '',''
@@ -1928,7 +1942,7 @@ def cancelrun():
         print()
         print("This should kill")
         print()
-    return "Operation Cancelled"
+    return ["Operation Cancelled",gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]
 
 def fillbox():
     global remaininglinks
@@ -1938,11 +1952,47 @@ def fillbox():
         return [text, 'Links updated!\nClick Download All! to download the rest of the links', gr.Button.update(visible=False)]
     return ['', '', gr.Button.update(visible=False)]
 
-def stretchui(stretch):
+if gradiostate == True:
+    storedstatedownloader = "gdown"
+else:
+    storedstatedownloader = "aria2"
+storedstatemodeltype = "safetensors"
+storedstateprecision = "fp16"
+storedstatevae = True
+
+def grchangedown(downstate):
+    global storedstatedownloader
+    storedstatedownloader = downstate
+    printvardebug(storedstatedownloader)
+
+def grchangetype(typestate):
+    global storedstatemodeltype
+    storedstatemodeltype = typestate
+    printvardebug(storedstatemodeltype)
+
+def grchangefp(fpstate):
+    global storedstateprecision
+    storedstateprecision = fpstate  
+    printvardebug(storedstateprecision)  
+
+def grchangevae(vaestate):
+    global storedstatevae
+    storedstatevae = vaestate
+    printvardebug(storedstatevae)  
+
+def stretchui(stretch): #outputs=[boxtohide, bottomlist] #outputs=[boxtohide, downbox, civitbox, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae])
+    # if stretch:
+    #     return [gr.Box.update(visible=False), gr.Accordion.update(visible=False), gr.Accordion.update(visible=True)] 
+    # else:
+    #     return [gr.Box.update(visible=True), gr.Accordion.update(visible=True), gr.Accordion.update(visible=False)] 
+    global storedstatedownloader
+    global storedstatemodeltype
+    global storedstateprecision
+    global storedstatevae
     if stretch:
-        return [gr.Box.update(visible=False), gr.Accordion.update(visible=False), gr.Accordion.update(visible=True)] 
+        return [gr.Box.update(visible=False), gr.Row.update(visible=True), gr.Row.update(visible=True), gr.Radio.update(value=storedstatedownloader), gr.Radio.update(value=storedstatemodeltype), gr.Radio.update(value=storedstateprecision), gr.Checkbox.update(value=storedstatevae)]
     else:
-        return [gr.Box.update(visible=True), gr.Accordion.update(visible=True), gr.Accordion.update(visible=False)] 
+        return [gr.Box.update(visible=True), gr.Row.update(visible=False), gr.Row.update(visible=False), gr.Radio.update(value=storedstatedownloader), gr.Radio.update(value=storedstatemodeltype), gr.Radio.update(value=storedstateprecision), gr.Checkbox.update(value=storedstatevae)]
     
 def hidehelp(hide):
     if hide:
@@ -2091,20 +2141,38 @@ def on_ui_tabs():
                 # if platform.system() == "Windows":
                 #     choose_downloader = gr.Radio(["gdown", "wget", "curl"], value="gdown", label="Download method")
                 # else:
-                with gr.Row(variant='panel'):
+
+
+                with gr.Row(variant='panel', visible=False) as downbox:
                     
-                    if gradiostate == True:
-                        with gr.Column(scale=1):
-                            choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
-                    else:
-                        with gr.Column(scale=1):
-                            choose_downloader = gr.Radio(["aria2"], value="aria2", label="Downloader")
-                    with gr.Box():
-                        with gr.Column(scale=1):
-                            civit_default = gr.Radio(["ckpt", "safetensors"], value="safetensors", label="CivitAI Preferred Model Type", interactive=True)
-                            with gr.Row():
-                                civit_ispruned = gr.Checkbox(True, label="Pruned", interactive=True)
-                                civit_alsodownvae = gr.Checkbox(True, label="Also Download VAE", interactive=True)
+                   if gradiostate == True:
+                       with gr.Column(scale=1):
+                           choose_downloader2 = gr.Radio(["gdown", "wget", "curl", "aria2"], value="gdown", label="Download method")
+                   else:
+                       with gr.Column(scale=1):
+                           choose_downloader2 = gr.Radio(["aria2"], value="aria2", label="Downloader")
+
+
+                with gr.Row(variant='panel', visible=False) as civitbox:
+                    # with gr.Box():
+                    #     with gr.Column(scale=1):
+                    #         with gr.Row():
+                   civit_default2 = gr.Radio(["ckpt", "safetensors"], value="safetensors", label="CivitAI Preferred Model Type", interactive=True)
+                   civit_ispruned2 = gr.Radio(["fp16", "fp32"], value="fp16", label="Model Precision", interactive=True)
+                            # with gr.Row():
+                                # civit_ispruned = gr.Checkbox(True, label="Pruned", interactive=True)
+                   civit_alsodownvae2 = gr.Checkbox(True, label="Also Download VAE", interactive=True)
+
+                # def passvaluebetweenradio(newval):
+                #     return gr.Radio.update(value=newval)
+
+                # def passvaluebetweencheckbox(newval):
+                #     return gr.Checkbox.update(value=newval)
+                
+                # choose_downloader2.change(passvaluebetweenradio, inputs=choose_downloader2, outputs=choose_downloader)
+                # civit_default2.change(passvaluebetweenradio, inputs=civit_default2, outputs=civit_default)
+                # civit_ispruned2.change(passvaluebetweenradio, inputs=civit_ispruned2, outputs=civit_ispruned)
+                # civit_alsodownvae2.change(passvaluebetweencheckbox, inputs=civit_alsodownvae2, outputs=civit_alsodownvae)
 
                 with gr.Row():
                     if gradiostate == True:
@@ -2144,19 +2212,47 @@ def on_ui_tabs():
 
                 file_output.upload(uploaded, file_output, command)
             with gr.Box(visible=True) as boxtohide:
-                # gr.Markdown("""
-                # <h5 style="text-align: center; vertical-align: middle; font-size: 14px;">If you feel the UI is too cramped, click the Stretch UI button above.</h5>
-                # """)
-                with gr.Accordion("List of Every Hashtags and its Path", open=False, visible=True) as rightlist:
-                    righttable = gr.DataFrame(
-                    buildarrayofhashtags('right'),
-                    headers=["hashtag", "path"],
-                    datatype=["str", "str"],
-                    interactive=False
-                    )
+                with gr.Row(variant='panel'): 
+                    if gradiostate == True:
+                        with gr.Column(scale=1):
+                            choose_downloader = gr.Radio(["gdown", "wget", "curl", "aria2"], value=storedstatedownloader, label="Download method")
+                    else:
+                        with gr.Column(scale=1):
+                            choose_downloader = gr.Radio(["aria2"], value=storedstatedownloader, label="Downloader")
+                with gr.Row(variant='panel'):
+                    civit_default = gr.Radio(["ckpt", "safetensors"], value=storedstatemodeltype, label="CivitAI Preferred Model Type", interactive=True)
+                    civit_ispruned = gr.Radio(["fp16", "fp32"], value=storedstateprecision, label="Model Precision", interactive=True)
+                            # with gr.Row():
+                                # civit_ispruned = gr.Checkbox(True, label="Pruned", interactive=True)
+                    civit_alsodownvae = gr.Checkbox(storedstatevae, label="Also Download VAE", interactive=True)
+                choose_downloader.change(grchangedown, inputs=choose_downloader)
+                civit_default.change(grchangetype, inputs=civit_default)
+                civit_ispruned.change(grchangefp, inputs=civit_ispruned)
+                civit_alsodownvae.change(grchangevae, inputs=civit_alsodownvae)
+#                with gr.Box(visible=True) as boxtohide:
+                    # gr.Markdown("""
+                    # <h5 style="text-align: center; vertical-align: middle; font-size: 14px;">If you feel the UI is too cramped, click the Stretch UI button above.</h5>
+                    # """)
+#                    with gr.Accordion("List of Every Hashtags and its Path", open=False, visible=True) as rightlist:
+#                        righttable = gr.DataFrame(
+#                        buildarrayofhashtags('right'),
+#                        headers=["hashtag", "path"],
+#                        datatype=["str", "str"],
+#                        interactive=False
+#                        )
                 # sidetext = gr.Markdown(knowmoretext, visible=True)
+            def passvaluebetweenradio(newval):
+                return gr.Radio.update(value=newval)
+
+            def passvaluebetweencheckbox(newval):
+                return gr.Checkbox.update(value=newval)
+            
+            choose_downloader2.change(passvaluebetweenradio, inputs=choose_downloader2, outputs=choose_downloader)
+            civit_default2.change(passvaluebetweenradio, inputs=civit_default2, outputs=civit_default)
+            civit_ispruned2.change(passvaluebetweenradio, inputs=civit_ispruned2, outputs=civit_ispruned)
+            civit_alsodownvae2.change(passvaluebetweencheckbox, inputs=civit_alsodownvae2, outputs=civit_alsodownvae)
             finish_audio = gr.Audio(interactive=False, value=os.path.join(extension_dir, "notification.mp3"), elem_id="finish_audio", visible=False)
-        with gr.Accordion("List of Every Hashtags and its Path", open=False, visible=False) as bottomlist:
+        with gr.Accordion("List of Every Hashtags and its Path", open=False, visible=True) as bottomlist:
             bottomtable = gr.DataFrame(
                 buildarrayofhashtags('bottom'),
                 headers=["hashtag", "path"],
@@ -2168,13 +2264,15 @@ def on_ui_tabs():
         <center><p style="font-size: 12px; color: gray">Made with ❤️ by <a href="https://github.com/etherealxx">etherealxx</a></p></center>
         """)
         helphider.change(hidehelp, helphider, outputs=[introduction, knowmore])
-        uistretcher.change(stretchui, uistretcher, outputs=[boxtohide, rightlist, bottomlist])
+        # uistretcher.change(stretchui, uistretcher, outputs=[boxtohide, rightlist, bottomlist])
+        # uistretcher.change(stretchui, uistretcher, outputs=boxtohide)
+        uistretcher.change(stretchui, uistretcher, outputs=[boxtohide, downbox, civitbox, choose_downloader2, civit_default2, civit_ispruned2, civit_alsodownvae2])
         #batchlinks.load(debug, output=debug_txt, every=1)
         if gradiostate == True:
-            run_event = btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=[out_text, righttable, bottomtable])
-            btn_cancel.click(cancelrun, None, outputs=out_text, cancels=[run_event])
+            run_event = btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=[out_text, bottomtable]) #righttable was on output
+            btn_cancel.click(cancelrun, None, outputs=[out_text, bottomtable], cancels=[run_event])
         else:
-            btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=[out_text, righttable, bottomtable, btn_resume])
+            btn_run.click(run, inputs=[command, choose_downloader, civit_default, civit_ispruned, civit_alsodownvae], outputs=[out_text, bottomtable, btn_resume]) #righttable was on output
         
         btn_pastebin.click(copyfrompastebin, inputs=[command], outputs=[command, out_text])
 
