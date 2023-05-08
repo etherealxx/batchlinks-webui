@@ -1,7 +1,6 @@
 #github.com/etherealxx
 import os
 import time
-import gradio as gr
 import urllib.request, subprocess, contextlib #these handle mega.nz
 import http.client
 import requests #this handle civit
@@ -14,6 +13,23 @@ import platform
 import shlex
 import signal
 import sys
+
+importable = False
+if not importable:
+    import gradio as gr
+else:
+    class gr:
+        def Progress():
+            pass
+        class Dataframe():
+            def update(value=''):
+                pass
+        class Button():
+            def update(value=''):
+                pass
+    def progress(a, desc=''):
+        pass
+
 sdless = False
 try:
     from modules import script_callbacks #,scripts
@@ -126,36 +142,59 @@ supportedlinks = [
     "https://www.dropbox.com/s"
 ]
 
-modelpath = os.path.join(script_path, "models/Stable-diffusion")
-embedpath = os.path.join(script_path, "embeddings")
-vaepath = os.path.join(script_path, "models/VAE")
-lorapath = os.path.join(script_path, "models/Lora")
-addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
-hynetpath = os.path.join(script_path, "models/hypernetworks")
-aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webui-aesthetic-gradients/aesthetic_embeddings")
-cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
-extpath = os.path.join(script_path, "extensions") #obsolete
-upscalerpath = os.path.join(script_path, "models/ESRGAN")
-lycorispath = os.path.join(addnetlorapath, "lycoris")
+modelpath, embedpath, vaepath, lorapath, addnetlorapath, hynetpath, aestheticembedpath, cnetpath, extpath, upscalerpath, lycorispath, altmodelpath, currentfolder = '', '', '', '', '', '', '', '', '', '', '', '', ''
 
-if vladmandic:
-    cnetpath = os.path.join(script_path, "models/ControlNet")
-    lycorispath = os.path.join(script_path, "models/LyCORIS")
+def syncpath():
+    global modelpath, embedpath, vaepath, lorapath, addnetlorapath, hynetpath, aestheticembedpath, cnetpath, extpath, upscalerpath, lycorispath, altmodelpath, currentfolder
+    # global embedpath
+    # global vaepath
+    # global lorapath
+    # global addnetlorapath
+    # global hynetpath
+    # global aestheticembedpath
+    # global cnetpath
+    # global extpath
+    # global upscalerpath
+    # global lycorispath
+    # global cnetpath
+    # global lycorispath
+    # global altmodelpath
+    # global currentfolder
 
-if cmd_opts.ckpt_dir:
-    altmodelpath = cmd_opts.ckpt_dir
-    currentfolder = altmodelpath
-else:
-    altmodelpath = modelpath
-    currentfolder = modelpath
+    modelpath = os.path.join(script_path, "models/Stable-diffusion")
+    embedpath = os.path.join(script_path, "embeddings")
+    vaepath = os.path.join(script_path, "models/VAE")
+    lorapath = os.path.join(script_path, "models/Lora")
+    addnetlorapath = os.path.join(script_path, "extensions/sd-webui-additional-networks/models/lora")
+    hynetpath = os.path.join(script_path, "models/hypernetworks")
+    aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webui-aesthetic-gradients/aesthetic_embeddings")
+    cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
+    extpath = os.path.join(script_path, "extensions") #obsolete
+    upscalerpath = os.path.join(script_path, "models/ESRGAN")
+    lycorispath = os.path.join(addnetlorapath, "lycoris")
+
+    if vladmandic:
+        cnetpath = os.path.join(script_path, "models/ControlNet")
+        lycorispath = os.path.join(script_path, "models/LyCORIS")
+
+    if cmd_opts.ckpt_dir:
+        altmodelpath = cmd_opts.ckpt_dir
+        currentfolder = altmodelpath
+    else:
+        altmodelpath = modelpath
+        currentfolder = modelpath
+
+    if os.path.exists(addnetlorapath) and not os.path.exists(lycorispath):
+        os.makedirs(lycorispath, exist_ok=True)
+
+syncpath()
 
 if platform.system() == "Windows":
     for x in typemain: 
         # exec(f"{x}path = os.path.normpath({x}path)")
         exec(f"{x}path = {x}path.replace('/', '\\\\')")
         #exec(f"print({x}path)")
-if os.path.exists(addnetlorapath) and not os.path.exists(lycorispath):
-    os.makedirs(lycorispath, exist_ok=True)
+
 
 newlines = ['\n', '\r\n', '\r']
 currentlink = ''
@@ -282,7 +321,7 @@ def global_rewind():
     return removedall
 
 # Take a snapshot of the directories
-if globaldebug == True:
+if globaldebug == True and not importable:
     take_snapshot()
 # }
 
@@ -448,8 +487,10 @@ def transfare(todownload, folder, torename=''):
                     print(f"\r{line}", end="")
                 else:
                     print(f"\n{line}")
-                    _ = subprocess.getoutput("pkill -f \"mega-cmd-server\"")
+                    # _ = subprocess.getoutput("pkill -f \"mega-cmd-server\"")
+                    _ = subprocess.getoutput("pkill -f \"mega-get\"")
                     printdebug("MEGA server killed")
+                    # time.sleep(2)
 
             else:
                 currentsuboutput = ''
@@ -575,6 +616,7 @@ def civitdown(url, folder, torename=''):
             except KeyError:
                 print('[1;31mLink Error')
                 print('[0m')
+                os.remove(pathtodown)
                 break
         #%cd {folder}
         actualpath = os.path.join(folder, actualfilename)
@@ -582,7 +624,22 @@ def civitdown(url, folder, torename=''):
         downloaded_size = os.path.getsize(actualpath)
         # Check if the download was successful
         if downloaded_size >= total_size:
-            print(f"{actualfilename} successfully downloaded.")
+            civitsuccess = True
+            if os.path.exists(actualpath):
+                if os.path.getsize(actualpath) <= 5 * 1024:
+                    try:
+                        with open(actualpath, "r", encoding="utf-8") as file:
+                            if "<title>503 Service Temporarily Unavailable</title>" in file.read():
+                                global prevciviterror
+                                prevciviterror = True
+                                civitsuccess = False
+                                print('[1;31mFailed to fetch from CivitAi: 503 Service Temporarily Unavailable')
+                                print('[0m')
+                    except Exception as e:
+                        print("File size checking failed. Reason: " + str(e))
+                        pass
+            if civitsuccess:
+                print(f"{actualfilename} successfully downloaded.")
             break
         else:
             print(f"Error: File download failed. Retrying...")
@@ -1087,14 +1144,18 @@ def hfdown(todownload, folder, downloader, mode='default', torename=''): #@note 
         # if torename:
         #     filepath = os.path.join(folder, torename)
         try:
+            printdebug("trying to check if path exist")
             if os.path.exists(filepath):
+                # printdebug("path exist, trying to check if it is smaller than 5kb")
                 if os.path.getsize(filepath) <= 5 * 1024:
+                    # printdebug("smaller than 5kb, trying to check if it's a message")
                     try:
                         with open(filepath, "r", encoding="utf-8") as file:
                             if "<title>We'll be right back | Civitai</title>" in file.read():
                                 prevciviterror = True
                                 print('[1;31mCivitAI website is currently down ツ')
                                 print('[0m')
+                                os.remove(filepath)
                     except Exception as e:
                         print("File size checking failed. Reason: " + str(e))
                         pass
@@ -1252,7 +1313,10 @@ def extractcurdir(currentdir): #@note extractcurdir
                 runwithsubprocess(f"7z x {shlex.quote(szfile)} -p- -o{shlex.quote(currentdir)} -y -sdel -bb0", currentdir, False, '7z')
 
 #@stopwatch #the decorator mess with the progress bar #@note run
-def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.Progress()):
+def run(command, choosedowner, civitdefault="safetensors", civitpruned="fp16", civitvae=True, progress=gr.Progress()):
+    if importable:
+        def progress(a, desc=''):
+            pass
     progress(0.01, desc='')
     global prockilled
     prockilled = False
@@ -1263,11 +1327,17 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     resumebuttonvisible = False
     if command.strip().startswith('https://pastebin.com/') and command.strip().count('\n') == 0:
         currentcondition = f'Done.'
-        if gradiostate == True:
-            return ["Use the 'Copy from Pastebin' button instead", gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
+        ptbinmessage = "Use the 'Copy from Pastebin' button instead"
+        if importable:
+            pbinlinksandmsg = copyfrompastebin(command)
+            print(pbinlinksandmsg[1])
+            command = pbinlinksandmsg[0]
         else:
-            return ["Use the 'Copy from Pastebin' button instead", gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
-    
+            if gradiostate == True:
+                return [ptbinmessage, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
+            else:
+                return [ptbinmessage, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
+        
     if command.strip() == '@debugresetdownloads' and snapshot != {} and globaldebug == True:
         currentcondition = f'Removing downloaded files...'
         removed_files = global_rewind()
@@ -1276,19 +1346,31 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
             texttowrite.append(item)
         writefinal = list_to_text(texttowrite)
         currentcondition = f'Removing done.'
-        if gradiostate == True:
-            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
+        if importable:
+            for msg in writefinal:
+                if msg is not None:
+                    print(msg)
+            pass
         else:
-            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')),
-        
+            if gradiostate == True:
+                return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
+            else:
+                return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')),
+            
     if not command.strip():
         currentcondition = "Logging activated."
         texttowrite = ["The link box is empty."]
         writefinal = list_to_text(texttowrite)
-        if gradiostate == True:
-            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right'))
+        if importable:
+            for msg in writefinal:
+                if msg is not None:
+                    print(msg)
+            pass
         else:
-            return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
+            if gradiostate == True:
+                return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))] #gr.Dataframe.update(value=buildarrayofhashtags('right'))
+            else:
+                return [writefinal, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), 
     oldfilesdict = trackall()
     if cmd_opts.ckpt_dir:
         altmodelpath = cmd_opts.ckpt_dir
@@ -1545,14 +1627,18 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
                 steps += 1
 
             elif listpart.startswith("https://civitai.com/api/download/models/"): #@note civit direct
+                skipthis = False
                 usenewmethod = True
                 currentlink, currenttorename = splitrename(listpart)
                 if currenttorename == '':
                     currenttorename = getcivitname(listpart)
                     if currenttorename == 'batchlinksold':
                         usenewmethod = False
+                        currenttorename = ''
                     elif currenttorename == 'batchlinksskip':
+                        currenttorename = ''
                         continue
+                        
                         # print("That CivitAI link no longer exist, or the server is currently down.")
                         # continue
                 
@@ -1780,10 +1866,17 @@ def run(command, choosedowner, civitdefault, civitpruned, civitvae, progress=gr.
     currentcondition = 'Done!'
     printdebug(f"this should be the output:\n" + str(downloadedfiles))
     progress(1.00, desc='')
-    if gradiostate == True:
-        return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]  #@note dataframe #gr.Dataframe.update(value=buildarrayofhashtags('right')), was here
+
+    if importable:
+        for msg in downloadedfiles:
+            if msg is not None:
+                print(msg)
+        pass
     else:
-        return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), was here
+        if gradiostate == True:
+            return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('bottom'))]  #@note dataframe #gr.Dataframe.update(value=buildarrayofhashtags('right')), was here
+        else:
+            return [downloadedfiles, gr.Dataframe.update(value=buildarrayofhashtags('bottom')), gr.Button.update(visible=resumebuttonvisible)] #gr.Dataframe.update(value=buildarrayofhashtags('right')), was here
 
 def hashtagtopath(thehashtag):
     hashtagcurrent, foldercurrent = '',''
@@ -1860,9 +1953,12 @@ def extract_links(string):
     #print(f"links: {links}")
     return links
 
-def list_to_text(lst):
+def list_to_text(lst, ispastebin=False):
     stripped_list = [item.strip(',').strip('\"') for item in lst]
-    return '\n'.join(stripped_list)
+    if importable and not ispastebin:
+        return lst
+    else:
+        return '\n'.join(stripped_list)
 
 def uploaded(textpath):
     if not textpath is None:
@@ -2053,7 +2149,7 @@ def copyfrompastebin(boxwithlink):
                     elif line.startswith("#"):
                         links.append(line.strip())
                 currentcondition = f'Done.'
-                finallinks = list_to_text(links)
+                finallinks = list_to_text(links, True)
                 return [finallinks, "Pastebin links retrieved successfully."]
             else:
                 currentcondition = f'Done.'
@@ -2283,7 +2379,9 @@ def on_ui_tabs():
             batchlinks.queue(64).launch(share=True)
     else:
         return (batchlinks, "Batchlinks Downloader", "batchlinks"),
-if not sdless:
-    script_callbacks.on_ui_tabs(on_ui_tabs)
-else:
-    on_ui_tabs()
+
+if not importable:
+    if not sdless:
+        script_callbacks.on_ui_tabs(on_ui_tabs)
+    else:
+        on_ui_tabs()
