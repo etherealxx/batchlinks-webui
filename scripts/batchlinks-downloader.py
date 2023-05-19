@@ -136,12 +136,11 @@ aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webu
 cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
 extpath = os.path.join(script_path, "extensions") #obsolete
 upscalerpath = os.path.join(script_path, "models/ESRGAN")
-lycorispath = os.path.join(addnetlorapath, "lycoris")
+lycorispath = os.path.join(script_path, "models/LyCORIS")
 
 if vladmandic:
     cnetpath = os.path.join(script_path, "models/ControlNet")
-    lycorispath = os.path.join(script_path, "models/LyCORIS")
-
+    
 if cmd_opts.ckpt_dir:
     altmodelpath = cmd_opts.ckpt_dir
     currentfolder = altmodelpath
@@ -154,7 +153,7 @@ if platform.system() == "Windows":
         # exec(f"{x}path = os.path.normpath({x}path)")
         exec(f"{x}path = {x}path.replace('/', '\\\\')")
         #exec(f"print({x}path)")
-if os.path.exists(addnetlorapath) and not os.path.exists(lycorispath):
+if not os.path.exists(lycorispath):
     os.makedirs(lycorispath, exist_ok=True)
 
 newlines = ['\n', '\r\n', '\r']
