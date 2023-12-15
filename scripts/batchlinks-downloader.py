@@ -136,11 +136,13 @@ aestheticembedpath = os.path.join(script_path, "extensions/stable-diffusion-webu
 cnetpath = os.path.join(script_path, "extensions/sd-webui-controlnet/models")
 extpath = os.path.join(script_path, "extensions") #obsolete
 upscalerpath = os.path.join(script_path, "models/ESRGAN")
-lycorispath = os.path.join(addnetlorapath, "lycoris")
+#the LyCORIS model can now be used as if there were a regular LoRA model
+lycorispath = os.path.join(script_path, "models/Lora")
 
 if vladmandic:
     cnetpath = os.path.join(script_path, "models/ControlNet")
-    lycorispath = os.path.join(script_path, "models/LyCORIS")
+    #the LyCORIS model can now be used as if there were a regular LoRA model
+    lycorispath = os.path.join(script_path, "models/Lora")
 
 if cmd_opts.ckpt_dir:
     altmodelpath = cmd_opts.ckpt_dir
